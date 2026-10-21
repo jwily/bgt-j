@@ -37,6 +37,18 @@ export function initInput() {
     pickedDate = chosen && chosen !== todayISO() ? chosen : null;
     renderInput();
   });
+  // iPhone Safari doesn't always size the hidden input to cover the whole button, so a tap that lands
+  // on the label (like the middle of "Today") opens the picker directly.
+  const dateButton = el('label', { className: 'window date-btn', 'data-label': 'Date' }, parts.dateLabel, parts.dateInput);
+  dateButton.addEventListener('click', (event) => {
+    if (event.target === parts.dateInput) return;
+    event.preventDefault();
+    try {
+      parts.dateInput.showPicker();
+    } catch {
+      parts.dateInput.focus(); // older iOS: focusing a date input opens its picker
+    }
+  });
 
   const pad = keypad(() => digits, (next) => {
     digits = next;
@@ -50,7 +62,7 @@ export function initInput() {
     el('div', { className: 'window strip-window', 'data-label': 'Category' }, parts.strip),
     el('div', { className: 'details' },
       el('label', { className: 'window note-window', 'data-label': 'Note' }, parts.note),
-      el('label', { className: 'window date-btn', 'data-label': 'Date' }, parts.dateLabel, parts.dateInput)),
+      dateButton),
     pad,
     parts.add,
   );

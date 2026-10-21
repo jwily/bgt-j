@@ -97,6 +97,14 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('grid pick selects', await page.locator('.strip .chip.selected').textContent(), 'Health');
   check('grid closed', await page.locator('#sheet-backdrop.open').count(), 0);
 
+  // A tap on the "Today" text itself (not the hidden input) still opens the date picker
+  await page.evaluate(() => {
+    window.pickerOpened = 0;
+    HTMLInputElement.prototype.showPicker = function () { window.pickerOpened += 1; };
+  });
+  await page.locator('.date-btn span').dispatchEvent('click');
+  check('tapping the date text opens the picker', await page.evaluate(() => window.pickerOpened), 1);
+
   // Backdated expense: date label, then resets to Today after adding
   const yesterday = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() - 1); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); });
   await page.locator('.date-btn input').fill(yesterday);
