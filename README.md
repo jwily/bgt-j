@@ -30,7 +30,7 @@ Your data is tied to the URL, so pick the site's name before you start using it.
 
 - **Amounts** fill in from the right. In dollars, 5 1 0 5 0 is $510.50. Pesos are whole numbers, so 5 1 0 5 0 is MX$51,050. Hold ⌫ to clear.
 - **Currency**: tap USD/MXN to step through them, or swipe anywhere on the amount: a swipe left picks the currency on the left, a swipe right the one on the right, and the ends don't wrap around.
-- **Category**: swipe the strip; the centered one is selected. Double-tap it to see every category at once. Categories are listed alphabetically and take their colors in that order.
+- **Category**: swipe the strip; the centered one is selected. Double-tap it to see every category at once. Categories are listed alphabetically and take their colors in that order. On the Categories screen, rows hold their places while you edit and re-sort when you leave.
 - The top of the screen is for reading and the bottom for tapping, for a right thumb. The **HELP** window at the top shows how much is left (tap it for the current period's summary) and messages. The bar at the bottom has **Add**, **Undo** while a message offers it, and **Menu**, which opens upward and is **‹ Back** on other screens.
 - A period's summary has **Edit budget** (current period only) and **Delete period** at the bottom. Deleting also deletes that period's expenses; deleting the current period reopens the previous one.
 

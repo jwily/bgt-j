@@ -176,7 +176,8 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   check('new category name selected', await page.evaluate(() => document.activeElement.value), 'New Category');
   await page.keyboard.type('Coffee');
   await page.keyboard.press('Enter');
-  check('editor alphabetical', (await page.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value))).join(','), 'Bills,Coffee,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');
+  // Rows hold their places while the screen is open (it re-sorts when you leave): Coffee stays at the bottom.
+  check('editor holds order while editing', (await page.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value))).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport,Coffee');
   const transportRow = await page.locator('.cat-row input').evaluateAll((ns) => ns.findIndex((n) => n.value === 'Transport'));
   await page.locator('.cat-row').nth(transportRow).locator('.mini', { hasText: '✕' }).tap();
   check('Transport archived', await page.locator('#help span').first().textContent(), 'Transport archived');
