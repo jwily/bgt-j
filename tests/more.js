@@ -472,6 +472,15 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const save = document.querySelector('#page .actions .primary').getBoundingClientRect();
     return save.top >= 0 && save.bottom <= document.querySelector('.dock').getBoundingClientRect().top;
   }), true);
+  check('Add/Save are fixed, so scrolling or bouncing the list can\'t carry them', await p5.evaluate(() => getComputedStyle(document.querySelector('#page .actions')).position), 'fixed');
+  check('scrolled to the end, the whole list clears Add/Save', await p5.evaluate(() => {
+    const page = document.getElementById('page');
+    page.scrollTop = page.scrollHeight;
+    const lastWindow = [...document.querySelectorAll('#page-body > :not(.actions)')].at(-1).getBoundingClientRect();
+    const result = lastWindow.bottom <= document.querySelector('#page .actions').getBoundingClientRect().top;
+    page.scrollTop = 0;
+    return result;
+  }), true);
   const nameField = (n) => p5.locator('.cat-row input').nth(n);
   const funIndex = (await categoryRows(p5)).indexOf('Fun');
   await nameField(funIndex).fill('groceries');
