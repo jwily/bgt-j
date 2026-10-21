@@ -217,7 +217,7 @@ export function deleteExpense(id) {
 // ---------- categories ----------
 
 export function addCategory() {
-  const category = { id: newId(), name: 'New category', color: null, archived: false }; // save() assigns the color
+  const category = { id: newId(), name: 'New Category', color: null, archived: false }; // save() assigns the color
   state.categories.push(category);
   save();
   return category;

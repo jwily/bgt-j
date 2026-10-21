@@ -145,7 +145,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   check('past period title', await titleText(page), 'Period 1');
   check('past period has no Edit', await page.locator('.stat .link').count(), 0);
   await page.locator('#nav-btn').tap();
-  check('back to periods', await titleText(page), 'Periods');
+  check('back to periods', await titleText(page), 'Past Periods');
   await page.locator('#nav-btn').tap();
 
   // Categories: recolor, add, archive used one
@@ -160,7 +160,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   check('no reorder arrows', await page.locator('.mini', { hasText: '↑' }).count(), 0);
   await page.locator('.wide-btn', { hasText: 'Add category' }).tap();
   check('category added', await page.locator('.cat-row input').count(), 10);
-  check('new category name selected', await page.evaluate(() => document.activeElement.value), 'New category');
+  check('new category name selected', await page.evaluate(() => document.activeElement.value), 'New Category');
   await page.keyboard.type('Coffee');
   await page.keyboard.press('Enter');
   check('editor alphabetical', (await page.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value))).join(','), 'Bills,Coffee,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');

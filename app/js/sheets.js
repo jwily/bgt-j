@@ -44,7 +44,7 @@ export function openExpenseSheet(expense) {
 
   const field = (label, input) => el('label', { className: 'field' }, el('span', { textContent: label }), input);
   openSheet(el('div', {},
-    el('h2', { textContent: 'Edit expense' }),
+    el('h2', { textContent: 'Edit Expense' }),
     foreign && el('p', { className: 'hint', textContent: `Entered as ${formatMoney(foreign.amount, currency)} at ${foreign.perUsd.toFixed(2)} ${currency} per ${HOME} (${formatUsd(expense.usdCents)}).` }),
     field(`Amount (${currency})`, amount),
     field('Category', category),

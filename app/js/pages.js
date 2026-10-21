@@ -243,8 +243,8 @@ function renderPeriods() {
     row.addEventListener('click', () => showPage('summary', { periodId: period.id }, { push: true }));
     return row;
   });
-  fill('Periods', 'Select a period to see its summary.', ...rows,
-    state.periods.length < 2 && el('p', { className: 'empty-note', textContent: 'Past Periods show up here after you start a New Period.' }));
+  fill('Past Periods', 'Select a period to see its summary.', ...rows,
+    state.periods.length < 2 && el('p', { className: 'empty-note', textContent: 'Past periods show up here after you start a new period.' }));
 }
 
 // ---------- categories ----------
@@ -385,7 +385,7 @@ function renderBudget({ mode }) {
     } else {
       startPeriod(cents);
       closePages();
-      toast(`New Period started · ${formatUsd(cents)}`);
+      toast(`New period started · ${formatUsd(cents)}`);
     }
   });
 

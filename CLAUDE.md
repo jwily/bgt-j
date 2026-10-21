@@ -43,6 +43,10 @@ Read README.md for what the app does; this file covers how to work on it.
   or unavailable options.
 - The pointing-hand cursor sits outside whatever it points at: centering ignores it (the USD/MXN
   pair, category chips). It bobs beside buttons you'd press and sits still beside selections.
+- Capitalization: Title Case for names (screens, menu commands, period and category names:
+  Current Period, Past Periods, Edit Budget, New Category); sentence case for everything else
+  (buttons, labels, help lines, messages: Start new period, Under budget, New period started).
+  ALL CAPS only as styling (window tabs, menu stat labels, ADD, UNDO).
 - Font: Nunito. A pixel FF8 font was tried (branch `ff8-font`) and rejected for readability.
 - Before imitating any visual style, get references and measure them (pixel sampling, tracing).
   Styling from memory produced FF7's look the first time.
