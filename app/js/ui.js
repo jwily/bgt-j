@@ -146,6 +146,29 @@ export function keypad(getDigits, onChange, getMaxDigits) {
   return pad;
 }
 
+// ---------- on-screen keyboard ----------
+// iOS lays the keyboard over the page without resizing it, so a field near the bottom of a screen
+// can end up hidden behind it, with nothing below to scroll it up by. While the keyboard is open,
+// --keyboard holds its height (screens make that much room at their bottom) and the focused field
+// is scrolled to sit just above it.
+export function keepFieldsAboveKeyboard() {
+  const view = window.visualViewport;
+  if (!view) return;
+  const update = () => {
+    const keyboard = Math.max(0, Math.round(window.innerHeight - view.height));
+    document.documentElement.style.setProperty('--keyboard', `${keyboard}px`);
+    const field = document.activeElement;
+    const scroller = field?.matches('input, textarea') && field.closest('.page');
+    if (!keyboard || !scroller) return;
+    const box = field.getBoundingClientRect();
+    const visibleBottom = view.offsetTop + view.height - 16;
+    if (box.bottom > visibleBottom) scroller.scrollTop += box.bottom - visibleBottom;
+  };
+  view.addEventListener('resize', update);
+  view.addEventListener('scroll', update);
+  document.addEventListener('focusin', () => requestAnimationFrame(update)); // moving between fields with the keyboard already open
+}
+
 // ---------- help window ----------
 // The HELP window at the top shows the current screen's help line. toast() borrows it for a few
 // seconds to show a message, then the help line comes back.

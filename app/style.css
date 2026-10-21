@@ -477,7 +477,7 @@ body.page-open #view-input { visibility: hidden; }
   overflow-y: auto;
   overscroll-behavior: contain; /* its bounce stays inside it */
   background: #000;
-  padding-bottom: var(--dock-h);
+  padding-bottom: max(var(--dock-h), var(--keyboard, 0px)); /* room to scroll a field above the keyboard, which covers the bar */
 }
 /* minmax(0, 1fr): never wider than the screen, so long one-line text (notes) ends in "…" instead. */
 /* A screen shorter than the phone sits at the bottom, near the thumb, rather than at the top. */

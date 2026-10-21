@@ -3,7 +3,7 @@
 import { currentPeriod, spentIn, refreshRate, needsRecovery } from './store.js';
 import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
-import { setHelp } from './ui.js';
+import { setHelp, keepFieldsAboveKeyboard } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack } from './pages.js';
 import { backupStatus } from './backup.js';
@@ -99,6 +99,7 @@ if (needsRecovery) {
 }
 
 takeDailySnapshot(); // before anything changes today
+keepFieldsAboveKeyboard();
 initInput();
 initPages({ onNavigate: refresh });
 refresh();
