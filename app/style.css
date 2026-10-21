@@ -102,7 +102,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 
 .options > .on::after,
 .chip.selected::after,
-.add-btn::after,
 .primary:not(:disabled)::after,
 .menu-list button:active::after,
 .menu-list button:focus-visible::after {
@@ -117,7 +116,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   pointer-events: none;
 }
 /* It bobs beside things you can press; it sits still beside things that are just chosen. */
-.add-btn::after, .primary::after, .menu-list button::after {
+.primary::after, .menu-list button::after {
   animation: hand-bob 0.45s ease-in-out infinite alternate;
 }
 @keyframes hand-bob { to { transform: translateX(-4px); } }
@@ -331,6 +330,9 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 }
 
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.keypad.with-side { grid-template-columns: repeat(4, 1fr); }
+.keypad.with-side > .add-btn { grid-row: span 3; height: auto; }
+.key.switch-key { font-size: 1.1rem; letter-spacing: 0.04em; }
 .key {
   height: clamp(44px, 7dvh, 58px);
   font-size: 1.55rem;
@@ -340,14 +342,13 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 
 .add-btn {
   height: 54px;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  /* A stripe in the chosen category's color, inside the bevel. */
-  box-shadow: var(--bevel), inset 8px 0 0 var(--c, transparent);
+  /* A stripe in the chosen category's color, inside the bevel, along the top. */
+  box-shadow: var(--bevel), inset 0 8px 0 var(--c, transparent);
 }
-.add-btn::after { left: 18px; }
 
 /* ---------- menu: command list on the right, stats box below ---------- */
 

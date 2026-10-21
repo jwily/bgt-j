@@ -52,12 +52,16 @@ export function initInput() {
     }
   });
 
+  // Add and the currency switch sit in the keypad's right column, under a right thumb. The switch
+  // key names the currency it switches to.
+  parts.add = el('button', { type: 'button', className: 'add-btn', textContent: 'Add' });
+  parts.add.addEventListener('click', add);
+  parts.switchKey = el('button', { type: 'button', className: 'key switch-key' });
+  parts.switchKey.addEventListener('click', () => switchCurrency('left'));
   const pad = keypad(() => digits, (next) => {
     digits = next;
     renderInput();
-  }, () => CURRENCIES[state.input.currency].maxDigits);
-  parts.add = el('button', { className: 'add-btn', textContent: 'Add' });
-  parts.add.addEventListener('click', add);
+  }, () => CURRENCIES[state.input.currency].maxDigits, { side: parts.add, corner: parts.switchKey });
 
   document.getElementById('view-input').append(
     zone,
@@ -66,7 +70,6 @@ export function initInput() {
       el('label', { className: 'window note-window', 'data-label': 'Note' }, parts.note),
       dateButton),
     pad,
-    parts.add,
   );
   renderInput();
   document.fonts?.ready.then(recenter);
@@ -78,6 +81,9 @@ export function renderInput() {
   const amount = Number(digits || '0');
 
   parts.currencies.forEach((span, i) => span.classList.toggle('on', CURRENCY_CODES[i] === currency));
+  const next = nextCurrency(1);
+  parts.switchKey.textContent = `⇄ ${next}`;
+  parts.switchKey.setAttribute('aria-label', `Switch to ${next}`);
   parts.amount.textContent = formatMoney(amount, currency);
   parts.amount.classList.toggle('empty', !amount);
   parts.sub.replaceChildren(...(currency === HOME ? [] : [
@@ -100,11 +106,15 @@ function rateText(code) {
   return `1 ${HOME} = ${rate.toFixed(2)} ${code}${daysBetween(state.rates.date) > 4 ? ` (rate from ${formatDate(state.rates.date)})` : ''}`;
 }
 
+// The currency `step` places after the chosen one (1 = next, -1 = previous), wrapping around.
+function nextCurrency(step) {
+  const count = CURRENCY_CODES.length;
+  return CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + step + count) % count];
+}
+
 // Swipe left (or tap) for the next currency, swipe right for the previous one; it wraps around.
 function switchCurrency(direction) {
-  const step = direction === 'right' ? -1 : 1;
-  const count = CURRENCY_CODES.length;
-  const next = CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + step + count) % count];
+  const next = nextCurrency(direction === 'right' ? -1 : 1);
   digits = digits.slice(0, CURRENCIES[next].maxDigits);
   parts.amount.classList.remove('slide-left', 'slide-right');
   void parts.amount.offsetWidth; // restart the animation

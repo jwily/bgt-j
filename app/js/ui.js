@@ -112,9 +112,16 @@ export function onLongPress(node, handler, ms = 450) {
 
 // Digits-only keypad. Amounts are built from the digit string, so there is no "." key:
 // for dollars the last two digits are cents. Hold ⌫ to clear.
-export function keypad(getDigits, onChange, getMaxDigits) {
-  const pad = el('div', { className: 'keypad' });
-  for (const key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', '⌫']) {
+// side and corner (optional, together): a fourth column for the right thumb. ⌫ moves to its top,
+// side fills the rest of it (three keys tall), and corner takes ⌫'s old place at the bottom right.
+export function keypad(getDigits, onChange, getMaxDigits, { side = null, corner = null } = {}) {
+  const pad = el('div', { className: side ? 'keypad with-side' : 'keypad' });
+  const order = side ? ['1', '2', '3', '⌫', '4', '5', '6', side, '7', '8', '9', '00', '0', corner] : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', '⌫'];
+  for (const key of order) {
+    if (typeof key !== 'string') {
+      pad.append(key);
+      continue;
+    }
     const button = el('button', { type: 'button', className: 'key', textContent: key });
     if (key === '⌫') {
       button.setAttribute('aria-label', 'Delete');

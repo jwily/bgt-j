@@ -85,6 +85,13 @@ const check = (label, ok, detail) => {
     check(`${name}: every category centered when selected`, Math.abs(worstOffset) <= 2, `worst ${worstOffset}px`);
     check(`${name}: hand stays clear of the diamond`, smallestGap >= 8, `${smallestGap}px`);
 
+    // The keypad's right column: ADD's label and the switch key's label fit their keys.
+    const column = await page.evaluate(() => {
+      const fits = (node) => node.scrollWidth <= node.clientWidth;
+      return { add: fits(document.querySelector('.add-btn')), switchKey: fits(document.querySelector('.switch-key')) };
+    });
+    check(`${name}: ADD and currency switch labels fit`, column.add && column.switchKey, column);
+
     // A long note must not make the summary wider than the screen (it ends in "…" instead).
     await key('⌫'); // clear the 9s typed above (hold ⌫)
     const back = page.locator('#view-input .key').filter({ hasText: /^⌫$/ });
