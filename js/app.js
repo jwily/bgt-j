@@ -13,7 +13,10 @@ const menuBackdrop = $('menu-backdrop');
 const isMenuOpen = () => menuBackdrop.classList.contains('open');
 const openMenu = () => menuBackdrop.classList.add('open');
 const closeMenu = () => menuBackdrop.classList.remove('open');
-const openCurrentSummary = () => showPage('summary', { periodId: currentPeriod().id });
+const openCurrentSummary = () => {
+  closeMenu(); // the HELP window can be tapped while the menu is open
+  showPage('summary', { periodId: currentPeriod().id });
+};
 
 // The title window: "Menu" on the main screen, "‹ <screen>" (Back) everywhere else.
 navButton.addEventListener('click', () => {

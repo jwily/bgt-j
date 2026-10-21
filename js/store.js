@@ -18,7 +18,7 @@ const FALLBACK_RATE = 18.5; // used only until the first successful download
 // 16 colors, each loosely after one of FF8's Guardian Force portraits, in the order the GFs appear
 // in the game's GF menu. Categories take them in turn. (Every pair is at least 11 apart in OKLab
 // distance x100, where under ~10 starts to look alike.)
-export const PALETTE = [
+const PALETTE = [
   '#94cc3a', // Quezacotl: yellow-green
   '#8fd0f5', // Shiva: ice blue
   '#e2682b', // Ifrit: burnt orange
@@ -46,7 +46,7 @@ export let state = load();
 // ---------- basics ----------
 
 // crypto.randomUUID only exists on HTTPS pages, so fall back for local testing over plain HTTP.
-export function newId() {
+function newId() {
   return crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
@@ -140,6 +140,25 @@ export function startPeriod(budgetCents) {
   if (current) current.end = today;
   state.periods.push({ id: newId(), budgetCents, start: today, end: null });
   save();
+}
+
+// Deletes a period and all of its expenses. Deleting the current period reopens the one before it
+// (as if that New Period never happened). Returns an undo function.
+export function deletePeriod(id) {
+  const index = state.periods.findIndex((p) => p.id === id);
+  const [period] = state.periods.splice(index, 1);
+  const expenses = state.expenses.filter((e) => e.periodId === id);
+  state.expenses = state.expenses.filter((e) => e.periodId !== id);
+  const reopened = period.end ? null : state.periods.at(-1) ?? null;
+  const reopenedEnd = reopened?.end;
+  if (reopened) reopened.end = null;
+  save();
+  return () => {
+    if (reopened) reopened.end = reopenedEnd;
+    state.periods.splice(index, 0, period);
+    state.expenses.push(...expenses);
+    save();
+  };
 }
 
 export function setBudget(periodId, budgetCents) {

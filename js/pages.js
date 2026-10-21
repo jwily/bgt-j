@@ -5,7 +5,7 @@
 
 import {
   state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories,
-  addCategory, updateCategory, removeCategory, todayISO, startPeriod, setBudget,
+  addCategory, updateCategory, removeCategory, todayISO, startPeriod, setBudget, deletePeriod,
 } from './store.js';
 import { formatUsd, formatMxn, formatDiff } from './money.js';
 import { el, svg, toast, setHelp, formatDate, colorDot, gauge, keypad } from './ui.js';
@@ -66,7 +66,7 @@ export function goBack() {
 }
 
 // Leave every screen and return to the main screen.
-export function closePages() {
+function closePages() {
   stack = [];
   page.hidden = true;
   onNavigate();
@@ -90,6 +90,7 @@ const longDate = (iso) => formatDate(iso, iso.startsWith(todayISO().slice(0, 4))
   : { month: 'short', day: 'numeric', year: 'numeric' });
 const periodDates = (period) => `${longDate(period.start)} – ${period.end ? longDate(period.end) : 'ongoing'}`;
 const periodName = (period) => (period.end ? `Period ${periodNumber(period)}` : 'Current Period');
+const tone = (diffCents) => (diffCents >= 0 ? 'good' : 'bad'); // budget minus spent: under is good
 
 // ---------- period summary ----------
 
@@ -128,7 +129,7 @@ function renderSummary({ periodId }) {
   const stats = panel('Budget',
     el('div', { className: 'stat' }, el('span', { textContent: 'Budget' }), budgetValue),
     el('div', { className: 'stat' }, el('span', { textContent: 'Spent' }), el('span', { className: 'value', textContent: formatUsd(spent) })),
-    el('div', { className: `stat diff ${diff >= 0 ? 'good' : 'bad'}` },
+    el('div', { className: `stat diff ${tone(diff)}` },
       el('span', { textContent: diff >= 0 ? 'Under budget' : 'Over budget' }),
       el('span', { className: 'value', textContent: formatDiff(diff) })),
   );
@@ -152,11 +153,28 @@ function renderSummary({ periodId }) {
       isOpen && el('ul', { className: 'items' }, ...row.items.map(itemRow))));
   }
 
+  const remove = el('button', { className: 'wide-btn delete-btn', textContent: 'Delete period' });
+  remove.addEventListener('click', () => removePeriod(period));
+
   fill(periodName(period), periodDates(period),
     panel('Spent', donut(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent)),
     stats,
     panel('Categories', rows.length ? list : el('p', { className: 'empty-note', textContent: 'No expenses yet.' })),
+    remove,
   );
+}
+
+// Asks first: this deletes every expense in the period. Undo is offered afterwards too.
+function removePeriod(period) {
+  const name = periodName(period);
+  const count = periodExpenses(period.id).length;
+  const what = `${name} and its ${count} expense${count === 1 ? '' : 's'}`;
+  const reopens = !period.end && state.periods.length > 1;
+  if (!confirm(`Delete ${what}?${reopens ? ' The previous period becomes current again.' : ''}`)) return;
+  goBack(); // leave this summary first; it can't be shown once its period is gone
+  const undo = deletePeriod(period.id);
+  if (!currentPeriod()) showPage('budget', { mode: 'first' }); // that was the only period
+  toast(`${name} deleted`, undo);
 }
 
 function itemRow(expense) {
@@ -172,25 +190,38 @@ function itemRow(expense) {
   return el('li', {}, row);
 }
 
-// Ring chart drawn as one SVG circle per category, each dashed to cover its share.
+// Ring chart drawn as one SVG circle per category, each dashed to cover its share. A shading
+// overlay makes it a rounded tube, with a soft dark outline on both edges.
 function donut(slices, total) {
-  const r = 40;
+  const r = 40, width = 14;
+  const [inner, outer] = [r - width / 2, r + width / 2];
   const circumference = 2 * Math.PI * r;
   const sum = slices.reduce((s, slice) => s + slice.value, 0);
   const gap = slices.length > 1 ? 0.8 : 0;
   const chart = svg('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
-  chart.append(svg('circle', { class: 'ring', cx: 50, cy: 50, r, fill: 'none', 'stroke-width': 14 }));
+  // Across the ring's width: shadow at the inner edge, highlight just past the middle, shadow outside.
+  const shade = svg('radialGradient', { id: 'donut-shade', gradientUnits: 'userSpaceOnUse', cx: 50, cy: 50, r: outer });
+  for (const [at, color, opacity] of [[inner, '#000', 0.4], [r - 2, '#fff', 0.05], [r + 2, '#fff', 0.32], [outer - 2, '#fff', 0.05], [outer, '#000', 0.35]]) {
+    shade.append(svg('stop', { offset: (at / outer).toFixed(3), 'stop-color': color, 'stop-opacity': opacity }));
+  }
+  chart.append(svg('defs'), svg('circle', { class: 'ring', cx: 50, cy: 50, r, fill: 'none', 'stroke-width': width }));
+  chart.firstChild.append(shade);
   let offset = 0;
   for (const slice of slices) {
     const length = (slice.value / sum) * circumference;
     chart.append(svg('circle', {
-      cx: 50, cy: 50, r, fill: 'none', stroke: slice.color, 'stroke-width': 14,
+      class: 'slice', cx: 50, cy: 50, r, fill: 'none', stroke: slice.color, 'stroke-width': width,
       'stroke-dasharray': `${Math.max(length - gap, 0.01)} ${circumference}`,
       'stroke-dashoffset': -offset,
       transform: 'rotate(-90 50 50)',
     }));
     offset += length;
   }
+  chart.append(
+    svg('circle', { cx: 50, cy: 50, r, fill: 'none', stroke: 'url(#donut-shade)', 'stroke-width': width }),
+    svg('circle', { cx: 50, cy: 50, r: outer - 0.3, fill: 'none', stroke: '#000', 'stroke-opacity': 0.45, 'stroke-width': 0.6 }),
+    svg('circle', { cx: 50, cy: 50, r: inner + 0.3, fill: 'none', stroke: '#000', 'stroke-opacity': 0.45, 'stroke-width': 0.6 }),
+  );
   return el('div', { className: 'donut' }, chart,
     el('div', { className: 'donut-center' },
       el('strong', { textContent: formatUsd(total) }),
@@ -207,7 +238,7 @@ function renderPeriods() {
       el('span', {}, el('strong', { textContent: periodName(period) }), el('small', { textContent: periodDates(period) })),
       el('span', { className: 'right' },
         el('span', { textContent: `${formatUsd(spent)} of ${formatUsd(period.budgetCents)}` }),
-        el('small', { className: diff >= 0 ? 'good' : 'bad', textContent: formatDiff(diff) })));
+        el('small', { className: tone(diff), textContent: formatDiff(diff) })));
     row.addEventListener('click', () => showPage('summary', { periodId: period.id }, { push: true }));
     return row;
   });
@@ -321,7 +352,7 @@ const BUDGET_SCREENS = {
   },
   new: {
     title: 'New Period',
-    help: (current) => `Ends the period that started ${formatDate(current.start)} and starts a new one.`,
+    help: (current) => `Ends the period that started ${longDate(current.start)} and starts a new one.`,
     button: 'Start new period',
   },
   edit: {
@@ -342,8 +373,8 @@ function renderBudget({ mode }) {
     renderPage();
   }, () => 8);
 
-  const confirm = el('button', { className: 'primary', textContent: screen.button, disabled: !budgetDigits });
-  confirm.addEventListener('click', () => {
+  const confirmButton = el('button', { className: 'primary', textContent: screen.button, disabled: !budgetDigits });
+  confirmButton.addEventListener('click', () => {
     const cents = Number(budgetDigits || '0');
     if (!cents) return;
     if (mode === 'edit') {
@@ -368,5 +399,5 @@ function renderBudget({ mode }) {
     });
   }
 
-  fill(screen.title, screen.help(current), panel('Budget', amount), pad, backupButton, confirm);
+  fill(screen.title, screen.help(current), panel('Budget', amount), pad, backupButton, confirmButton);
 }

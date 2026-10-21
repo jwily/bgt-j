@@ -66,7 +66,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 
 /* Every panel and button is one of these: a smooth grey fill, a dark outer line, and an inner
    bevel lit from the top-left. */
-.window, .key, .add-btn, .primary, .secondary, .danger, .wide-btn, .period-row {
+.window, .key, .add-btn, .primary, .danger, .wide-btn, .period-row {
   position: relative;
   background: var(--window-fill);
   border: 2px solid;
@@ -75,7 +75,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   box-shadow: var(--bevel);
   color: var(--text);
 }
-:is(.key, .add-btn, .primary, .secondary, .danger, .wide-btn, .period-row, .nav-btn):active {
+:is(.key, .add-btn, .primary, .danger, .wide-btn, .period-row, .nav-btn):active {
   filter: brightness(1.18);
 }
 
@@ -213,7 +213,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   container-type: inline-size; /* lets the amount size itself to this window's width */
   touch-action: none; /* we handle horizontal swipes here ourselves */
 }
-.currency-opts { display: flex; gap: 44px; padding-left: 34px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; }
+/* Only USD and MXN count for centering; the hand hangs outside the pair. */
+.currency-opts { display: flex; gap: 44px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; }
 .currency-opts span { position: relative; color: var(--off); transition: color 0.1s; }
 .currency-opts span.on { color: var(--text); }
 /* A slightly smaller hand here, so it sits neatly between USD and MXN. */
@@ -228,7 +229,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 }
 .amount.empty { color: var(--off); }
 /* Under the amount: "≈ $12.50" and, on its own line, "1 USD = 18.52 MXN" (pesos only). */
-.amount-sub { height: calc(1.35 * (1rem + 0.8rem)); /* both lines' room, always, so switching currency doesn't shift anything */ color: #cfcfcf; font-size: 0.8rem; line-height: 1.35; text-align: center; font-variant-numeric: tabular-nums; }
+.amount-sub { flex-shrink: 0; height: calc(1.35 * (1rem + 0.8rem)); /* both lines' room, always, so switching currency doesn't shift anything */ color: #cfcfcf; font-size: 0.8rem; line-height: 1.35; text-align: center; font-variant-numeric: tabular-nums; }
 .amount-sub span { display: block; }
 .amount-sub .converted { color: var(--text); font-size: 1rem; }
 
@@ -382,13 +383,13 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .budget-amount.empty { color: var(--off); }
 
 .actions { display: flex; gap: 8px; margin-top: 12px; }
-.primary, .secondary, .danger { flex: 1; height: 50px; font-weight: 800; }
+.primary, .danger { flex: 1; height: 50px; font-weight: 800; }
 .primary { padding: 0 34px; } /* room for the hand on the left, matched on the right so the label stays centered */
 .primary::after { left: 8px; }
 .primary:disabled { color: var(--off); }
-.secondary { color: #d6d6d6; }
 .danger { color: var(--bad); }
 .wide-btn:disabled { color: var(--good); cursor: default; }
+.delete-btn { color: var(--bad); }
 
 /* Text fields: sunken (the bevel reversed). */
 .field { display: grid; gap: 4px; margin-bottom: 12px; }
