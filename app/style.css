@@ -430,6 +430,19 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
 
 .actions { display: flex; gap: var(--gap); }
 .actions > * { flex: 1; }
+/* A screen's buttons that must stay in reach however long the screen is: they stick to the bottom,
+   just above the bottom bar, and the screen scrolls behind them. (Sticky offsets count from inside
+   the screen's padding, which already leaves room for the bar.) */
+.actions.pinned {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -10px;
+  padding: var(--gap) 10px 0;
+  background: #000;
+}
+/* Anything scrolled into view (a focused field, say) stops above them, not behind them. */
+.page:has(.actions.pinned) { scroll-padding-bottom: calc(50px + var(--gap) + var(--gap)); }
 .sheet .actions { margin-top: 12px; }
 .primary, .danger { flex: 1; height: 50px; font-weight: 800; }
 .primary { padding: 0 34px; } /* room for the hand on the left, matched on the right so the label stays centered */

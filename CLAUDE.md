@@ -37,10 +37,13 @@ Read README.md for what the app does; this file covers how to work on it.
   edits only (edit expense, category grid).
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Check changes with `npm run palette`.
-- **Category names are unique** ignoring case (`categoryNamed`); new ones get a free name.
-- **The Categories screen holds its order and colors while it's open** (`categoryView` in pages.js):
-  edits save immediately, but rows don't jump; new and restored ones join at the bottom. It's
-  alphabetical again on the next visit (the user found the instant re-sort annoying).
+- **The Categories screen edits a draft** (`categoryDraft` in pages.js): renames, additions,
+  removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
+  undo) and sorts right then. Back with unsaved changes asks first (`confirmLeave`). Colors always
+  go by position down the list in GF order (`paletteColor(i)`), in the draft too, so the color
+  order never breaks. Names must be unique ignoring case and non-empty; new ones get a free name.
+  (Tried and replaced: instant saving with an instant re-sort, then re-sorting on leaving.)
+- Buttons that must stay reachable on a long screen use `.actions.pinned` (sticky above the bar).
 - **Saving can fail** (storage full): `save()` fires `budget:save-failed` and app.js alerts. Unreadable
   saved data is kept under `budget-tracker-unreadable` and app.js recovers from the newest snapshot.
 - **Snapshots** (`snapshots.js`, in IndexedDB, async): taken once a day and before anything drastic; call

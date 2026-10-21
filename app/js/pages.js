@@ -5,7 +5,7 @@
 
 import {
   state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories,
-  addCategory, updateCategory, removeCategory, categoryNamed, startPeriod, setBudget, deletePeriod, setBackupReminder,
+  saveCategories, categoryIsUsed, paletteColor, startPeriod, setBudget, deletePeriod, setBackupReminder,
 } from './store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
 import { el, svg, toast, setHelp, colorDot, gauge, keypad } from './ui.js';
@@ -24,7 +24,8 @@ let title = '';               // the showing screen's name, for the title window
 const expanded = new Set();   // category ids opened on the summary screen
 let budgetDigits = '';        // what's typed on the budget screen (kept across redraws)
 let budgetBackedUp = false;   // whether "Back up first" succeeded on the budget screen
-let categoryView = null;      // the Categories screen's row order and colors, held while it's open
+let categoryDraft = null;     // the Categories screen's unsaved edits: [{ key, id, name, archived }]
+let newCategoryKeys = 0;      // row keys for categories added in the draft (they have no id yet)
 let onNavigate = () => {};    // redraws the app after showing or leaving a screen
 
 // A small grey footnote.
@@ -58,7 +59,7 @@ export function showPage(name, params = {}, { push = false } = {}) {
     budgetDigits = params.mode === 'edit' ? String(currentPeriod().budgetCents) : '';
     budgetBackedUp = false;
   }
-  if (name === 'categories') categoryView = null; // alphabetical again on each visit
+  if (name === 'categories') categoryDraft = null;
   page.hidden = false;
   page.scrollTop = 0;
   unfold();
@@ -252,42 +253,71 @@ function renderPeriods() {
 
 // ---------- categories ----------
 
-// Changes save as they're made, but rows keep the places and colors they had when the screen
-// opened, so a renamed row doesn't jump away (the store re-sorts and recolors on every save). New
-// and restored categories join at the bottom. The next visit is alphabetical again.
-function heldCategoryView() {
-  if (!categoryView) categoryView = { order: [], colors: new Map() };
-  for (const category of sortedCategories()) {
-    if (!categoryView.colors.has(category.id)) categoryView.colors.set(category.id, category.color);
+// The Categories screen edits a draft: renaming, adding, removing and restoring change only the
+// draft, and Save applies it all at once, which sorts the categories alphabetically then and
+// there. Colors always go by position down the list (GF order), in the draft as after saving.
+const categoriesFromState = () => [...activeCategories(), ...sortedCategories().filter((c) => c.archived)]
+  .map(({ id, name, archived }) => ({ key: id, id, name, archived }));
+const sameCategories = (a, b) => JSON.stringify(a.map((c) => [c.id, c.name.trim(), c.archived]))
+  === JSON.stringify(b.map((c) => [c.id, c.name.trim(), c.archived]));
+const categoryDraftChanged = () => Boolean(categoryDraft) && !sameCategories(categoryDraft, categoriesFromState());
+
+// Back from the Categories screen with unsaved changes asks first. Returns whether to leave.
+export function confirmLeave() {
+  if (stack.at(-1)?.name !== 'categories' || !categoryDraftChanged()) return true;
+  if (!confirm('Discard your unsaved category changes?')) return false;
+  categoryDraft = null;
+  return true;
+}
+
+// Two categories can't share a name (ignoring capitalization), and names can't be empty. Returns
+// the problem to show, or null.
+function categoryDraftProblem() {
+  if (categoryDraft.some((c) => !c.name.trim())) return "Category names can't be empty.";
+  const savedNames = new Map(categoriesFromState().map((c) => [c.id, c.name]));
+  const unrenamed = (c) => c.id && savedNames.get(c.id) === c.name.trim();
+  for (const [i, category] of categoryDraft.entries()) {
+    const earlier = categoryDraft.slice(0, i).find((c) => c.name.trim().toLowerCase() === category.name.trim().toLowerCase());
+    // Name the one that was already called that, not the one just renamed to it.
+    const other = earlier && (unrenamed(earlier) || !unrenamed(category) ? earlier : category);
+    if (other) return `There's already ${other.archived ? 'an archived' : 'a'} category called ${other.name.trim()}${other.archived ? '. Restore it instead' : ''}.`;
   }
-  for (const category of activeCategories()) {
-    if (!categoryView.order.includes(category.id)) categoryView.order.push(category.id);
-  }
-  return categoryView;
+  return null;
 }
 
 function renderCategories() {
-  const view = heldCategoryView();
-  const live = activeCategories();
-  const active = view.order.map((id) => live.find((c) => c.id === id)).filter(Boolean);
-  const dot = (category) => colorDot(view.colors.get(category.id));
-  const list = panel('Categories');
+  if (!categoryDraftChanged()) categoryDraft = categoriesFromState();
+  const draft = categoryDraft;
+  const active = draft.filter((c) => !c.archived);
+  const archived = draft.filter((c) => c.archived);
+  const dot = (category) => colorDot(paletteColor([...active, ...archived].indexOf(category)));
+  const editDraft = (change) => {
+    const before = draft.map((c) => ({ ...c }));
+    const message = change();
+    renderPage();
+    if (message) toast(message, () => { categoryDraft = before; renderPage(); });
+  };
 
-  for (const category of active) {
+  const saveButton = el('button', { className: 'primary', textContent: 'Save', disabled: !categoryDraftChanged() });
+  saveButton.addEventListener('click', () => {
+    const problem = categoryDraftProblem();
+    if (problem) {
+      toast(problem);
+      return;
+    }
+    const undo = saveCategories(draft.map(({ id, name, archived: isArchived }) => ({ id, name, archived: isArchived })));
+    categoryDraft = null;
+    renderPage();
+    toast('Categories saved', undo);
+  });
+
+  const list = panel('Categories', ...active.map((category) => {
     const name = el('input', { type: 'text', value: category.name, enterKeyHint: 'done', 'aria-label': 'Category name' });
-    name.dataset.id = category.id;
+    name.dataset.key = category.key;
     name.addEventListener('keydown', (event) => { if (event.key === 'Enter') name.blur(); });
-    name.addEventListener('change', () => {
-      const value = name.value.trim();
-      const clash = categoryNamed(value);
-      if (clash && clash.id !== category.id) {
-        toast(`There's already ${clash.archived ? 'an archived' : 'a'} category called ${clash.name}${clash.archived ? '. Restore it instead' : ''}.`);
-        name.value = category.name;
-      } else if (value && value !== category.name) {
-        updateCategory(category.id, { name: value });
-      } else {
-        name.value = category.name;
-      }
+    name.addEventListener('input', () => {
+      category.name = name.value;
+      saveButton.disabled = !categoryDraftChanged();
     });
 
     const remove = el('button', { className: 'mini', textContent: '✕', 'aria-label': `Remove ${category.name}` });
@@ -296,30 +326,45 @@ function renderCategories() {
         toast('You need at least one category.');
         return;
       }
-      const undo = removeCategory(category.id);
-      toast(`${category.name} ${getCategory(category.id) ? 'archived' : 'deleted'}`, undo);
+      editDraft(() => {
+        draft.splice(draft.indexOf(category), 1);
+        // One with expenses is archived, so past summaries keep it.
+        if (category.id && categoryIsUsed(category.id)) {
+          draft.push({ ...category, archived: true });
+          return `${category.name.trim()} archived`;
+        }
+        return `${category.name.trim()} removed`;
+      });
     });
 
-    list.append(el('div', { className: 'cat-row' }, dot(category), name, remove));
-  }
+    return el('div', { className: 'cat-row' }, dot(category), name, remove);
+  }));
 
   const addButton = el('button', { className: 'wide-btn', textContent: 'Add category' });
   addButton.addEventListener('click', () => {
-    const { id } = addCategory();
-    // Find the new one's name field (at the bottom) and select it for typing.
-    [...body.querySelectorAll('.cat-row input')].find((input) => input.dataset.id === id)?.select();
+    let name = 'New Category';
+    const taken = (candidate) => draft.some((c) => c.name.trim().toLowerCase() === candidate.toLowerCase());
+    for (let n = 2; taken(name); n++) name = `New Category ${n}`;
+    const key = `new-${++newCategoryKeys}`;
+    // New ones go after the other active categories, until Save sorts them.
+    draft.splice(active.length, 0, { key, id: null, name, archived: false });
+    renderPage();
+    body.querySelector(`.cat-row input[data-key="${key}"]`)?.select();
   });
 
-  const archived = sortedCategories().filter((c) => c.archived);
   const archivedPanel = archived.length > 0 && panel('Archived',
     ...archived.map((category) => {
       const restore = el('button', { className: 'link', textContent: 'Restore' });
-      restore.addEventListener('click', () => updateCategory(category.id, { archived: false }));
+      restore.addEventListener('click', () => editDraft(() => {
+        draft.splice(draft.indexOf(category), 1);
+        draft.splice(draft.filter((c) => !c.archived).length, 0, { ...category, archived: false });
+      }));
       return el('div', { className: 'cat-row' }, dot(category), el('span', { className: 'grow', textContent: category.name }), restore);
     }));
 
-  fill('Categories', 'Tap a name to rename it.', list, addButton, archivedPanel,
-    note('Categories are sorted alphabetically, and colored in that order, when you leave this screen. Removing a category that has expenses archives it, so past summaries stay intact.'));
+  fill('Categories', 'Rename, add or remove, then save.', list, archivedPanel,
+    note('Saving sorts categories alphabetically, and colors follow that order. Removing a category that has expenses archives it, so past summaries stay intact.'),
+    el('div', { className: 'actions pinned' }, addButton, saveButton));
 }
 
 // ---------- backup ----------

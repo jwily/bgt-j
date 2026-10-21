@@ -91,7 +91,10 @@ const RATE = '{"date":"2026-10-20","rates":{"MXN":18.5}}';
     await shot('09-periods');
     await back();
     await menu('Categories');
-    await page.locator('.cat-row').filter({ has: page.locator('input') }).last().locator('.mini').tap(); // archive one
+    // Archive one that has expenses (Health), save, and show the result with an Archived window.
+    const health = await page.locator('.cat-row input').evaluateAll((inputs) => inputs.findIndex((i) => i.value === 'Health'));
+    await page.locator('.cat-row').nth(health).locator('.mini').tap();
+    await page.locator('#page .actions .primary').tap();
     await pause(4300);
     await shot('10-categories', true);
     await back();
