@@ -1,7 +1,9 @@
-# Budget tracker: notes for Claude
+# Bgt-J (Budget Junction): notes for Claude
 
 A personal iPhone budget tracker (home-screen web app) for one user, who is paid in USD and also
-spends in Mexican pesos. Styled after the Final Fantasy VIII menu. Personal use only, not shared.
+spends in Mexican pesos. Styled after the Final Fantasy VIII menu; the app is named Bgt-J ("Budget Junction", after FF8's
+stat junctions). Personal use only, not shared. Storage keys stay `budget-tracker*` (renaming them
+would orphan saved data).
 Read README.md for what the app does; this file covers how to work on it.
 
 ## Layout and commands
@@ -34,11 +36,14 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Check changes with `npm run palette`.
 - **Category names are unique** ignoring case (`categoryNamed`); new ones get a free name.
-- **Saving can fail** (storage full): `save()` fires `budget:save-failed`; app.js drops snapshots and
-  retries, else alerts. Unreadable saved data is kept under `budget-tracker-unreadable` and the newest
-  snapshot is loaded instead.
-- **Snapshots** (`backup.js`): taken once a day and before anything drastic; call `takeSnapshot(reason)`
-  before any new destructive action. Stored under their own localStorage key, never in backups.
+- **Saving can fail** (storage full): `save()` fires `budget:save-failed` and app.js alerts. Unreadable
+  saved data is kept under `budget-tracker-unreadable` and app.js recovers from the newest snapshot.
+- **Snapshots** (`snapshots.js`, in IndexedDB, async): taken once a day and before anything drastic; call
+  `takeSnapshot(reason)` before any new destructive action (it captures the data immediately). Never in
+  backups. Older versions kept them in localStorage; `moveOldSnapshots()` moves them at startup.
+- **Settings** live in `state.settings` (currently `backupReminderDays`, default 30); data is version 3.
+- Tests run as the installed app (`asInstalledApp` in helpers.js); in a Safari tab the app shows an
+  install hint in the HELP window instead of the amount left.
 - **Rates** download when the app opens without today's rates, at most every 3 hours (the source
   publishes once per business day).
 - **Dates** always go through `formatDate()` in `ui.js` (year shown only when it isn't this year).
@@ -64,6 +69,8 @@ Read README.md for what the app does; this file covers how to work on it.
 
 ## Working with this user
 
+- Their phone is an iPhone 14 Pro (in the layout tests).
+
 - Likes DRY code and periodic refactor passes; asks for them by name.
 - Wants honest reasons when something went wrong, and wants things verified (tests, measurements,
   screenshots) before you report them done.
@@ -83,6 +90,6 @@ Read README.md for what the app does; this file covers how to work on it.
 
 ## Branches
 
-- `master`: the app before the FF8 re-skin. `ff8-reskin`: current work, not yet merged.
+- `master`: the current app. `ff8-reskin`: where the FF8 work happened (merged).
   `ff8-font`: the rejected pixel-font trial.
 - Not deployed yet. When it is, deploy the `app/` folder only.

@@ -1,7 +1,9 @@
 // Third pass: layout checks that used to be one-off measurements, now pass/fail.
-// Runs on the shortest current iPhone (13 mini), an iPhone SE (3rd gen), and a regular iPhone 13.
+// Runs on the shortest current iPhone (13 mini), an iPhone SE (3rd gen), an iPhone 13, and the
+// user's own iPhone 14 Pro.
 // (Sizes are Safari's visible area; as a home-screen app the screen is taller still.)
 const { chromium, webkit, devices } = require('playwright');
+const { asInstalledApp } = require('./helpers');
 const ENGINE = process.env.ENGINE || 'chromium';
 let failures = 0;
 const check = (label, ok, detail) => {
@@ -10,9 +12,9 @@ const check = (label, ok, detail) => {
 };
 
 (async () => {
-  const browser = ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch();
+  const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
   const errors = [];
-  for (const [name, device] of [['13 mini', devices['iPhone 13 Mini']], ['SE 3', devices['iPhone SE (3rd gen)']], ['13', devices['iPhone 13']]]) {
+  for (const [name, device] of [['13 mini', devices['iPhone 13 Mini']], ['SE 3', devices['iPhone SE (3rd gen)']], ['13', devices['iPhone 13']], ['14 Pro', devices['iPhone 14 Pro']]]) {
     const context = await browser.newContext(device);
     await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"date":"2026-10-20","rates":{"MXN":18.5}}' }));
     const page = await context.newPage();

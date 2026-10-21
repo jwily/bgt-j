@@ -1,10 +1,10 @@
-// Screenshots every screen (with realistic data) on the shortest current iPhone (13 mini) and a
-// regular one (13), into tests/output/screens/. For reviewing layout and spacing by eye.
+// Screenshots every screen (with realistic data) on the shortest current iPhone (13 mini) and the
+// user's iPhone 14 Pro, into tests/output/screens/. For reviewing layout and spacing by eye.
 // Usage: npm run screens
 const { webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { serveApp, APP_URL } = require('../helpers');
+const { serveApp, APP_URL, asInstalledApp } = require('../helpers');
 
 const OUT = path.join(__dirname, '..', 'output', 'screens');
 const RATE = '{"date":"2026-10-20","rates":{"MXN":18.5}}';
@@ -12,8 +12,8 @@ const RATE = '{"date":"2026-10-20","rates":{"MXN":18.5}}';
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const server = await serveApp();
-  const browser = await webkit.launch();
-  for (const [phone, device] of [['13mini', devices['iPhone 13 Mini']], ['13', devices['iPhone 13']]]) {
+  const browser = asInstalledApp(await webkit.launch());
+  for (const [phone, device] of [['13mini', devices['iPhone 13 Mini']], ['14pro', devices['iPhone 14 Pro']]]) {
     const context = await browser.newContext(device);
     await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
     const page = await context.newPage();

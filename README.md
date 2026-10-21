@@ -1,6 +1,6 @@
-# Budget
+# Bgt-J (Budget Junction)
 
-A personal budget tracker that runs as a home-screen web app on iPhone, styled after the Final Fantasy VIII menu. Plain HTML, CSS and JS: no build step, no dependencies.
+A personal budget tracker that runs as a home-screen web app on iPhone, styled after the Final Fantasy VIII menu (the name nods to FF8's stat junctions). Plain HTML, CSS and JS: no build step, no dependencies.
 
 Instead of resetting every month, the budget runs in **periods**: each time you get paid, start a New Period with that paycheck's budget. The previous period closes and keeps its summary.
 
@@ -24,7 +24,7 @@ Open http://localhost:8000. To try it on your phone on the same Wi-Fi, open `htt
 2. Open the URL in Safari on your iPhone.
 3. Tap Share → **Add to Home Screen**.
 
-Your data is tied to the URL, so pick the site's name before you start using it.
+Your data is tied to the URL, so pick the site's name before you start using it. Opened in a regular Safari tab, the app's HELP window shows how to install it (tap it for details).
 
 ## Using it
 
@@ -52,8 +52,8 @@ Data is stored on the phone in `localStorage`, tied to the URL you installed fro
 Two safeguards:
 
 - **Persistent storage.** On launch the app asks the browser not to clear its data when the phone is low on space. The browser decides silently; the Backup screen shows whether it was granted.
-- **Safety snapshots.** The app keeps copies of all your data on the phone: one a day and one before anything drastic (restoring a backup, deleting a period, going back to a snapshot). The newest 7 are listed under **Menu → Backup → Snapshots** with **Go back**. They undo mistakes; they're lost with the phone, unlike exported backups.
-- **Backup reminders.** The menu shows when you last backed up. After 30 days (or if you've never backed up and have expenses), that line turns red and a dot appears on Menu. Starting a New Period also offers **Back up first**.
+- **Safety snapshots.** The app keeps copies of all your data on the phone (in IndexedDB, which has far more room than localStorage): one a day and one before anything drastic (restoring a backup, deleting a period, going back to a snapshot). The newest 7 are listed under **Menu → Backup → Snapshots** with **Go back**. They undo mistakes; they're lost with the phone, unlike exported backups.
+- **Backup reminders.** The menu shows when you last backed up. After the reminder period (30 days by default; change it on the Backup screen to 7, 14, 30 or 60), or if you've never backed up and have expenses, that line turns red and a dot appears on Menu. Starting a New Period also offers **Back up first**.
 
 ## Tests
 
@@ -69,9 +69,10 @@ npm test           # all passes on WebKit (Safari's engine) and Chromium
 - `main.js`: the core flow, from first launch through entering, editing, summaries, periods, categories and backups
 - `more.js`: edge cases (keypad limits, long-press grid, backdating, CSV, restore, deleting periods, offline rates, upgrading old data)
 - `layout.js`: centering, spacing and fit on an iPhone 13 mini, SE (3rd gen) and 13
+- `layout.js` also covers your iPhone 14 Pro.
 - `failures.js`: when things go wrong: storage full or corrupted, the rate server failing, newer or broken backups, opening offline, the app left open overnight, a period spanning New Year, and lots of data
 
-Tools: `npm run palette` checks the category colors are distinct. `npm run icon` redraws the app icon (the first four category colors). `npm run hand` re-traces the hand cursor from the reference capture in `~/projects/ff8-references/cursor.png`. `npm run screens` screenshots every screen on two iPhone sizes into `tests/output/screens/`.
+Tools: `npm run palette` checks the category colors are distinct. `npm run icon` redraws the app icon (the first four category colors as diamonds spiralling into the distance). `npm run hand` re-traces the hand cursor from the reference capture in `~/projects/ff8-references/cursor.png`. `npm run screens` screenshots every screen on two iPhone sizes into `tests/output/screens/`.
 
 ## App files
 

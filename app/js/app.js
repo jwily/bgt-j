@@ -1,11 +1,12 @@
 // Entry point: wires the top bar, menu, screens and data together.
 
-import { currentPeriod, spentIn, refreshRate, todayISO, recoveredFrom, write } from './store.js';
+import { currentPeriod, spentIn, refreshRate, todayISO, needsRecovery } from './store.js';
 import { formatUsd } from './money.js';
 import { setHelp, formatMoment } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack } from './pages.js';
-import { backupStatus, takeDailySnapshot, clearSnapshots } from './backup.js';
+import { backupStatus } from './backup.js';
+import { moveOldSnapshots, recoverFromSnapshot, takeDailySnapshot } from './snapshots.js';
 
 const $ = (id) => document.getElementById(id);
 const navButton = $('nav-btn');
@@ -39,6 +40,11 @@ $('menu').addEventListener('click', (event) => {
   else showPage(action);
 });
 
+// Opened in a Safari tab on an iPhone rather than from the home screen. (navigator.standalone only
+// exists on iOS, so this is never true anywhere else.)
+const inSafariTab = navigator.standalone === false;
+const explainInstall = () => alert('To install Bgt-J, tap Share, then Add to Home Screen, and open it from there from now on. Data entered in a Safari tab stays separate from the installed app.');
+
 // Day 1 is the day the period started.
 const periodDay = (period) => Math.round((new Date(`${todayISO()}T00:00`) - new Date(`${period.start}T00:00`)) / 86400000) + 1;
 
@@ -62,7 +68,9 @@ function renderChrome() {
   $('stat-left-label').textContent = over ? 'Over' : 'Left';
   $('stat-left').textContent = formatUsd(Math.abs(left));
   $('stat-left').classList.toggle('bad', over);
-  if (!pageOpen) {
+  if (!pageOpen && inSafariTab) {
+    setHelp('Install: Share → Add to Home Screen', { onTap: explainInstall });
+  } else if (!pageOpen) {
     setHelp(`${formatUsd(Math.abs(left))} ${over ? 'over' : 'left'} this period`, { tone: over ? 'bad' : '', onTap: openCurrentSummary });
   }
 }
@@ -74,15 +82,16 @@ function refresh() {
   renderChrome();
 }
 
-// The phone's storage for the app is full: snapshots share that space, so drop them and try once
-// more. If it still fails, say so plainly: the change is on screen but won't survive closing the app.
+// Saving failed (the phone's storage for the app is full): say so plainly, since the change is on
+// screen but won't survive closing the app.
 window.addEventListener('budget:save-failed', () => {
-  if (clearSnapshots() && write()) return;
   alert("Couldn't save: this phone's storage for the app is full. Export a backup now (Menu → Backup).");
 });
 
-if (recoveredFrom) {
-  alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
+await moveOldSnapshots(); // from older versions, which kept them in localStorage
+if (needsRecovery) {
+  const recoveredFrom = await recoverFromSnapshot();
+  if (recoveredFrom) alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
 }
 
 takeDailySnapshot(); // before anything changes today

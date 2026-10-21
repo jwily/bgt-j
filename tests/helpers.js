@@ -63,3 +63,26 @@ exports.readPalette = () => {
   if (palette.length === 0) throw new Error('No colors found in PALETTE');
   return palette;
 };
+
+// The app's safety snapshots (in IndexedDB), newest first: their reasons.
+exports.snapshotReasons = (page) => page.evaluate(() => new Promise((resolve) => {
+  const open = indexedDB.open('budget-tracker', 1);
+  open.onupgradeneeded = () => open.result.createObjectStore('snapshots', { keyPath: 'at' });
+  open.onsuccess = () => {
+    const request = open.result.transaction('snapshots').objectStore('snapshots').getAll();
+    request.onsuccess = () => resolve(request.result.sort((a, b) => b.at - a.at).map((s) => s.reason));
+  };
+}));
+
+// Makes every new context look like the installed home-screen app (navigator.standalone true), the
+// way the user runs it. Playwright's WebKit otherwise reports a Safari tab, where the app shows its
+// install hint. A test can still opt out by redefining navigator.standalone in its own init script.
+exports.asInstalledApp = (browser) => {
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (options) => {
+    const context = await newContext(options);
+    await context.addInitScript(() => Object.defineProperty(navigator, 'standalone', { value: true, configurable: true }));
+    return context;
+  };
+  return browser;
+};

@@ -5,7 +5,7 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary } = require('./helpers');
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, snapshotReasons, asInstalledApp } = require('./helpers');
 let failures = 0;
 const check = (label, actual, expected) => {
   const ok = actual === expected;
@@ -15,7 +15,7 @@ const check = (label, actual, expected) => {
 const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
 
 (async () => {
-  const browser = ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch();
+  const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
   const errors = [];
   const newPage = async (context, { rate = 'ok' } = {}) => {
     const page = await context.newPage();
@@ -83,7 +83,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.mouse.down();
   await page.waitForTimeout(650);
   await page.mouse.up();
-  await page.waitForTimeout(350);
+  await page.waitForSelector('#sheet-backdrop.open', { timeout: 5000 }).catch(() => {}); // wait for it, not a fixed time
+  await page.waitForTimeout(200); // let its unfold animation finish before measuring
   check('grid opened', await page.locator('#sheet').getAttribute('data-label'), 'Category');
   check('grid has no duplicate heading', await page.locator('#sheet h2').count(), 0);
   check('grid opens level with the strip', await page.evaluate(() =>
@@ -173,7 +174,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   // CSV export content
   await openMenuItem('Backup');
   const csvFile = await grabFile(page, ENGINE, () => page.locator('.wide-btn', { hasText: 'CSV' }).tap());
-  check('CSV file name', /^budget-\d{4}-\d{2}-\d{2}\.csv$/.test(csvFile.name), true);
+  check('CSV file name', /^bgt-j-\d{4}-\d{2}-\d{2}\.csv$/.test(csvFile.name), true);
   const csv = csvFile.text.split('\n');
   check('CSV header', csv[0], 'period_start,date,category,amount_usd,note,original_currency,original_amount,rate_per_usd');
   check('CSV rows', csv.length, 3);
@@ -321,7 +322,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await fakeShareSheet(snap);
   await snap.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
   const p6 = await newPage(snap);
-  const snaps = () => p6.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker-snapshots') ?? '[]').map((s) => s.reason));
+  const snaps = () => snapshotReasons(p6);
   const expensesNow = () => p6.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).expenses.length);
   await p6.goto(URL);
   await p6.waitForTimeout(300);
@@ -359,6 +360,57 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('going back restores the deleted expense', await expensesNow(), 1);
   check('going back snapshots the current data first', (await snaps())[0], 'before going back to a snapshot');
   await snap.close();
+
+  // The backup reminder: adjustable on the Backup screen, and the nudge follows it.
+  {
+    const ctx = await browser.newContext({ ...devices['iPhone 13'] });
+    await ctx.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+    const p7 = await newPage(ctx);
+    await p7.goto(URL);
+    for (const k of '100000') await p7.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+    await p7.locator('#page .primary').tap();
+    await p7.waitForTimeout(4300);
+    await p7.evaluate(() => { // backed up 10 days ago
+      const s = JSON.parse(localStorage.getItem('budget-tracker'));
+      s.lastBackupAt = Date.now() - 10 * 86400000;
+      localStorage.setItem('budget-tracker', JSON.stringify(s));
+    });
+    await p7.reload();
+    await p7.waitForTimeout(400);
+    check('reminder: 10 days ago is fine with the default 30', await p7.locator('#nav-btn.alert').count(), 0);
+    await p7.locator('#nav-btn').tap();
+    await p7.waitForTimeout(250);
+    await p7.locator('#menu button', { hasText: 'Backup' }).tap();
+    await p7.waitForTimeout(300);
+    check('reminder: 30 is selected by default', await p7.locator('.reminder .options .on').textContent(), '30');
+    await p7.locator('.reminder .options button', { hasText: /^7$/ }).tap();
+    await p7.waitForTimeout(300);
+    check('reminder: choosing 7 is saved', await p7.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).settings.backupReminderDays), 7);
+    check('reminder: and shown as selected', await p7.locator('.reminder .options .on').textContent(), '7');
+    await p7.locator('#nav-btn').tap();
+    await p7.waitForTimeout(300);
+    check('reminder: now 10 days ago gets the nudge', await p7.locator('#nav-btn.alert').count(), 1);
+    await ctx.close();
+  }
+
+  // In a Safari tab (not installed), the HELP window explains how to install.
+  {
+    const ctx = await browser.newContext({ ...devices['iPhone 13'] });
+    await ctx.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+    await ctx.addInitScript(() => Object.defineProperty(navigator, 'standalone', { value: false })); // a Safari tab, not installed
+    const p8 = await newPage(ctx);
+    await p8.goto(URL);
+    for (const k of '100000') await p8.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+    await p8.locator('#page .primary').tap();
+    await p8.waitForSelector('#help:not(.message)', { timeout: 6000 });
+    check('Safari tab: HELP shows how to install', await p8.locator('#help span').textContent(), 'Install: Share → Add to Home Screen');
+    let explained = '';
+    p8.once('dialog', (d) => { explained = d.message(); d.accept(); });
+    await p8.locator('#help').click({ position: { x: 20, y: 30 } });
+    await p8.waitForTimeout(300);
+    check('Safari tab: tapping it explains the separate data', explained.includes('Data entered in a Safari tab stays separate'), true);
+    await ctx.close();
+  }
 
   // Category names can't clash (ignoring capitalization); new ones get a free name.
   const clash = await browser.newContext({ ...devices['iPhone 13'] });
@@ -441,7 +493,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p3.goto(URL);
   await p3.waitForTimeout(500);
   const upgraded = await p3.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')));
-  check('v1 data: upgraded to version 2', upgraded.version, 2);
+  check('v1 data: upgraded to the current version (3)', upgraded.version, 3);
+  check('v1 data: gets the default reminder setting', upgraded.settings.backupReminderDays, 30);
   check('v1 data: old rate field gone', 'rate' in upgraded, false);
   check('v1 data: expense keeps its rate as perUsd', JSON.stringify(upgraded.expenses[0].original), '{"currency":"MXN","amount":250,"perUsd":18.5}');
   check('v1 data: the day\u2019s rate downloads into the new shape', upgraded.rates.perUsd.MXN, 20);
@@ -463,7 +516,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p3.waitForTimeout(400);
   check('v1 backup: restores', await p3.locator('#help span').first().textContent(), 'Backup restored');
   const restored = await p3.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')));
-  check('v1 backup: upgraded on restore', [restored.version, restored.expenses[0].note, restored.expenses[0].original.perUsd].join('|'), '2|restored from an old backup|18.5');
+  check('v1 backup: upgraded on restore', [restored.version, restored.expenses[0].note, restored.expenses[0].original.perUsd].join('|'), '3|restored from an old backup|18.5');
   await old.close();
 
   const realErrors = errors.filter((e) => !/Failed to load resource|frankfurter|network/i.test(e));

@@ -97,7 +97,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 
 /* ---------- the pointing hand ---------- */
 
-.currency-opts span.on::after,
+.options > .on::after,
 .chip.selected::after,
 .add-btn::after,
 .primary:not(:disabled)::after,
@@ -213,12 +213,13 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   container-type: inline-size; /* lets the amount size itself to this window's width */
   touch-action: none; /* we handle horizontal swipes here ourselves */
 }
-/* Only USD and MXN count for centering; the hand hangs outside the pair. */
-.currency-opts { display: flex; gap: 44px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; }
-.currency-opts span { position: relative; color: var(--off); transition: color 0.1s; }
-.currency-opts span.on { color: var(--text); }
-/* A slightly smaller hand here, so it sits neatly between USD and MXN. */
-.currency-opts span.on::after { left: -31px; width: 27px; height: 16px; margin-top: -8px; }
+/* FF8 Config-style choices (the currency picker, the backup reminder): the chosen one is bright
+   with the hand beside it, the others grey. Only the choices count for centering; the hand hangs
+   outside them. */
+.options { display: flex; gap: 44px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; }
+.options > * { position: relative; color: var(--off); transition: color 0.1s; }
+.options > .on { color: var(--text); }
+.options > .on::after { left: -31px; width: 27px; height: 16px; margin-top: -8px; }
 
 .amount {
   font-size: clamp(1.1rem, 12cqw, 3.1rem); /* MX$9,999,999 still fits on one line */
@@ -523,6 +524,9 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 
 .wide-btn { display: block; width: 100%; padding: 13px; text-align: center; font-weight: 700; cursor: pointer; }
 .backup-status { margin: 0 0 8px; font-weight: 800; }
+.reminder { display: grid; gap: 8px; margin: 4px 0 14px; }
+.reminder-row { display: flex; align-items: baseline; gap: 18px; padding-left: 36px; } /* room for the hand */
+.reminder-row .options { gap: 40px; }
 .snapshot-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
 .snapshot-row .grow { flex: 1; min-width: 0; }
 .snapshot-row small { display: block; color: #cfcfcf; font-size: 0.85rem; }

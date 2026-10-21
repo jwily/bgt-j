@@ -15,7 +15,7 @@ export function initInput() {
   // Currency: tap the options, or swipe anywhere in the Amount window to step through them. Like
   // FF8's Config options, the chosen one is bright with the hand beside it and the others are grey.
   parts.currencies = CURRENCY_CODES.map((code) => el('span', { textContent: code }));
-  const options = el('button', { className: 'currency-opts', 'aria-label': 'Switch currency' }, ...parts.currencies);
+  const options = el('button', { className: 'options currency-opts', 'aria-label': 'Switch currency' }, ...parts.currencies);
   options.addEventListener('click', () => switchCurrency('left'));
   parts.amount = el('div', { className: 'amount' });
   parts.sub = el('div', { className: 'amount-sub' });

@@ -3,12 +3,12 @@
 const { chromium, webkit, devices } = require('playwright');
 const ENGINE = process.env.ENGINE || 'chromium';
 const fs = require('fs');
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary } = require('./helpers');
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, asInstalledApp } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
 const check = (label, actual, expected) => console.log(`${actual === expected ? 'PASS' : 'FAIL'}  ${label}: ${JSON.stringify(actual)}${actual === expected ? '' : ` (expected ${JSON.stringify(expected)})`}`);
 
 (async () => {
-  const browser = ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch();
+  const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
   const context = await browser.newContext({ ...devices['iPhone 13'], colorScheme: 'light' });
   await fakeShareSheet(context);
   const page = await context.newPage();
@@ -127,7 +127,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   await page.waitForTimeout(300);
   check('new period title', await titleText(page), 'New Period');
   const backupFile = await grabFile(page, ENGINE, () => page.locator('#page .wide-btn', { hasText: 'Back up first' }).tap());
-  check('backup file name', /^budget-backup-\d{4}-\d{2}-\d{2}\.json$/.test(backupFile.name), true);
+  check('backup file name', /^bgt-j-backup-\d{4}-\d{2}-\d{2}\.json$/.test(backupFile.name), true);
   fs.writeFileSync(`${OUT}/backup.json`, backupFile.text);
   await page.waitForTimeout(200);
   check('back up first button', await page.locator('#page .wide-btn').textContent(), 'Backed up ✓');

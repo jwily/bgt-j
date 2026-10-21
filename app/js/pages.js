@@ -5,12 +5,13 @@
 
 import {
   state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories,
-  addCategory, updateCategory, removeCategory, categoryNamed, startPeriod, setBudget, deletePeriod, readSnapshots,
+  addCategory, updateCategory, removeCategory, categoryNamed, startPeriod, setBudget, deletePeriod, setBackupReminder,
 } from './store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
 import { el, svg, toast, setHelp, formatDate, formatMoment, colorDot, gauge, keypad } from './ui.js';
 import { openExpenseSheet } from './sheets.js';
-import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, takeSnapshot, restoreSnapshot } from './backup.js';
+import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, REMINDER_CHOICES } from './backup.js';
+import { readSnapshots, takeSnapshot, restoreSnapshot } from './snapshots.js';
 
 const page = document.getElementById('page');
 const body = document.getElementById('page-body');
@@ -335,31 +336,46 @@ function renderBackup() {
       : 'Storage: standard. iOS may clear it if the phone runs very low on space.';
   }).catch(() => {});
 
-  const snapshotRows = readSnapshots().map((snapshot) => {
+  // Fills in once IndexedDB answers.
+  const snapshotList = el('div');
+  readSnapshots().then((list) => snapshotList.replaceChildren(...list.map((snapshot) => {
     const when = formatMoment(snapshot.at);
     const goBackButton = el('button', { className: 'link', textContent: 'Go back' });
-    goBackButton.addEventListener('click', () => {
+    goBackButton.addEventListener('click', async () => {
       if (!confirm(`Go back to how everything was ${when} (${snapshot.reason})? Your current data is snapshotted first, so you can undo this.`)) return;
-      if (restoreSnapshot(snapshot.at)) toast(`Back to ${when}`);
+      if (await restoreSnapshot(snapshot.at)) toast(`Back to ${when}`);
     });
     return el('div', { className: 'snapshot-row' },
       el('span', { className: 'grow' }, el('span', { textContent: when }), el('small', { textContent: snapshot.reason })),
       goBackButton);
-  });
+  })));
 
   fill('Backup', 'Keep a copy of your data somewhere safe.',
     panel('Status',
       el('p', { className: `backup-status${status.stale ? ' bad' : ''}`, textContent: status.label }),
+      reminderChoice(),
       el('p', { className: 'hint', textContent: 'Your data lives only on this phone, inside this home-screen app (separate from Safari). Deleting the app from your home screen erases it, so export a backup now and then and keep it in Files or iCloud Drive.' })),
     backupButton,
     csvButton,
     restore,
     el('p', { className: 'empty-note', textContent: 'Restoring replaces everything in the app with the backup.' }),
     panel('Snapshots',
-      ...snapshotRows,
+      snapshotList,
       el('p', { className: 'hint', textContent: 'Kept on this phone automatically: one a day, and one before anything drastic. For undoing mistakes; they\u2019re lost with the phone, unlike exported backups.' })),
     storage,
   );
+}
+
+// "Remind me to back up after: 7 · 14 · 30 · 60 days", in the FF8 Config style.
+function reminderChoice() {
+  const choices = REMINDER_CHOICES.map((days) => {
+    const choice = el('button', { className: days === state.settings.backupReminderDays ? 'on' : '', textContent: String(days), 'aria-label': `${days} days` });
+    choice.addEventListener('click', () => setBackupReminder(days));
+    return choice;
+  });
+  return el('div', { className: 'reminder' },
+    el('span', { className: 'label', textContent: 'Remind me to back up after' }),
+    el('div', { className: 'reminder-row' }, el('div', { className: 'options' }, ...choices), el('span', { textContent: 'days' })));
 }
 
 // ---------- budget: first budget, New Period, edit budget ----------

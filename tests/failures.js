@@ -4,7 +4,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { fakeShareSheet, grabFile, APP_URL } = require('./helpers');
+const { fakeShareSheet, grabFile, APP_URL, asInstalledApp } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = path.join(__dirname, 'output');
@@ -30,7 +30,7 @@ const sample = (overrides = {}) => ({
 });
 
 (async () => {
-  const browser = ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch();
+  const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
   const errors = [];
 
   // Opens the app in a fresh context. Options: saved (data to start with), snapshots, rate
@@ -70,27 +70,7 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(300);
   };
 
-  // --- Storage full, but snapshots can be dropped to make room: the save goes through quietly.
-  {
-    const { context, page, dialogs, type, stored } = await open({ saved: JSON.stringify(sample()) });
-    await page.evaluate(() => {
-      const real = Storage.prototype.setItem;
-      // "Full" while snapshots take up space.
-      Storage.prototype.setItem = function (k, v) {
-        if (k === 'budget-tracker' && localStorage.getItem('budget-tracker-snapshots')) throw new DOMException('full', 'QuotaExceededError');
-        return real.call(this, k, v);
-      };
-    });
-    await type('500');
-    await page.locator('.add-btn').tap();
-    await page.waitForTimeout(300);
-    check('storage full: snapshots dropped to make room', await stored('budget-tracker-snapshots'), null);
-    check('storage full: the expense still saved', JSON.parse(await stored()).expenses.length, 2);
-    check('storage full: no alarm needed', dialogs.length, 0);
-    await context.close();
-  }
-
-  // --- Storage full and nothing to drop: an unmissable warning instead of failing silently.
+  // --- Storage full: an unmissable warning instead of failing silently.
   {
     const { context, page, dialogs, type } = await open({ saved: JSON.stringify(sample()) });
     await page.evaluate(() => {
@@ -108,7 +88,8 @@ const sample = (overrides = {}) => ({
     await context.close();
   }
 
-  // --- Corrupted data with a snapshot: recovered from it, with a message; the bad copy is kept.
+  // --- Corrupted data with a snapshot (saved the old way, in localStorage, so this also checks
+  // that old snapshots move to IndexedDB): recovered from it, with a message; the bad copy is kept.
   {
     const good = sample();
     const { context, page, dialogs, stored } = await open({
@@ -158,7 +139,7 @@ const sample = (overrides = {}) => ({
   {
     const { context, page } = await open({ saved: JSON.stringify(sample()) });
     fs.mkdirSync(OUT, { recursive: true });
-    fs.writeFileSync(path.join(OUT, 'newer-backup.json'), JSON.stringify(sample({ version: 3 })));
+    fs.writeFileSync(path.join(OUT, 'newer-backup.json'), JSON.stringify(sample({ version: 99 })));
     await menu(page, 'Backup');
     await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'newer-backup.json'));
     await page.waitForTimeout(300);

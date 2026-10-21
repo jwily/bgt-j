@@ -1,6 +1,6 @@
 {
-  "name": "Budget",
-  "short_name": "Budget",
+  "name": "Bgt-J: Budget Junction",
+  "short_name": "Bgt-J",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -12,13 +12,13 @@
 //               for, checkedAt when we last downloaded)
 //   input:      { currency, categoryId }                   (last choices on the main screen)
 //   lastBackupAt: timestamp of the last exported backup, or null
+//   settings:   { backupReminderDays }                   (the backup nudge's timing, 30 by default)
 
 import { CURRENCIES, CURRENCY_CODES, FOREIGN_CODES, HOME } from './money.js';
 
 const STORAGE_KEY = 'budget-tracker';
-export const SNAPSHOT_KEY = 'budget-tracker-snapshots'; // see backup.js
 const UNREADABLE_KEY = 'budget-tracker-unreadable'; // saved data that couldn't be read, kept just in case
-export const VERSION = 2;
+export const VERSION = 3;
 const RATES_URL = `https://api.frankfurter.dev/v1/latest?base=${HOME}&symbols=${FOREIGN_CODES.join(',')}`;
 
 // 16 colors, each loosely after one of FF8's Guardian Force portraits, in the order the GFs appear
@@ -47,8 +47,8 @@ const DEFAULT_CATEGORIES = ['Groceries', 'Dining', 'Transport', 'Housing', 'Bill
 
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 
-// Set when the saved data couldn't be read and the newest snapshot was loaded instead (its time).
-export let recoveredFrom = null;
+// True when the saved data couldn't be read (app.js then recovers from a snapshot; see snapshots.js).
+export let needsRecovery = false;
 export let state = load();
 
 // ---------- basics ----------
@@ -74,6 +74,7 @@ function freshState() {
     rates: { perUsd: {}, date: null, checkedAt: 0 },
     input: { currency: HOME, categoryId: categories[0].id },
     lastBackupAt: null,
+    settings: { backupReminderDays: 30 },
   };
 }
 
@@ -93,6 +94,11 @@ export function migrate(data) {
     }
     data.version = 2;
   }
+  // Version 2 had no settings.
+  if (data?.version === 2) {
+    data.settings = { backupReminderDays: 30 };
+    data.version = 3;
+  }
   return data;
 }
 
@@ -102,11 +108,12 @@ export function isValid(data) {
     && Array.isArray(data.periods)
     && Array.isArray(data.expenses)
     && data.rates !== null && typeof data.rates?.perUsd === 'object'
+    && data.settings?.backupReminderDays > 0
     && data.input !== null && typeof data.input === 'object'; // typeof null is also 'object'
 }
 
 // Saved data (as JSON text), upgraded and checked, or null if it can't be used.
-function parse(text) {
+export function parse(text) {
   try {
     const data = migrate(JSON.parse(text));
     return isValid(data) ? data : null;
@@ -115,38 +122,22 @@ function parse(text) {
   }
 }
 
-// Newest first: [{ at, reason, data }] (data is the saved JSON text).
-export function readSnapshots() {
-  try {
-    return JSON.parse(localStorage.getItem(SNAPSHOT_KEY)) ?? [];
-  } catch {
-    return [];
-  }
-}
-
-// If the saved data can't be read, keep it aside and fall back to the newest readable snapshot
-// rather than silently starting over.
+// If the saved data can't be read, keep it aside (never overwrite it) and flag it, so the app can
+// recover from a snapshot rather than silently starting over.
 function load() {
   const text = localStorage.getItem(STORAGE_KEY);
   let loaded = text === null ? null : parse(text);
   if (text !== null && !loaded) {
+    needsRecovery = true;
     try {
       localStorage.setItem(UNREADABLE_KEY, text);
     } catch {
       // No room to keep it; recovering matters more.
     }
-    for (const snapshot of readSnapshots()) {
-      loaded = parse(snapshot.data);
-      if (loaded) {
-        recoveredFrom = snapshot.at;
-        break;
-      }
-    }
   }
   loaded ??= freshState();
   keepInputCategoryActive(loaded);
   assignColors(loaded);
-  if (recoveredFrom) write(loaded);
   return loaded;
 }
 
@@ -177,8 +168,8 @@ export function write(data = state) {
   }
 }
 
-// A failed save fires "budget:save-failed" (app.js frees space and retries, or warns); the screen
-// still redraws so it shows what you did.
+// A failed save fires "budget:save-failed" (app.js warns); the screen still redraws so it shows
+// what you did.
 export function save() {
   keepInputCategoryActive(state);
   assignColors(state);
@@ -303,6 +294,11 @@ export function removeCategory(id) {
 
 export function setInputPrefs(prefs) {
   Object.assign(state.input, prefs);
+  save();
+}
+
+export function setBackupReminder(days) {
+  state.settings.backupReminderDays = days;
   save();
 }
 
