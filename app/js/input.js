@@ -63,10 +63,11 @@ export function initInput() {
 
   document.getElementById('view-input').append(
     zone,
-    el('div', { className: 'window strip-window', 'data-label': 'Category' }, parts.strip),
     el('div', { className: 'details' },
       el('label', { className: 'window note-window', 'data-label': 'Note' }, parts.note),
       dateButton),
+    // Category sits below Note and Date: it changes more often, so it's nearer the thumb.
+    el('div', { className: 'window strip-window', 'data-label': 'Category' }, parts.strip),
     pad,
   );
   renderInput();

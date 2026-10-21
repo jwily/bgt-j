@@ -88,7 +88,8 @@ Read README.md for what the app does; this file covers how to work on it.
 - Periods are paycheck-to-paycheck, started manually with New Period. Deleting the current period
   reopens the previous one.
 - Main screen: AMOUNT window on top (swipe for currency; swipes follow the finger and stop at the
-  ends, taps cycle), horizontal CATEGORY strip below it, 3-column keypad. A vertical category list
+  ends, taps cycle), then NOTE + DATE, then the horizontal CATEGORY strip (nearer the thumb, since
+  it changes more often), then a 3-column keypad. A vertical category list
   beside the amount was tried and reverted (spacing problems).
 - Thumb reach (right-handed): the top is for reading, the bottom for tapping. HELP and the title
   window stay at the top (user's choice, like FF8); a bottom bar holds ADD (main screen, long, with
