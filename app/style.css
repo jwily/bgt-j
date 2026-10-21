@@ -10,6 +10,7 @@
 }
 
 :root {
+  --unfold: 0.14s ease-out; /* every window's opening animation */
   color-scheme: dark;
   --font: 'Nunito', 'Avenir Next', system-ui, sans-serif;
   --text: #ededed;
@@ -119,7 +120,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 }
 @keyframes hand-bob { to { transform: translateX(-4px); } }
 
-/* Windows open with a quick vertical unfold. */
+/* Windows open with a quick vertical unfold from their middle; every window uses this same one
+   (--unfold, set on :root). */
 @keyframes unfold { from { transform: scaleY(0.05); opacity: 0.5; } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -162,7 +164,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .help.tappable { cursor: pointer; }
 .help.bad span { color: var(--bad); }
 .help .undo { flex: none; color: var(--yellow); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
-.help.message { animation: unfold 0.12s ease-out; }
+.help.message { animation: unfold var(--unfold); }
 
 .nav-btn {
   flex: none;
@@ -367,7 +369,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   display: grid;
   gap: 6px;
 }
-.backdrop.open .menu > .window { animation: unfold 0.14s ease-out; }
+.backdrop.open .menu > .window { animation: unfold var(--unfold); }
 .menu-list { display: flex; flex-direction: column; padding: 8px 6px 8px 0; }
 .menu-list button { position: relative; padding: 8px 10px 8px 42px; text-align: left; font-size: 1.15rem; }
 .menu-list button::after { left: 4px; }
@@ -388,8 +390,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   overflow-y: auto;
   padding: 18px 14px 14px;
 }
-.backdrop.open .sheet { animation: unfold 0.16s ease-out; }
-.sheet.anchored { transform-origin: top; } /* unfolds downward from where it was opened */
+.backdrop.open .sheet { animation: unfold var(--unfold); }
 .sheet h2 { margin: 0 0 4px; font-size: 1.25rem; }
 .hint { margin: 0 0 12px; color: #d2d2d2; font-size: 0.92rem; font-weight: 500; line-height: 1.4; }
 .budget-amount { margin: 2px 0; text-align: center; font-size: 2.6rem; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
@@ -441,7 +442,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 }
 /* minmax(0, 1fr): never wider than the screen, so long one-line text (notes) ends in "…" instead. */
 .page-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; max-width: 560px; margin: 0 auto; padding: 0 10px; }
-.page-body.unfold > * { animation: unfold 0.15s ease-out; }
+.page-body.unfold > * { animation: unfold var(--unfold); }
 .panel { padding: 18px 14px 12px; }
 .empty-note { margin: 4px 0; color: var(--off); font-size: 0.85rem; text-align: center; }
 .link { margin-left: 10px; color: var(--yellow); font-size: 0.85rem; font-weight: 800; }
