@@ -316,6 +316,41 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('offline estimate line', (await p2.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $10.00 | ~18.5 MXN per USD (estimate until online)');
   await offline.close();
 
+  // Rates: re-check every 3 hours until today's rate arrives, then stop for the day.
+  const now = new Date();
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10); // local date, like the app
+  let rateDate = '2020-01-01'; // the source hasn't published today's rate yet
+  let downloads = 0;
+  // No service worker here: in WebKit, Playwright can't intercept requests that go through one,
+  // so after the first load the app's rate checks would bypass the fake rate server below.
+  const timing = await browser.newContext({ ...devices['iPhone 13'], serviceWorkers: 'block' });
+  await timing.route('https://api.frankfurter.dev/**', (r) => {
+    downloads++;
+    r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ date: rateDate, rates: { MXN: 19 } }) });
+  });
+  const p4 = await newPage(timing);
+  await p4.goto(URL);
+  await p4.waitForTimeout(400);
+  check('rates: downloaded on first launch', downloads, 1);
+  await p4.reload();
+  await p4.waitForTimeout(400);
+  check('rates: not today\u2019s yet, but checked under 3 hours ago, so no download', downloads, 1);
+  const hoursAgo = (h) => p4.evaluate((ms) => {
+    const s = JSON.parse(localStorage.getItem('budget-tracker'));
+    s.rates.checkedAt = Date.now() - ms;
+    localStorage.setItem('budget-tracker', JSON.stringify(s));
+  }, h * 3600 * 1000);
+  await hoursAgo(4);
+  rateDate = today; // now the source has today's rate
+  await p4.reload();
+  await p4.waitForTimeout(400);
+  check('rates: checked again after 3 hours', downloads, 2);
+  await hoursAgo(4);
+  await p4.reload();
+  await p4.waitForTimeout(400);
+  check('rates: has today\u2019s rate, so no more checks today', downloads, 2);
+  await timing.close();
+
   // Data saved by version 1 (before the currency table) is upgraded on load, and so are old backups.
   const v1 = (note) => ({
     version: 1,

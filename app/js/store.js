@@ -8,7 +8,8 @@
 //   expenses:   [{ id, periodId, categoryId, usdCents, date, note, original, createdAt }]
 //               original is { currency, amount, perUsd } when entered in another currency
 //               (amount in that currency's typed units, perUsd = its rate that day), else null
-//   rates:      { perUsd: { MXN: 18.52, ... }, date, fetchedOn }   (latest downloaded rates)
+//   rates:      { perUsd: { MXN: 18.52, ... }, date, checkedAt }   (latest rates; date is the day they're
+//               for, checkedAt when we last downloaded)
 //   input:      { currency, categoryId }                   (last choices on the main screen)
 //   lastBackupAt: timestamp of the last exported backup, or null
 
@@ -66,7 +67,7 @@ function freshState() {
     categories,
     periods: [],
     expenses: [],
-    rates: { perUsd: {}, date: null, fetchedOn: null },
+    rates: { perUsd: {}, date: null, checkedAt: 0 },
     input: { currency: HOME, categoryId: categories[0].id },
     lastBackupAt: null,
   };
@@ -78,7 +79,7 @@ function freshState() {
 export function migrate(data) {
   if (data?.version === 1) {
     const old = data.rate ?? {};
-    data.rates = { perUsd: old.mxnPerUsd > 0 ? { MXN: old.mxnPerUsd } : {}, date: old.date ?? null, fetchedOn: old.fetchedOn ?? null };
+    data.rates = { perUsd: old.mxnPerUsd > 0 ? { MXN: old.mxnPerUsd } : {}, date: old.date ?? null, checkedAt: 0 };
     delete data.rate;
     for (const expense of data.expenses ?? []) {
       if (expense.original?.mxnPerUsd) {
@@ -265,17 +266,21 @@ export function markBackedUp() {
 export const rateFor = (code) => (code === HOME ? 1 : state.rates.perUsd[code] ?? CURRENCIES[code].fallbackRate);
 export const rateIsEstimate = (code) => code !== HOME && !(state.rates.perUsd[code] > 0);
 
-// Downloads today's rates for every other currency, unless we already did today.
-// Failing (e.g. offline) keeps the last rates.
+// The source publishes new rates once per business day (around 9am in Mexico City), so: download
+// whenever the app opens without today's rates, but at most every 3 hours (weekends and holidays
+// never get a "today" rate). Failing (e.g. offline) keeps the last rates and tries next time.
+const RECHECK_MS = 3 * 60 * 60 * 1000;
+
 export async function refreshRate() {
-  if (!FOREIGN_CODES.length || state.rates.fetchedOn === todayISO()) return;
+  if (!FOREIGN_CODES.length || state.rates.date === todayISO()) return;
+  if (Date.now() - (state.rates.checkedAt ?? 0) < RECHECK_MS) return;
   try {
     const response = await fetch(RATES_URL, { cache: 'no-store' });
     if (!response.ok) return;
     const data = await response.json();
     const fetched = Object.fromEntries(FOREIGN_CODES.filter((code) => data.rates?.[code] > 0).map((code) => [code, data.rates[code]]));
     if (!Object.keys(fetched).length) return;
-    state.rates = { perUsd: { ...state.rates.perUsd, ...fetched }, date: data.date, fetchedOn: todayISO() };
+    state.rates = { perUsd: { ...state.rates.perUsd, ...fetched }, date: data.date, checkedAt: Date.now() };
     save();
   } catch {
     // Network error: try again next time the app opens.
