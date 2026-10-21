@@ -3,7 +3,7 @@
 // fills the page with labelled windows.
 
 import {
-  state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories, PALETTE,
+  state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories,
   addCategory, updateCategory, removeCategory, todayISO,
 } from './store.js';
 import { formatUsd, formatMxn, formatDiff } from './money.js';
@@ -19,7 +19,6 @@ const PAGES = { summary: renderSummary, periods: renderPeriods, categories: rend
 let stack = [];               // [{ name, params }], so Back returns to the previous screen
 let title = '';               // the showing screen's name, for the title window
 const expanded = new Set();   // category ids opened on the summary screen
-let paletteFor = null;        // category id whose color choices are showing
 let onNavigate = () => {};    // redraws the app after showing or leaving a screen
 
 // A window with an FF8-style label tab on its top edge.
@@ -44,7 +43,6 @@ export const pageTitle = () => title;
 export function showPage(name, params = {}, { push = false } = {}) {
   stack = push ? [...stack, { name, params }] : [{ name, params }];
   expanded.clear();
-  paletteFor = null;
   page.hidden = false;
   page.scrollTop = 0;
   unfold();
@@ -208,13 +206,6 @@ function renderCategories() {
   const list = panel('Categories');
 
   for (const category of active) {
-    const swatch = el('button', { className: 'swatch', 'aria-label': `Color for ${category.name}` });
-    swatch.style.setProperty('--c', category.color);
-    swatch.addEventListener('click', () => {
-      paletteFor = paletteFor === category.id ? null : category.id;
-      renderPage();
-    });
-
     const name = el('input', { type: 'text', value: category.name, enterKeyHint: 'done', 'aria-label': 'Category name' });
     name.dataset.id = category.id;
     name.addEventListener('keydown', (event) => { if (event.key === 'Enter') name.blur(); });
@@ -234,8 +225,7 @@ function renderCategories() {
       toast(`${category.name} ${getCategory(category.id) ? 'archived' : 'deleted'}`, undo);
     });
 
-    list.append(el('div', { className: 'cat-row' }, swatch, name, remove));
-    if (paletteFor === category.id) list.append(palette(category));
+    list.append(el('div', { className: 'cat-row' }, colorDot(category.color), name, remove));
   }
 
   const addButton = el('button', { className: 'wide-btn', textContent: 'Add category' });
@@ -253,20 +243,8 @@ function renderCategories() {
       return el('div', { className: 'cat-row' }, colorDot(category.color), el('span', { className: 'grow', textContent: category.name }), restore);
     }));
 
-  fill('Categories', 'Tap a color to change it.', list, addButton, archivedPanel,
-    el('p', { className: 'empty-note', textContent: 'Removing a category that has expenses archives it, so past summaries stay intact.' }));
-}
-
-function palette(category) {
-  return el('div', { className: 'palette' }, ...PALETTE.map((color) => {
-    const choice = el('button', { className: color === category.color ? 'selected' : '', 'aria-label': `Use color ${color}` });
-    choice.style.setProperty('--c', color);
-    choice.addEventListener('click', () => {
-      paletteFor = null;
-      updateCategory(category.id, { color });
-    });
-    return choice;
-  }));
+  fill('Categories', 'Tap a name to rename it.', list, addButton, archivedPanel,
+    el('p', { className: 'empty-note', textContent: 'Colors follow alphabetical order. Removing a category that has expenses archives it, so past summaries stay intact.' }));
 }
 
 // ---------- backup ----------

@@ -2,7 +2,8 @@
 // every save fires a "budget:change" event so the screens can redraw.
 //
 // Shape:
-//   categories: [{ id, name, color, archived }]          (always shown alphabetically)
+//   categories: [{ id, name, color, archived }]          (always shown alphabetically; color is
+//                                                         assigned automatically, see assignColors)
 //   periods:    [{ id, budgetCents, start, end }]          (end is null for the current period)
 //   expenses:   [{ id, periodId, categoryId, usdCents, date, note, original, createdAt }]
 //               original is { currency: 'MXN', amount, mxnPerUsd } for peso entries, else null
@@ -14,25 +15,29 @@ const STORAGE_KEY = 'budget-tracker';
 const RATE_URL = 'https://api.frankfurter.dev/v1/latest?base=USD&symbols=MXN';
 const FALLBACK_RATE = 18.5; // used only until the first successful download
 
+// 16 colors, each loosely after one of FF8's Guardian Force portraits, in the order the GFs appear
+// in the game's GF menu. Categories take them in turn. (Every pair is at least 11 apart in OKLab
+// distance x100, where under ~10 starts to look alike.)
 export const PALETTE = [
-  '#e5484d', // red
-  '#f76b15', // orange
-  '#f5a623', // amber
-  '#a0b833', // lime
-  '#30a46c', // green
-  '#12a594', // teal
-  '#05a2c2', // cyan
-  '#0090ff', // blue
-  '#3e63dd', // indigo
-  '#8e4ec6', // purple
-  '#d6409f', // pink
-  '#8d7a68', // brown
+  '#94cc3a', // Quezacotl: yellow-green
+  '#8fd0f5', // Shiva: ice blue
+  '#e2682b', // Ifrit: burnt orange
+  '#f2bd33', // Siren: gold
+  '#6250d0', // Brothers: indigo
+  '#b3173c', // Diablos: crimson
+  '#45d6a8', // Carbuncle: mint
+  '#1f8e9e', // Leviathan: deep teal
+  '#a64ee0', // Pandemona: violet
+  '#efe8d4', // Cerberus: pale bone
+  '#e0a2d8', // Alexander: lavender-pink
+  '#7d4a28', // Doomtrain: dark bronze
+  '#253f84', // Bahamut: dark steel blue
+  '#3aa64a', // Cactuar: cactus green
+  '#6f7e1c', // Tonberry: olive
+  '#28b4ff', // Eden: electric blue
 ];
 
-const DEFAULT_CATEGORIES = [
-  ['Groceries', 4], ['Dining', 1], ['Transport', 7], ['Housing', 8], ['Bills', 6],
-  ['Shopping', 10], ['Health', 0], ['Fun', 9], ['Other', 11],
-];
+const DEFAULT_CATEGORIES = ['Groceries', 'Dining', 'Transport', 'Housing', 'Bills', 'Shopping', 'Health', 'Fun', 'Other'];
 
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 
@@ -52,7 +57,7 @@ export function todayISO() {
 }
 
 function freshState() {
-  const categories = DEFAULT_CATEGORIES.map(([name, color]) => ({ id: newId(), name, color: PALETTE[color], archived: false }));
+  const categories = DEFAULT_CATEGORIES.map((name) => ({ id: newId(), name, color: null, archived: false }));
   return {
     version: 1,
     categories,
@@ -82,6 +87,7 @@ function load() {
     // Corrupt data: start fresh.
   }
   keepInputCategoryActive(loaded);
+  assignColors(loaded);
   return loaded;
 }
 
@@ -92,8 +98,18 @@ function keepInputCategoryActive(data) {
   if (!active.some((c) => c.id === data.input.categoryId)) data.input.categoryId = [...active].sort(byName)[0]?.id;
 }
 
+// Colors follow alphabetical order: the first active category gets color 1, the next color 2, and
+// so on. Archived categories come after the active ones, so past summaries still tell them apart.
+// Past 16, colors repeat. Renaming, adding or removing a category can shift colors.
+function assignColors(data) {
+  const sorted = [...data.categories].sort(byName);
+  const ordered = [...sorted.filter((c) => !c.archived), ...sorted.filter((c) => c.archived)];
+  ordered.forEach((category, i) => { category.color = PALETTE[i % PALETTE.length]; });
+}
+
 export function save() {
   keepInputCategoryActive(state);
+  assignColors(state);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   window.dispatchEvent(new Event('budget:change'));
 }
@@ -159,8 +175,7 @@ export function deleteExpense(id) {
 // ---------- categories ----------
 
 export function addCategory() {
-  const used = new Set(activeCategories().map((c) => c.color));
-  const category = { id: newId(), name: 'New category', color: PALETTE.find((c) => !used.has(c)) ?? PALETTE[0], archived: false };
+  const category = { id: newId(), name: 'New category', color: null, archived: false }; // save() assigns the color
   state.categories.push(category);
   save();
   return category;
