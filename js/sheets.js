@@ -78,7 +78,7 @@ export function openBudgetSheet(mode) {
     pad,
     backupButton,
     actions,
-  ), { dismissable: mode !== 'first' });
+  ), { dismissable: mode !== 'first', label: 'Budget' });
 }
 
 export function openExpenseSheet(expense) {
@@ -129,7 +129,7 @@ export function openExpenseSheet(expense) {
     field('Date', date),
     field('Note', note),
     el('div', { className: 'actions' }, deleteButton, saveButton),
-  ));
+  ), { label: 'Expense' });
 }
 
 export function openCategoryGrid(selectedId, onPick) {
@@ -141,5 +141,5 @@ export function openCategoryGrid(selectedId, onPick) {
     });
     return chip;
   }));
-  openSheet(el('div', {}, el('h2', { textContent: 'Category' }), grid));
+  openSheet(el('div', {}, el('h2', { textContent: 'Category' }), grid), { label: 'Category' });
 }

@@ -5,6 +5,7 @@ const CACHE = 'budget-tracker';
 const FILES = [
   './', 'index.html', 'style.css', 'manifest.json', 'icons/icon-180.png', 'icons/icon-512.png',
   'js/app.js', 'js/store.js', 'js/money.js', 'js/ui.js', 'js/input.js', 'js/sheets.js', 'js/pages.js', 'js/backup.js',
+  'fonts/nunito-latin.woff2',
 ];
 
 self.addEventListener('install', (event) => {

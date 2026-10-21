@@ -24,25 +24,27 @@ export function formatDate(iso, options = { month: 'short', day: 'numeric' }) {
   return new Date(`${iso}T00:00`).toLocaleDateString('en-US', options);
 }
 
-// Black or white text, whichever reads better on the given color.
-export function textOn(hex) {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.6 ? '#111111' : '#ffffff';
-}
-
-// A pill in the category's color. Used by the main screen's strip and the long-press grid.
+// A category name with its color gem. Used by the main screen's strip and the long-press grid.
 export function categoryChip(category, { selected = false } = {}) {
   const chip = el('button', { type: 'button', className: `chip${selected ? ' selected' : ''}`, textContent: category.name });
   chip.dataset.id = category.id;
   chip.style.setProperty('--c', category.color);
-  chip.style.setProperty('--chip-text', textOn(category.color));
   return chip;
 }
 
+// A small diamond in a category's color.
 export function colorDot(color) {
   const dot = el('span', { className: 'dot' });
-  dot.style.background = color;
+  dot.style.setProperty('--c', color);
   return dot;
+}
+
+// A rounded FF8-style gauge filled to `fraction` (0–1) in `color`.
+export function gauge(fraction, color) {
+  const fill = el('span');
+  fill.style.width = `${Math.max(0, Math.min(1, fraction)) * 100}%`;
+  fill.style.setProperty('--c', color);
+  return el('span', { className: 'gauge' }, fill);
 }
 
 // Briefly shake an element to say "can't do that".
@@ -126,30 +128,58 @@ export function keypad(getDigits, onChange, getMaxDigits) {
   return pad;
 }
 
-// ---------- overlays ----------
+// ---------- help window ----------
+// The HELP window at the top shows the current screen's help line. toast() borrows it for a few
+// seconds to show a message, then the help line comes back.
 
-let toastTimer;
+let helpLine = { text: '', tone: '', onTap: null };
+let toastTimer = null;
+
+function showHelpLine() {
+  const node = $('help');
+  node.className = `window help${helpLine.tone ? ` ${helpLine.tone}` : ''}${helpLine.onTap ? ' tappable' : ''}`;
+  node.onclick = helpLine.onTap;
+  node.replaceChildren(el('span', { textContent: helpLine.text }));
+}
+
+// tone: '' or 'bad'. onTap: optional action when the help window is tapped.
+export function setHelp(text, { tone = '', onTap = null } = {}) {
+  helpLine = { text, tone, onTap };
+  if (!toastTimer) showHelpLine();
+}
 
 // Pass an undo function (as returned by the store's changes) to show an Undo button.
 export function toast(message, undo) {
-  const node = $('toast');
-  const hide = () => node.classList.remove('show');
+  const node = $('help');
+  const end = () => {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    showHelpLine();
+  };
   const children = [el('span', { textContent: message })];
   if (undo) {
-    const button = el('button', { textContent: 'Undo' });
-    button.addEventListener('click', () => {
-      hide();
+    const button = el('button', { className: 'undo', textContent: 'Undo' });
+    button.addEventListener('click', (event) => {
+      // end() makes the HELP window tappable again (it opens the summary on the main screen),
+      // so keep this click from reaching it.
+      event.stopPropagation();
+      end();
       undo();
     });
     children.push(button);
   }
-  node.replaceChildren(...children);
-  node.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(hide, 4000);
+  toastTimer = setTimeout(end, 4000);
+  node.className = 'window help message';
+  node.onclick = null;
+  node.replaceChildren(...children);
 }
 
-export function openSheet(content, { dismissable = true } = {}) {
+// ---------- sheets ----------
+
+// label: the small tab on the sheet's top edge, like FF8's "HELP" / "STATUS" tabs.
+export function openSheet(content, { dismissable = true, label = '' } = {}) {
+  $('sheet').dataset.label = label;
   $('sheet').replaceChildren(content);
   $('sheet').scrollTop = 0;
   const backdrop = $('sheet-backdrop');

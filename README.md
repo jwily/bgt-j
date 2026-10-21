@@ -25,7 +25,7 @@ Open http://localhost:8000. To try it on your phone on the same Wi-Fi, open `htt
 - **Currency**: tap the USD/MXN switch, or swipe left or right on the amount.
 - **Category**: swipe the colored strip; the centered one is selected. Long-press the strip to see every category at once. Categories are always listed alphabetically.
 - **Undo** appears for a few seconds after adding or deleting.
-- Tap the **"$… left"** button for the current period's summary. Everything else is under **≡**.
+- The **HELP** window at the top shows how much is left; tap it for the current period's summary. Messages (with **Undo**) appear there briefly. Everything else is under **Menu**, top right; on other screens that same window is the **‹ Back** button.
 
 Everything is stored in US dollars. Peso entries are converted when you add them, using that day's rate, and also keep the original peso amount so summaries can show "from MX$250".
 
@@ -52,5 +52,6 @@ Two safeguards:
 - `js/backup.js`: backup export/restore, CSV export, "last backed up" status
 - `js/ui.js`: shared helpers (keypad, swipe and long-press, toasts)
 - `js/money.js`: formatting and peso conversion
-- `style.css`: layout and light/dark themes
+- `style.css`: the look, styled after the Final Fantasy VIII menu (grey bevelled windows with label tabs, HELP window, pointing-hand cursor). Everything is drawn with CSS and an original SVG; no game assets are used.
+- `fonts/`: Nunito (SIL Open Font License, see `fonts/OFL.txt`), bundled so it works offline
 - `sw.js`, `manifest.json`, `icons/`: offline support and the home-screen icon

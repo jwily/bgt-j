@@ -1,34 +1,44 @@
 // Secondary screens behind the menu: period summaries, the list of periods, categories, backup.
+// Each screen sets its title (shown in the top-right title window) and its HELP line, then
+// fills the page with labelled windows.
 
 import {
   state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories, PALETTE,
-  addCategory, updateCategory, removeCategory,
+  addCategory, updateCategory, removeCategory, todayISO,
 } from './store.js';
 import { formatUsd, formatMxn, formatDiff } from './money.js';
-import { el, svg, toast, formatDate, colorDot } from './ui.js';
+import { el, svg, toast, setHelp, formatDate, colorDot, gauge } from './ui.js';
 import { openBudgetSheet, openExpenseSheet } from './sheets.js';
 import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus } from './backup.js';
 
 const page = document.getElementById('page');
-const title = document.getElementById('page-title');
 const body = document.getElementById('page-body');
-
-// Put nodes on the page, skipping empty slots like `condition && el(...)` that came out false.
-const fill = (...nodes) => body.replaceChildren(...nodes.filter((node) => node != null && node !== false));
 
 const PAGES = { summary: renderSummary, periods: renderPeriods, categories: renderCategories, backup: renderBackup };
 
 let stack = [];               // [{ name, params }], so Back returns to the previous screen
+let title = '';               // the showing screen's name, for the title window
 const expanded = new Set();   // category ids opened on the summary screen
 let paletteFor = null;        // category id whose color choices are showing
+let onNavigate = () => {};    // redraws the app after showing or leaving a screen
 
-export function initPages() {
-  document.getElementById('page-back').addEventListener('click', () => {
-    stack.pop();
-    if (stack.length) renderPage();
-    else page.hidden = true;
-  });
+// A window with an FF8-style label tab on its top edge.
+const panel = (label, ...children) => el('div', { className: 'window panel', 'data-label': label }, ...children);
+
+// Set up a screen: its title and help line, then its windows. Skips empty slots like
+// `condition && el(...)` that came out false.
+function fill(screenTitle, help, ...nodes) {
+  title = screenTitle;
+  setHelp(help);
+  body.replaceChildren(...nodes.filter((node) => node != null && node !== false));
 }
+
+export function initPages(options) {
+  onNavigate = options.onNavigate;
+}
+
+export const isPageOpen = () => !page.hidden;
+export const pageTitle = () => title;
 
 // push: keep the current screen underneath (Back returns to it).
 export function showPage(name, params = {}, { push = false } = {}) {
@@ -37,7 +47,21 @@ export function showPage(name, params = {}, { push = false } = {}) {
   paletteFor = null;
   page.hidden = false;
   page.scrollTop = 0;
-  renderPage();
+  unfold();
+  onNavigate();
+}
+
+export function goBack() {
+  stack.pop();
+  if (stack.length) unfold();
+  else page.hidden = true;
+  onNavigate();
+}
+
+// Windows unfold when you arrive at a screen, not on every redraw.
+function unfold() {
+  body.classList.add('unfold');
+  setTimeout(() => body.classList.remove('unfold'), 250);
 }
 
 export function renderPage() {
@@ -46,7 +70,10 @@ export function renderPage() {
   PAGES[top.name](top.params);
 }
 
-const longDate = (iso) => formatDate(iso, { month: 'short', day: 'numeric', year: 'numeric' });
+// "Oct 20" this year, "Oct 20, 2025" otherwise (keeps the HELP line short).
+const longDate = (iso) => formatDate(iso, iso.startsWith(todayISO().slice(0, 4))
+  ? { month: 'short', day: 'numeric' }
+  : { month: 'short', day: 'numeric', year: 'numeric' });
 const periodDates = (period) => `${longDate(period.start)} – ${period.end ? longDate(period.end) : 'ongoing'}`;
 const periodName = (period) => (period.end ? `Period ${periodNumber(period)}` : 'Current Period');
 
@@ -55,18 +82,17 @@ const periodName = (period) => (period.end ? `Period ${periodNumber(period)}` : 
 function renderSummary({ periodId }) {
   const period = getPeriod(periodId);
   if (!period) {
-    page.hidden = true; // e.g. after restoring a backup that doesn't contain it
+    // e.g. after restoring a backup that doesn't contain it
+    stack = [];
+    page.hidden = true;
     return;
   }
   const isCurrent = !period.end;
-  title.textContent = periodName(period);
-
-  const expenses = periodExpenses(period.id);
   const spent = spentIn(period.id);
   const diff = period.budgetCents - spent;
 
   const groups = new Map();
-  for (const expense of expenses) {
+  for (const expense of periodExpenses(period.id)) {
     if (!groups.has(expense.categoryId)) groups.set(expense.categoryId, []);
     groups.get(expense.categoryId).push(expense);
   }
@@ -85,7 +111,7 @@ function renderSummary({ periodId }) {
     budgetValue.append(edit);
   }
 
-  const stats = el('div', { className: 'card stats' },
+  const stats = panel('Budget',
     el('div', { className: 'stat' }, el('span', { textContent: 'Budget' }), budgetValue),
     el('div', { className: 'stat' }, el('span', { textContent: 'Spent' }), el('span', { className: 'value', textContent: formatUsd(spent) })),
     el('div', { className: `stat diff ${diff >= 0 ? 'good' : 'bad'}` },
@@ -98,10 +124,11 @@ function renderSummary({ periodId }) {
     const isOpen = expanded.has(row.category.id);
     const head = el('button', { className: 'cat-head', 'aria-expanded': String(isOpen) },
       colorDot(row.category.color),
-      el('span', { textContent: row.category.name }),
+      el('span', { className: 'name', textContent: row.category.name }),
       el('span', { className: 'pct', textContent: `${Math.round((row.cents / spent) * 100)}%` }),
       el('span', { className: 'value', textContent: formatUsd(row.cents) }),
-      el('span', { className: 'chev', textContent: '›' }));
+      el('span', { className: 'chev', textContent: '›' }),
+      gauge(row.cents / spent, row.category.color));
     head.addEventListener('click', () => {
       if (isOpen) expanded.delete(row.category.id);
       else expanded.add(row.category.id);
@@ -111,11 +138,10 @@ function renderSummary({ periodId }) {
       isOpen && el('ul', { className: 'items' }, ...row.items.map(itemRow))));
   }
 
-  fill(
-    el('p', { className: 'dates', textContent: periodDates(period) }),
-    donut(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent),
+  fill(periodName(period), periodDates(period),
+    panel('Spent', donut(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent)),
     stats,
-    el('div', { className: 'card' }, rows.length ? list : el('p', { className: 'empty-note', textContent: 'No expenses yet.' })),
+    panel('Categories', rows.length ? list : el('p', { className: 'empty-note', textContent: 'No expenses yet.' })),
   );
 }
 
@@ -160,11 +186,10 @@ function donut(slices, total) {
 // ---------- list of periods ----------
 
 function renderPeriods() {
-  title.textContent = 'Periods';
   const rows = [...state.periods].reverse().map((period) => {
     const spent = spentIn(period.id);
     const diff = period.budgetCents - spent;
-    const row = el('button', { className: 'period-row' },
+    const row = el('button', { className: `period-row${period.end ? '' : ' current'}` },
       el('span', {}, el('strong', { textContent: periodName(period) }), el('small', { textContent: periodDates(period) })),
       el('span', { className: 'right' },
         el('span', { textContent: `${formatUsd(spent)} of ${formatUsd(period.budgetCents)}` }),
@@ -172,20 +197,19 @@ function renderPeriods() {
     row.addEventListener('click', () => showPage('summary', { periodId: period.id }, { push: true }));
     return row;
   });
-  fill(...rows,
+  fill('Periods', 'Select a period to see its summary.', ...rows,
     state.periods.length < 2 && el('p', { className: 'empty-note', textContent: 'Past Periods show up here after you start a New Period.' }));
 }
 
 // ---------- categories ----------
 
 function renderCategories() {
-  title.textContent = 'Categories';
   const active = activeCategories();
-  const card = el('div', { className: 'card' });
+  const list = panel('Categories');
 
   for (const category of active) {
     const swatch = el('button', { className: 'swatch', 'aria-label': `Color for ${category.name}` });
-    swatch.style.background = category.color;
+    swatch.style.setProperty('--c', category.color);
     swatch.addEventListener('click', () => {
       paletteFor = paletteFor === category.id ? null : category.id;
       renderPage();
@@ -210,11 +234,11 @@ function renderCategories() {
       toast(`${category.name} ${getCategory(category.id) ? 'archived' : 'deleted'}`, undo);
     });
 
-    card.append(el('div', { className: 'cat-row' }, swatch, name, remove));
-    if (paletteFor === category.id) card.append(palette(category));
+    list.append(el('div', { className: 'cat-row' }, swatch, name, remove));
+    if (paletteFor === category.id) list.append(palette(category));
   }
 
-  const addButton = el('button', { className: 'wide-btn', textContent: '+ Add category' });
+  const addButton = el('button', { className: 'wide-btn', textContent: 'Add category' });
   addButton.addEventListener('click', () => {
     const { id } = addCategory();
     // Categories are alphabetical, so find the new one's name field and select it for typing.
@@ -222,22 +246,21 @@ function renderCategories() {
   });
 
   const archived = sortedCategories().filter((c) => c.archived);
-  const archivedCard = archived.length > 0 && el('div', { className: 'card' },
-    el('h2', { className: 'section-title', textContent: 'Archived' }),
+  const archivedPanel = archived.length > 0 && panel('Archived',
     ...archived.map((category) => {
       const restore = el('button', { className: 'link', textContent: 'Restore' });
       restore.addEventListener('click', () => updateCategory(category.id, { archived: false }));
       return el('div', { className: 'cat-row' }, colorDot(category.color), el('span', { className: 'grow', textContent: category.name }), restore);
     }));
 
-  fill(card, addButton, archivedCard,
+  fill('Categories', 'Tap a color to change it.', list, addButton, archivedPanel,
     el('p', { className: 'empty-note', textContent: 'Removing a category that has expenses archives it, so past summaries stay intact.' }));
 }
 
 function palette(category) {
   return el('div', { className: 'palette' }, ...PALETTE.map((color) => {
     const choice = el('button', { className: color === category.color ? 'selected' : '', 'aria-label': `Use color ${color}` });
-    choice.style.background = color;
+    choice.style.setProperty('--c', color);
     choice.addEventListener('click', () => {
       paletteFor = null;
       updateCategory(category.id, { color });
@@ -249,8 +272,6 @@ function palette(category) {
 // ---------- backup ----------
 
 function renderBackup() {
-  title.textContent = 'Backup';
-
   const status = backupStatus();
 
   const backupButton = el('button', { className: 'wide-btn', textContent: 'Export backup' });
@@ -284,9 +305,10 @@ function renderBackup() {
       : 'Storage: standard. iOS may clear it if the phone runs very low on space.';
   }).catch(() => {});
 
-  fill(
-    el('p', { className: 'hint', textContent: 'Your data lives only on this phone. Deleting the app from your home screen or clearing Safari’s website data erases it, so export a backup now and then and keep it in Files or iCloud Drive.' }),
-    el('p', { className: `backup-status${status.stale ? ' bad' : ''}`, textContent: status.label }),
+  fill('Backup', 'Keep a copy of your data somewhere safe.',
+    panel('Status',
+      el('p', { className: `backup-status${status.stale ? ' bad' : ''}`, textContent: status.label }),
+      el('p', { className: 'hint', textContent: 'Your data lives only on this phone. Deleting the app from your home screen or clearing Safari’s website data erases it, so export a backup now and then and keep it in Files or iCloud Drive.' })),
     backupButton,
     csvButton,
     restore,

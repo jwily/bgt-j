@@ -1,8 +1,8 @@
 // The main screen: type an amount, swipe to pick currency and category, tap Add.
 
-import { state, todayISO, activeCategories, getCategory, currentPeriod, spentIn, addExpense, setInputPrefs } from './store.js';
+import { state, todayISO, activeCategories, getCategory, addExpense, setInputPrefs } from './store.js';
 import { formatUsd, formatMxn, pesosToUsdCents } from './money.js';
-import { el, keypad, onSwipe, onLongPress, toast, textOn, nudge, formatDate, categoryChip } from './ui.js';
+import { el, keypad, onSwipe, onLongPress, toast, nudge, formatDate, categoryChip } from './ui.js';
 import { openCategoryGrid } from './sheets.js';
 
 const MAX_DIGITS = { USD: 8, MXN: 7 }; // $999,999.99 and MX$9,999,999
@@ -12,20 +12,16 @@ let date = todayISO();
 let stripKey = ''; // which categories the strip was last built from
 const parts = {};
 
-export function initInput({ openMenu, openSummary }) {
-  const menuButton = el('button', { id: 'menu-btn', className: 'icon-btn', textContent: '≡', 'aria-label': 'Menu' });
-  menuButton.addEventListener('click', openMenu);
-  parts.left = el('button', { className: 'left-btn' });
-  parts.left.addEventListener('click', openSummary);
-
-  // Currency: tap the pill, or swipe anywhere in this area.
+export function initInput() {
+  // Currency: tap the options, or swipe anywhere in the Amount window. Like FF8's Config
+  // options, the chosen one is bright with the hand beside it and the other is grey.
   parts.usd = el('span', { textContent: 'USD' });
   parts.mxn = el('span', { textContent: 'MXN' });
-  const pill = el('button', { className: 'currency-pill', 'aria-label': 'Switch currency' }, parts.usd, parts.mxn);
-  pill.addEventListener('click', () => switchCurrency('left'));
+  const options = el('button', { className: 'currency-opts', 'aria-label': 'Switch currency' }, parts.usd, parts.mxn);
+  options.addEventListener('click', () => switchCurrency('left'));
   parts.amount = el('div', { className: 'amount' });
   parts.sub = el('div', { className: 'amount-sub' });
-  const zone = el('div', { className: 'currency-zone' }, pill, parts.amount, parts.sub);
+  const zone = el('div', { className: 'window currency-zone', 'data-label': 'Amount' }, options, parts.amount, parts.sub);
   onSwipe(zone, switchCurrency);
 
   // Category: a snapping strip; whichever chip is centered is selected. Long-press for a grid.
@@ -33,7 +29,7 @@ export function initInput({ openMenu, openSummary }) {
   parts.strip.addEventListener('scroll', pickCenteredChip, { passive: true });
   onLongPress(parts.strip, () => openCategoryGrid(state.input.categoryId, selectCategory));
 
-  parts.note = el('input', { type: 'text', className: 'note', placeholder: 'Add note', enterKeyHint: 'done' });
+  parts.note = el('input', { type: 'text', className: 'note', placeholder: 'Optional', enterKeyHint: 'done', 'aria-label': 'Note' });
   parts.note.addEventListener('keydown', (event) => { if (event.key === 'Enter') parts.note.blur(); });
   parts.dateLabel = el('span');
   parts.dateInput = el('input', { type: 'date', 'aria-label': 'Expense date' });
@@ -50,10 +46,11 @@ export function initInput({ openMenu, openSummary }) {
   parts.add.addEventListener('click', add);
 
   document.getElementById('view-input').append(
-    el('header', { className: 'topbar' }, menuButton, parts.left),
     zone,
-    parts.strip,
-    el('div', { className: 'details' }, parts.note, el('label', { className: 'date-btn' }, parts.dateLabel, parts.dateInput)),
+    el('div', { className: 'window strip-window', 'data-label': 'Category' }, parts.strip),
+    el('div', { className: 'details' },
+      el('label', { className: 'window note-window', 'data-label': 'Note' }, parts.note),
+      el('label', { className: 'window date-btn', 'data-label': 'Date' }, parts.dateLabel, parts.dateInput)),
     pad,
     parts.add,
   );
@@ -73,17 +70,8 @@ export function renderInput() {
     ? `≈ ${formatUsd(pesosToUsdCents(amount, state.rate.mxnPerUsd))} · ${rateText()}`
     : '';
 
-  const period = currentPeriod();
-  if (period) {
-    const left = period.budgetCents - spentIn(period.id);
-    parts.left.textContent = `${formatUsd(Math.abs(left))} ${left >= 0 ? 'left' : 'over'}`;
-    parts.left.classList.toggle('over', left < 0);
-  }
-
   renderStrip();
-  const category = getCategory(state.input.categoryId);
-  parts.add.style.background = category.color;
-  parts.add.style.color = textOn(category.color);
+  parts.add.style.setProperty('--c', getCategory(state.input.categoryId).color);
 
   parts.dateLabel.textContent = date === todayISO() ? 'Today' : formatDate(date);
   parts.dateInput.value = date;

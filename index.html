@@ -5,44 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Budget">
-  <meta name="theme-color" content="#f6f6f3" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#000000">
   <title>Budget</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="preload" href="fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- On every screen: the HELP window (which also shows messages) and the title window,
+       which is "Menu" on the main screen and "‹ <screen name>" (Back) elsewhere. -->
+  <header class="hud">
+    <div id="help" class="window help" data-label="Help" role="status"></div>
+    <button id="nav-btn" class="window nav-btn">Menu</button>
+  </header>
+
   <!-- Main screen: built by js/input.js -->
   <main id="view-input"></main>
 
-  <div id="menu-backdrop" class="backdrop">
-    <nav id="menu" class="menu">
-      <button data-action="current">Current Period</button>
-      <button data-action="periods">Past Periods</button>
-      <button data-action="categories">Categories</button>
-      <button data-action="new-period">New Period</button>
-      <button data-action="backup">Backup<small id="backup-status"></small></button>
-    </nav>
-  </div>
-
   <!-- Secondary screens: built by js/pages.js -->
   <section id="page" class="page" hidden>
-    <header class="topbar">
-      <button id="page-back" class="icon-btn" aria-label="Back">‹</button>
-      <h1 id="page-title"></h1>
-      <span class="icon-btn"></span>
-    </header>
     <div id="page-body" class="page-body"></div>
   </section>
 
-  <div id="sheet-backdrop" class="backdrop">
-    <div id="sheet" class="sheet"></div>
+  <div id="menu-backdrop" class="backdrop">
+    <nav id="menu" class="menu">
+      <div class="window menu-list">
+        <button data-action="current">Current Period</button>
+        <button data-action="periods">Past Periods</button>
+        <button data-action="categories">Categories</button>
+        <button data-action="new-period">New Period</button>
+        <button data-action="backup">Backup</button>
+      </div>
+      <div class="window menu-stats">
+        <div><span class="label">Day</span><span id="stat-day"></span></div>
+        <div><span id="stat-left-label" class="label">Left</span><span id="stat-left"></span></div>
+        <div><span class="label">Backup</span><span id="backup-status"></span></div>
+      </div>
+    </nav>
   </div>
 
-  <div id="toast" class="toast" role="status"></div>
+  <div id="sheet-backdrop" class="backdrop">
+    <div id="sheet" class="window sheet"></div>
+  </div>
 
   <script type="module" src="js/app.js"></script>
 </body>

@@ -33,14 +33,15 @@ export function restoreBackup(data) {
   replaceState({ ...data, lastBackupAt: Date.now() });
 }
 
-// { label, stale }: stale means it's time to nudge (never backed up with data, or 30+ days).
+// { short, label, stale }: short is "today" / "3 days ago" / "never" for tight spaces,
+// label is the full sentence, stale means it's time to nudge (never backed up with data, or 30+ days).
 export function backupStatus() {
   const last = state.lastBackupAt;
-  if (!last) return { label: 'Never backed up', stale: state.expenses.length > 0 };
+  if (!last) return { short: 'never', label: 'Never backed up', stale: state.expenses.length > 0 };
   const startOfDay = (time) => new Date(time).setHours(0, 0, 0, 0);
   const days = Math.round((startOfDay(Date.now()) - startOfDay(last)) / DAY_MS);
-  const label = days === 0 ? 'Backed up today' : days === 1 ? 'Backed up yesterday' : `Backed up ${days} days ago`;
-  return { label, stale: days >= REMINDER_DAYS };
+  const short = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+  return { short, label: `Backed up ${short}`, stale: days >= REMINDER_DAYS };
 }
 
 function toCsv() {
