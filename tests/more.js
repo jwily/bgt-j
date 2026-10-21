@@ -105,6 +105,15 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('grid pick selects', await page.locator('.strip .chip.selected').textContent(), 'Health');
   check('grid closed', await page.locator('#sheet-backdrop.open').count(), 0);
 
+  // Animations run even with the phone's Reduce Motion on (the user's choice for this app).
+  const reduced = await browser.newContext({ ...devices['iPhone 13'], reducedMotion: 'reduce' });
+  await mockRates(reduced, RATE);
+  const calm = await newPage(reduced);
+  await calm.goto(URL);
+  await startFirstPeriod(calm, '100000');
+  check('ADD hand bobs even with Reduce Motion on', await calm.evaluate(() => getComputedStyle(document.querySelector('.add-btn'), '::after').animationName), 'hand-bob');
+  await reduced.close();
+
   // A tap on the "Today" text itself (not the hidden input) still opens the date picker
   await page.evaluate(() => {
     window.pickerOpened = 0;
