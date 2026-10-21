@@ -24,7 +24,8 @@ export function initInput() {
   const zone = el('div', { className: 'window currency-zone', 'data-label': 'Amount' }, options, parts.amount, parts.sub);
   onSwipe(zone, switchCurrency);
 
-  // Category: a snapping strip; whichever chip is centered is selected. Long-press for a grid.
+  // Category: a vertical snapping list beside the amount; whichever chip is centered is selected.
+  // Long-press for a grid.
   parts.strip = el('div', { className: 'strip' });
   parts.strip.addEventListener('scroll', pickCenteredChip, { passive: true });
   onLongPress(parts.strip, () => openCategoryGrid(state.input.categoryId, selectCategory));
@@ -46,8 +47,7 @@ export function initInput() {
   parts.add.addEventListener('click', add);
 
   document.getElementById('view-input').append(
-    zone,
-    el('div', { className: 'window strip-window', 'data-label': 'Category' }, parts.strip),
+    el('div', { className: 'entry' }, zone, el('div', { className: 'window strip-window', 'data-label': 'Category' }, parts.strip)),
     el('div', { className: 'details' },
       el('label', { className: 'window note-window', 'data-label': 'Note' }, parts.note),
       el('label', { className: 'window date-btn', 'data-label': 'Date' }, parts.dateLabel, parts.dateInput)),
@@ -66,9 +66,10 @@ export function renderInput() {
   parts.mxn.classList.toggle('on', currency === 'MXN');
   parts.amount.textContent = currency === 'USD' ? formatUsd(amount) : formatMxn(amount);
   parts.amount.classList.toggle('empty', !amount);
-  parts.sub.textContent = currency === 'MXN'
-    ? `≈ ${formatUsd(pesosToUsdCents(amount, state.rate.mxnPerUsd))} · ${rateText()}`
-    : '';
+  parts.sub.replaceChildren(...(currency === 'MXN' ? [
+    el('span', { className: 'converted', textContent: `≈ ${formatUsd(pesosToUsdCents(amount, state.rate.mxnPerUsd))}` }),
+    el('span', { textContent: rateText() }),
+  ] : []));
 
   renderStrip();
   parts.add.style.setProperty('--c', getCategory(state.input.categoryId).color);
@@ -112,15 +113,15 @@ const chipFor = (id) => [...parts.strip.children].find((chip) => chip.dataset.id
 
 function centerChip(chip, behavior) {
   if (!chip) return;
-  parts.strip.scrollTo({ left: chip.offsetLeft - (parts.strip.clientWidth - chip.offsetWidth) / 2, behavior });
+  parts.strip.scrollTo({ top: chip.offsetTop - (parts.strip.clientHeight - chip.offsetHeight) / 2, behavior });
 }
 
 function pickCenteredChip() {
-  const middle = parts.strip.scrollLeft + parts.strip.clientWidth / 2;
+  const middle = parts.strip.scrollTop + parts.strip.clientHeight / 2;
   let best = null;
   let bestDistance = Infinity;
   for (const chip of parts.strip.children) {
-    const distance = Math.abs(chip.offsetLeft + chip.offsetWidth / 2 - middle);
+    const distance = Math.abs(chip.offsetTop + chip.offsetHeight / 2 - middle);
     if (distance < bestDistance) {
       best = chip;
       bestDistance = distance;

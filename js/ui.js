@@ -70,6 +70,13 @@ export function onSwipe(node, handler) {
   let start = null;
   node.addEventListener('pointerdown', (event) => { start = { x: event.clientX, y: event.clientY }; });
   node.addEventListener('pointercancel', () => { start = null; });
+  // Once a drag is clearly sideways, keep receiving it even if it ends outside this element.
+  // (Not on pointerdown: capturing then would steal plain taps from the buttons inside.)
+  node.addEventListener('pointermove', (event) => {
+    if (start && !node.hasPointerCapture(event.pointerId) && Math.abs(event.clientX - start.x) > 10) {
+      node.setPointerCapture(event.pointerId);
+    }
+  });
   node.addEventListener('pointerup', (event) => {
     if (!start) return;
     const dx = event.clientX - start.x;

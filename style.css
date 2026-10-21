@@ -194,30 +194,39 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   -webkit-touch-callout: none;
 }
 
+/* The amount window and, to its right, the category list. */
+.entry { flex: 1; min-height: 150px; display: flex; gap: 6px; }
+
 .currency-zone {
-  flex: 1;
-  min-height: 118px;
+  flex: 1.35 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 16px 10px 10px;
+  padding: 16px 8px 10px;
+  container-type: inline-size; /* lets the amount size itself to this window's width */
   touch-action: none; /* we handle horizontal swipes here ourselves */
 }
-.currency-opts { display: flex; gap: 56px; padding-left: 36px; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.08em; }
+.currency-opts { display: flex; gap: 34px; padding-left: 34px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; }
 .currency-opts span { position: relative; color: var(--off); transition: color 0.1s; }
 .currency-opts span.on { color: var(--text); }
-.currency-opts span.on::after { left: -38px; }
+/* A slightly smaller hand here, so it fits between USD and MXN in the narrow window. */
+.currency-opts span.on::after { left: -31px; width: 27px; height: 16px; margin-top: -8px; }
 
 .amount {
-  font-size: clamp(2.4rem, 12vw, 3.3rem);
+  font-size: clamp(1.1rem, 12cqw, 3.1rem); /* MX$9,999,999 still fits on one line */
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .amount.empty { color: var(--off); }
-.amount-sub { min-height: 1.3em; color: #cfcfcf; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+/* Under the amount: "≈ $12.50" and, on its own line, "1 USD = 18.52 MXN" (pesos only). */
+.amount-sub { min-height: 2.7em; color: #cfcfcf; font-size: 0.8rem; line-height: 1.35; text-align: center; font-variant-numeric: tabular-nums; }
+.amount-sub span { display: block; }
+.amount-sub .converted { color: var(--text); font-size: 1rem; }
 
 .slide-left { animation: slide-left 0.18s ease-out; }
 .slide-right { animation: slide-right 0.18s ease-out; }
@@ -226,25 +235,30 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .nudge { animation: nudge 0.3s; }
 @keyframes nudge { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
-.strip-window { padding: 14px 0 4px; }
+.strip-window { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 14px 0 4px; }
 .strip {
-  position: relative; /* chips measure their offsetLeft from here */
+  position: relative; /* chips measure their offsetTop from here */
+  flex: 1;
+  min-height: 0;
   display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
   scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
 }
 .strip::-webkit-scrollbar { display: none; }
-/* Spacers so the first and last chips can reach the center. */
-.strip::before, .strip::after { content: ''; flex: 0 0 calc(50% - 74px); }
+/* Spacers so the first and last chips can reach the middle (half the list, minus half a chip and the gap). */
+.strip::before, .strip::after { content: ''; flex: 0 0 calc(50% - 20px); }
 
 /* A category: [hand][gem] Name. Chosen: yellow with the hand; others grey. */
 .chip {
   position: relative;
-  flex: 0 0 140px;
+  flex: none;
+  width: 100%;
   height: 36px;
   padding: 0 6px 0 52px;
   color: var(--off);
@@ -383,7 +397,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 }
 
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 8px; margin-top: 8px; }
-.grid .chip { width: 100%; flex: none; }
 
 /* ---------- secondary screens ---------- */
 
