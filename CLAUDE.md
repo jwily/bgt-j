@@ -96,7 +96,8 @@ Read README.md for what the app does; this file covers how to work on it.
   the hand), Undo while offered, and Menu/Back. The menu opens upward, period commands nearest the
   thumb. A tall ADD and a currency switch key in a 4th keypad column were tried and replaced by this.
   Short screens sit at the bottom; a screen's actions go at its bottom.
-- Category chips are as wide as their name; long-pressing the strip opens the grid level with it.
+- Category chips are as wide as their name; double-tapping the strip opens the grid level with it
+  (it was a long-press before; the user asked for double tap).
 - New Period / first budget / edit budget is a full screen, not a sheet.
 - Backups are whole-history JSON; CSV export is for spreadsheets only.
 - Animations ignore the phone's Reduce Motion setting: the user keeps it on elsewhere but wants the

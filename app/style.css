@@ -282,6 +282,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   scrollbar-width: none;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
+  touch-action: manipulation; /* a double tap opens the grid; it never zooms */
 }
 .strip::-webkit-scrollbar { display: none; }
 /* Spacers so the first and last chips can reach the center whatever their width (the snap
