@@ -1,5 +1,5 @@
 // Renders the app icon: the first four category colors (Quezacotl, Shiva, Ifrit, Siren) as diamonds
-// spiralling counter-clockwise from 12 o'clock into the distance, the first closest, on a dark charcoal glow (FF8's dark menu
+// spiralling clockwise from 12 o'clock into the distance, the first closest, on a dark charcoal glow (FF8's dark menu
 // backdrop, without hard corners, since iOS rounds the icon itself). Colors come from the app's
 // palette. Usage: npm run icon
 const { webkit } = require('playwright');
@@ -9,17 +9,17 @@ const { readPalette } = require('../helpers');
 const OUT = path.join(__dirname, '../../app/icons');
 
 // The diamonds sit on a spiral around a vanishing point: the first at 12 o'clock and closest,
-// the rest curling counter-clockwise (12 → 9 → 6 → 3) as they shrink into the distance, each
+// the rest curling clockwise (12 → 3 → 6 → 9) as they shrink into the distance, each
 // a little dimmer and softer (kept light, so the GF colors stay true). Fractions of the icon.
 const CENTER = { x: 0.52, y: 0.53 };
-const TURN = 95;            // degrees between diamonds, counter-clockwise
+const TURN = 95;            // degrees between diamonds, clockwise
 const SPIRAL = [
-  { radius: 0.255, size: 0.40, light: 1, blur: 0 },
+  { radius: 0.225, size: 0.40, light: 1, blur: 0 },
   { radius: 0.215, size: 0.27, light: 0.95, blur: 0 },
   { radius: 0.165, size: 0.175, light: 0.9, blur: 0.0012 },
   { radius: 0.115, size: 0.11, light: 0.85, blur: 0.0024 },
 ].map((d, i) => {
-  const angle = ((90 + i * TURN) * Math.PI) / 180; // 90° = 12 o'clock; increasing = counter-clockwise
+  const angle = ((90 - i * TURN) * Math.PI) / 180; // 90° = 12 o'clock; decreasing = clockwise
   return { ...d, x: CENTER.x + d.radius * Math.cos(angle), y: CENTER.y - d.radius * Math.sin(angle) };
 });
 
