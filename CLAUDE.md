@@ -57,6 +57,8 @@ Read README.md for what the app does; this file covers how to work on it.
 - Windows: square corners; fill shades **left to right** (dark at the edges, flat `#646464` in the
   middle), no stripes or texture; a dark outer line plus an inner bevel (light `#747474` top/left,
   dark `#323232` bottom/right). Pure black background.
+- Spacing: one gap, `--gap` (8px), between any two windows or buttons in either direction; keypad
+  keys use the tighter `--gap-keys` (6px). Use the variables, not new numbers.
 - Small uppercase label tabs on a window's top-left edge (HELP, AMOUNT, CATEGORY...).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
   or unavailable options.
@@ -85,8 +87,14 @@ Read README.md for what the app does; this file covers how to work on it.
 
 - Periods are paycheck-to-paycheck, started manually with New Period. Deleting the current period
   reopens the previous one.
-- Main screen: AMOUNT window on top (swipe for currency), horizontal CATEGORY strip below it.
-  A vertical category list beside the amount was tried and reverted (spacing problems).
+- Main screen: AMOUNT window on top (swipe for currency; swipes follow the finger and stop at the
+  ends, taps cycle), horizontal CATEGORY strip below it, 3-column keypad. A vertical category list
+  beside the amount was tried and reverted (spacing problems).
+- Thumb reach (right-handed): the top is for reading, the bottom for tapping. HELP and the title
+  window stay at the top (user's choice, like FF8); a bottom bar holds ADD (main screen, long, with
+  the hand), Undo while offered, and Menu/Back. The menu opens upward, period commands nearest the
+  thumb. A tall ADD and a currency switch key in a 4th keypad column were tried and replaced by this.
+  Short screens sit at the bottom; a screen's actions go at its bottom.
 - Category chips are as wide as their name; long-pressing the strip opens the grid level with it.
 - New Period / first budget / edit budget is a full screen, not a sheet.
 - Backups are whole-history JSON; CSV export is for spreadsheets only.
@@ -95,4 +103,8 @@ Read README.md for what the app does; this file covers how to work on it.
 
 - `master`: the current app. `ff8-reskin`: where the FF8 work happened (merged).
   `ff8-font`: the rejected pixel-font trial.
-- Not deployed yet. When it is, deploy the `app/` folder only.
+- Deployed with GitHub Pages: pushing `master` to `origin` (the user's personal repo, `jwily/bgt-j`,
+  through a deploy key set in this repo's git config) publishes `app/` via `.github/workflows/pages.yml`.
+  The live address is under the user's own domain, `https://www.johnjylee.com/bgt-j/`. Never change
+  the address: the phone's saved data is tied to it. Ask before pushing. Commit email for this repo
+  is the user's personal one (set in the repo's git config), not their work email.

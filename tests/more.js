@@ -42,7 +42,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.mouse.click(200, 40);
   await page.waitForTimeout(200);
   check('first budget screen stays open', await page.locator('#page').isVisible(), true);
-  check('first budget screen has no Back', await page.locator('#nav-btn').isDisabled(), true);
+  check('first budget screen has no Back', await page.locator('#nav-btn').isHidden(), true);
   check('start disabled while empty', await page.locator('#page .primary').isDisabled(), true);
 
   // 00 key in the budget sheet: 1 5 00 00 -> $1,500.00

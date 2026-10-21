@@ -60,7 +60,6 @@ function renderChrome() {
   navButton.textContent = pageOpen ? '‹ Back' : 'Menu';
   // The first-budget screen can't be left, so it has no Back.
   navButton.hidden = pageOpen && !canGoBack();
-  navButton.disabled = navButton.hidden;
   navButton.classList.toggle('alert', !pageOpen && status.stale);
   $('backup-status').textContent = status.short;
   $('backup-status').classList.toggle('bad', status.stale);

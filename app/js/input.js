@@ -101,12 +101,6 @@ function rateText(code) {
   return `1 ${HOME} = ${rate.toFixed(2)} ${code}${daysBetween(state.rates.date) > 4 ? ` (rate from ${formatDate(state.rates.date)})` : ''}`;
 }
 
-// The currency `step` places after the chosen one (1 = next, -1 = previous), wrapping around.
-function nextCurrency(step) {
-  const count = CURRENCY_CODES.length;
-  return CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + step + count) % count];
-}
-
 // Swipes move the choice the way the finger goes, like the options' order on screen: a swipe left
 // picks the option to the left, a swipe right the one to the right. The ends are walls: swiping
 // past the first or last option just nudges the amount.
@@ -120,7 +114,8 @@ function swipeCurrency(direction) {
 }
 
 // Tapping the options steps to the next currency, wrapping around.
-const cycleCurrency = () => switchCurrency(nextCurrency(1), 'left');
+const cycleCurrency = () =>
+  switchCurrency(CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + 1) % CURRENCY_CODES.length], 'left');
 
 // slide: which way the amount slides in, following the finger.
 function switchCurrency(next, slide) {

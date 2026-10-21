@@ -20,7 +20,7 @@ Open http://localhost:8000. To try it on your phone on the same Wi-Fi, open `htt
 
 ## Put it on your phone
 
-1. Host the **`app` folder** on a free HTTPS static host, e.g. Netlify (drag the `app` folder onto app.netlify.com/drop) or GitHub Pages.
+1. Host the **`app` folder** on a free HTTPS static host. This repo publishes it to GitHub Pages on every push to `master` (`.github/workflows/pages.yml`); Netlify also works (drag the `app` folder onto app.netlify.com/drop).
 2. Open the URL in Safari on your iPhone.
 3. Tap Share → **Add to Home Screen**.
 
@@ -29,11 +29,10 @@ Your data is tied to the URL, so pick the site's name before you start using it.
 ## Using it
 
 - **Amounts** fill in from the right. In dollars, 5 1 0 5 0 is $510.50. Pesos are whole numbers, so 5 1 0 5 0 is MX$51,050. Hold ⌫ to clear.
-- **Currency**: tap USD/MXN, or swipe left or right on the amount.
+- **Currency**: tap USD/MXN to step through them, or swipe anywhere on the amount: a swipe left picks the currency on the left, a swipe right the one on the right, and the ends don't wrap around.
 - **Category**: swipe the strip; the centered one is selected. Long-press it to see every category at once. Categories are listed alphabetically and take their colors in that order.
-- The **HELP** window at the top shows how much is left; tap it for the current period's summary. Messages (with **Undo**) appear there briefly.
-- Everything else is under **Menu** (top right). On other screens that window is **‹ Back**.
-- A period's summary has **Delete period** at the bottom (it deletes that period's expenses too; deleting the current period reopens the previous one).
+- The top of the screen is for reading and the bottom for tapping, for a right thumb. The **HELP** window at the top shows how much is left (tap it for the current period's summary) and messages. The bar at the bottom has **Add**, **Undo** while a message offers it, and **Menu**, which opens upward and is **‹ Back** on other screens.
+- A period's summary has **Edit budget** (current period only) and **Delete period** at the bottom. Deleting also deletes that period's expenses; deleting the current period reopens the previous one.
 
 Everything is stored in US dollars. Expenses in another currency are converted when you add them, at that day's rate, and keep their original amount so summaries can show "from MX$250".
 
@@ -76,7 +75,7 @@ Tools: `npm run palette` checks the category colors are distinct. `npm run icon`
 
 ## App files
 
-- `js/app.js`: startup, the title window and the menu
+- `js/app.js`: startup, the title window, the Menu/Back button and the menu
 - `js/store.js`: the data model, saving, upgrading old data, and the rate download
 - `js/money.js`: the currency table, formatting and conversion to US dollars
 - `js/input.js`: the main entry screen
