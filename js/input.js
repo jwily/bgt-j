@@ -1,11 +1,9 @@
 // The main screen: type an amount, swipe to pick currency and category, tap Add.
 
-import { state, todayISO, activeCategories, getCategory, addExpense, setInputPrefs } from './store.js';
-import { formatUsd, formatMxn, pesosToUsdCents } from './money.js';
+import { state, todayISO, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
+import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
 import { el, keypad, onSwipe, onLongPress, toast, nudge, formatDate, categoryChip } from './ui.js';
 import { openCategoryGrid } from './sheets.js';
-
-const MAX_DIGITS = { USD: 8, MXN: 7 }; // $999,999.99 and MX$9,999,999
 
 let digits = '';
 let date = todayISO();
@@ -14,11 +12,10 @@ let recentering = false; // true while the app (not the person) is moving the st
 const parts = {};
 
 export function initInput() {
-  // Currency: tap the options, or swipe anywhere in the Amount window. Like FF8's Config
-  // options, the chosen one is bright with the hand beside it and the other is grey.
-  parts.usd = el('span', { textContent: 'USD' });
-  parts.mxn = el('span', { textContent: 'MXN' });
-  const options = el('button', { className: 'currency-opts', 'aria-label': 'Switch currency' }, parts.usd, parts.mxn);
+  // Currency: tap the options, or swipe anywhere in the Amount window to step through them. Like
+  // FF8's Config options, the chosen one is bright with the hand beside it and the others are grey.
+  parts.currencies = CURRENCY_CODES.map((code) => el('span', { textContent: code }));
+  const options = el('button', { className: 'currency-opts', 'aria-label': 'Switch currency' }, ...parts.currencies);
   options.addEventListener('click', () => switchCurrency('left'));
   parts.amount = el('div', { className: 'amount' });
   parts.sub = el('div', { className: 'amount-sub' });
@@ -42,7 +39,7 @@ export function initInput() {
   const pad = keypad(() => digits, (next) => {
     digits = next;
     renderInput();
-  }, () => MAX_DIGITS[state.input.currency]);
+  }, () => CURRENCIES[state.input.currency].maxDigits);
   parts.add = el('button', { className: 'add-btn', textContent: 'Add' });
   parts.add.addEventListener('click', add);
 
@@ -64,14 +61,13 @@ export function renderInput() {
   const { currency } = state.input;
   const amount = Number(digits || '0');
 
-  parts.usd.classList.toggle('on', currency === 'USD');
-  parts.mxn.classList.toggle('on', currency === 'MXN');
-  parts.amount.textContent = currency === 'USD' ? formatUsd(amount) : formatMxn(amount);
+  parts.currencies.forEach((span, i) => span.classList.toggle('on', CURRENCY_CODES[i] === currency));
+  parts.amount.textContent = formatMoney(amount, currency);
   parts.amount.classList.toggle('empty', !amount);
-  parts.sub.replaceChildren(...(currency === 'MXN' ? [
-    el('span', { className: 'converted', textContent: `≈ ${formatUsd(pesosToUsdCents(amount, state.rate.mxnPerUsd))}` }),
-    el('span', { textContent: rateText() }),
-  ] : []));
+  parts.sub.replaceChildren(...(currency === HOME ? [] : [
+    el('span', { className: 'converted', textContent: `≈ ${formatUsd(toUsdCents(amount, currency, rateFor(currency)))}` }),
+    el('span', { textContent: rateText(currency) }),
+  ]));
 
   renderStrip();
   parts.add.style.setProperty('--c', getCategory(state.input.categoryId).color);
@@ -80,14 +76,17 @@ export function renderInput() {
   parts.dateInput.value = date;
 }
 
-function rateText() {
-  const { mxnPerUsd, date: rateDate } = state.rate;
-  return rateDate ? `1 USD = ${mxnPerUsd.toFixed(2)} MXN` : `~${mxnPerUsd} MXN per USD (estimate until online)`;
+function rateText(code) {
+  const rate = rateFor(code);
+  return rateIsEstimate(code) ? `~${rate} ${code} per ${HOME} (estimate until online)` : `1 ${HOME} = ${rate.toFixed(2)} ${code}`;
 }
 
+// Swipe left (or tap) for the next currency, swipe right for the previous one; it wraps around.
 function switchCurrency(direction) {
-  const next = state.input.currency === 'USD' ? 'MXN' : 'USD';
-  digits = digits.slice(0, MAX_DIGITS[next]);
+  const step = direction === 'right' ? -1 : 1;
+  const count = CURRENCY_CODES.length;
+  const next = CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + step + count) % count];
+  digits = digits.slice(0, CURRENCIES[next].maxDigits);
   parts.amount.classList.remove('slide-left', 'slide-right');
   void parts.amount.offsetWidth; // restart the animation
   parts.amount.classList.add(direction === 'right' ? 'slide-right' : 'slide-left');
@@ -158,8 +157,8 @@ function add() {
     return;
   }
   const { currency, categoryId } = state.input;
-  const rate = state.rate.mxnPerUsd;
-  const usdCents = currency === 'USD' ? amount : pesosToUsdCents(amount, rate);
+  const rate = rateFor(currency);
+  const usdCents = toUsdCents(amount, currency, rate);
   const note = parts.note.value.trim();
   const expenseDate = date;
 
@@ -174,7 +173,7 @@ function add() {
     usdCents,
     date: expenseDate,
     note,
-    original: currency === 'MXN' ? { currency, amount, mxnPerUsd: rate } : null,
+    original: currency === HOME ? null : { currency, amount, perUsd: rate },
   });
   toast(`Added ${formatUsd(usdCents)} · ${getCategory(categoryId).name}`, undo);
 }

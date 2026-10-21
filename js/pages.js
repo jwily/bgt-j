@@ -7,7 +7,7 @@ import {
   state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories,
   addCategory, updateCategory, removeCategory, todayISO, startPeriod, setBudget, deletePeriod,
 } from './store.js';
-import { formatUsd, formatMxn, formatDiff } from './money.js';
+import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
 import { el, svg, toast, setHelp, formatDate, colorDot, gauge, keypad } from './ui.js';
 import { openExpenseSheet } from './sheets.js';
 import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus } from './backup.js';
@@ -179,8 +179,9 @@ function removePeriod(period) {
 
 function itemRow(expense) {
   const amount = el('span', { className: 'much', textContent: formatUsd(expense.usdCents) });
-  if (expense.original?.currency === 'MXN') {
-    amount.append(el('span', { className: 'orig', textContent: `from ${formatMxn(expense.original.amount)}` }));
+  const { original } = expense;
+  if (original && original.currency !== HOME) {
+    amount.append(el('span', { className: 'orig', textContent: `from ${formatMoney(original.amount, original.currency)}` }));
   }
   const row = el('button', { className: 'item' },
     el('span', { className: 'when', textContent: formatDate(expense.date) }),

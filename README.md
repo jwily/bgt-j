@@ -29,9 +29,13 @@ Open http://localhost:8000. To try it on your phone on the same Wi-Fi, open `htt
 
 Everything is stored in US dollars. Peso entries are converted when you add them, using that day's rate, and also keep the original peso amount so summaries can show "from MX$250".
 
+## Adding a currency
+
+Add one line to `CURRENCIES` in `js/money.js`, e.g. `EUR: { decimals: 2, maxDigits: 8, fallbackRate: 0.9 },`. The picker, keypad, formatting, daily rate download, editing and CSV export all pick it up. US dollars stay the home currency: everything is stored and totaled in USD. The rate source covers about 30 major currencies (European Central Bank data).
+
 ## Exchange rate
 
-Each time the app opens, it downloads the USD→MXN rate from [Frankfurter](https://frankfurter.dev) (free, publishes European Central Bank rates) unless it already has today's. Offline, it uses the last rate it had. That download is the app's only network request.
+Each time the app opens, it downloads today's rates for every currency in the table from [Frankfurter](https://frankfurter.dev) (free, publishes European Central Bank rates) unless it already has today's. Offline, it uses the last rate it had. That download is the app's only network request.
 
 ## Your data
 
@@ -51,7 +55,7 @@ Two safeguards:
 - `js/sheets.js`: pop-up sheets (budget, edit expense, category grid)
 - `js/backup.js`: backup export/restore, CSV export, "last backed up" status
 - `js/ui.js`: shared helpers (keypad, swipe and long-press, toasts)
-- `js/money.js`: formatting and peso conversion
+- `js/money.js`: the currency table, formatting and conversion to US dollars
 - `style.css`: the look, styled after the Final Fantasy VIII menu (grey bevelled windows with label tabs, HELP window, pointing-hand cursor). Everything is drawn with CSS and an original SVG; no game assets are used.
 - `fonts/`: Nunito (SIL Open Font License, see `fonts/OFL.txt`), bundled so it works offline
 - `sw.js`, `manifest.json`, `icons/`: offline support and the home-screen icon

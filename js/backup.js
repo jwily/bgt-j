@@ -1,8 +1,12 @@
 // Backup files: a full JSON copy of the app's data (restorable), a CSV for spreadsheets,
 // and how long it has been since the last backup.
 
-import { state, getPeriod, getCategory, isValid, replaceState, markBackedUp, todayISO } from './store.js';
+import { state, getPeriod, getCategory, isValid, migrate, replaceState, markBackedUp, todayISO } from './store.js';
 import { saveFile } from './ui.js';
+import { CURRENCIES } from './money.js';
+
+// An expense's original amount as a plain number in its currency, e.g. 300 (pesos) or 12.50.
+const formatAmount = ({ amount, currency }) => (amount / 10 ** CURRENCIES[currency].decimals).toFixed(CURRENCIES[currency].decimals);
 
 const REMINDER_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -18,10 +22,11 @@ export function exportCsv() {
   return saveFile(`budget-${todayISO()}.csv`, toCsv(), 'text/csv');
 }
 
-// Returns the backup's data, or null if the file isn't a backup.
+// Returns the backup's data (brought up to date if it came from an older version), or null if
+// the file isn't a backup.
 export async function readBackup(file) {
   try {
-    const data = JSON.parse(await file.text());
+    const data = migrate(JSON.parse(await file.text()));
     return isValid(data) ? data : null;
   } catch {
     return null;
@@ -46,12 +51,12 @@ export function backupStatus() {
 
 function toCsv() {
   const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-  const lines = ['period_start,date,category,amount_usd,note,original_currency,original_amount,mxn_per_usd'];
+  const lines = ['period_start,date,category,amount_usd,note,original_currency,original_amount,rate_per_usd'];
   const sorted = [...state.expenses].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
   for (const e of sorted) {
     lines.push([
       getPeriod(e.periodId)?.start, e.date, getCategory(e.categoryId)?.name, (e.usdCents / 100).toFixed(2), e.note,
-      e.original?.currency, e.original?.amount, e.original?.mxnPerUsd,
+      e.original?.currency, e.original && formatAmount(e.original), e.original?.perUsd,
     ].map(cell).join(','));
   }
   return lines.join('\n');

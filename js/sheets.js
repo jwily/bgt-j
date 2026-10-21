@@ -1,16 +1,20 @@
 // Bottom sheets: editing an expense, and the category grid.
 
 import { activeCategories, sortedCategories, updateExpense, deleteExpense } from './store.js';
-import { formatUsd, pesosToUsdCents } from './money.js';
+import { CURRENCIES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
 import { el, openSheet, closeSheet, toast, nudge, categoryChip } from './ui.js';
 
 export function openExpenseSheet(expense) {
-  const mxn = expense.original?.currency === 'MXN' ? expense.original : null;
+  // Expenses entered in another currency are edited in that currency, at the rate saved with them.
+  const foreign = expense.original && expense.original.currency !== HOME ? expense.original : null;
+  const currency = foreign?.currency ?? HOME;
+  const { decimals } = CURRENCIES[currency];
+  const typed = foreign ? foreign.amount : expense.usdCents; // in the currency's smallest typed unit
 
   const amount = el('input', {
     type: 'text',
-    inputMode: mxn ? 'numeric' : 'decimal',
-    value: mxn ? String(mxn.amount) : (expense.usdCents / 100).toFixed(2),
+    inputMode: decimals ? 'decimal' : 'numeric',
+    value: (typed / 10 ** decimals).toFixed(decimals),
   });
   const category = el('select', {}, ...sortedCategories()
     .filter((c) => !c.archived || c.id === expense.categoryId)
@@ -21,17 +25,14 @@ export function openExpenseSheet(expense) {
 
   const saveButton = el('button', { className: 'primary', textContent: 'Save' });
   saveButton.addEventListener('click', () => {
-    const raw = Number(amount.value.replace(/[^0-9.]/g, ''));
+    const units = Math.round(Number(amount.value.replace(/[^0-9.]/g, '')) * 10 ** decimals);
+    if (!(units > 0)) return nudge(amount);
     const changes = { categoryId: category.value, date: date.value || expense.date, note: note.value.trim() };
-    if (mxn) {
-      const pesos = Math.round(raw);
-      if (!(pesos > 0)) return nudge(amount);
-      changes.original = { ...mxn, amount: pesos };
-      changes.usdCents = pesosToUsdCents(pesos, mxn.mxnPerUsd);
+    if (foreign) {
+      changes.original = { ...foreign, amount: units };
+      changes.usdCents = toUsdCents(units, currency, foreign.perUsd);
     } else {
-      const cents = Math.round(raw * 100);
-      if (!(cents > 0)) return nudge(amount);
-      changes.usdCents = cents;
+      changes.usdCents = units;
     }
     closeSheet();
     updateExpense(expense.id, changes);
@@ -46,8 +47,8 @@ export function openExpenseSheet(expense) {
   const field = (label, input) => el('label', { className: 'field' }, el('span', { textContent: label }), input);
   openSheet(el('div', {},
     el('h2', { textContent: 'Edit expense' }),
-    mxn && el('p', { className: 'hint', textContent: `Entered in pesos at ${mxn.mxnPerUsd.toFixed(2)} MXN per USD (${formatUsd(expense.usdCents)}).` }),
-    field(mxn ? 'Amount (MXN)' : 'Amount (USD)', amount),
+    foreign && el('p', { className: 'hint', textContent: `Entered as ${formatMoney(foreign.amount, currency)} at ${foreign.perUsd.toFixed(2)} ${currency} per ${HOME} (${formatUsd(expense.usdCents)}).` }),
+    field(`Amount (${currency})`, amount),
     field('Category', category),
     field('Date', date),
     field('Note', note),
