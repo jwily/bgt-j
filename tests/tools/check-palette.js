@@ -1,13 +1,8 @@
 // Checks the app's category palette (PALETTE in app/js/store.js) for colors that look too alike.
 // Categories take colors in order, so it reports the closest pair among the first n colors.
 // Distance is OKLab x100; under ~10 starts to look alike. Usage: node tools/check-palette.js
-const fs = require('fs');
-const path = require('path');
 
-const store = fs.readFileSync(path.join(__dirname, '../../app/js/store.js'), 'utf8');
-const block = store.slice(store.indexOf('const PALETTE = ['), store.indexOf('];', store.indexOf('const PALETTE = [')));
-const palette = [...block.matchAll(/'(#[0-9a-f]{6})', \/\/ ([^:]+):/gi)].map(([, hex, name]) => ({ hex, name }));
-if (palette.length === 0) throw new Error('No colors found in PALETTE');
+const palette = require('../helpers').readPalette();
 
 const linear = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
 function oklab(hex) {
