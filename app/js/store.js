@@ -148,10 +148,16 @@ function keepInputCategoryActive(data) {
 // Colors follow alphabetical order: the first active category gets color 1, the next color 2, and
 // so on. Archived categories come after the active ones, so past summaries still tell them apart.
 // Past 16, colors repeat. Renaming, adding or removing a category can shift colors.
+// The color for the category in position i (alphabetical, active first), wrapping after 16.
+// (A function declaration: load() runs near the top of this file, before a const here would exist.)
+export function paletteColor(i) {
+  return PALETTE[i % PALETTE.length];
+}
+
 function assignColors(data) {
   const sorted = [...data.categories].sort(byName);
   const ordered = [...sorted.filter((c) => !c.archived), ...sorted.filter((c) => c.archived)];
-  ordered.forEach((category, i) => { category.color = PALETTE[i % PALETTE.length]; });
+  ordered.forEach((category, i) => { category.color = paletteColor(i); });
 }
 
 // Returns false if the data couldn't be saved (the phone's storage for the app is full).
@@ -185,7 +191,6 @@ export const getPeriod = (id) => state.periods.find((p) => p.id === id);
 export const periodNumber = (period) => state.periods.indexOf(period) + 1;
 export const getCategory = (id) => state.categories.find((c) => c.id === id);
 // Names are unique, ignoring capitalization ("groceries" and "Groceries" clash), archived ones included.
-export const categoryNamed = (name) => state.categories.find((c) => c.name.toLowerCase() === name.trim().toLowerCase());
 export const sortedCategories = () => [...state.categories].sort(byName);
 export const activeCategories = () => sortedCategories().filter((c) => !c.archived);
 export const periodExpenses = (periodId) => state.expenses.filter((e) => e.periodId === periodId);
@@ -254,39 +259,28 @@ export function deleteExpense(id) {
 
 // ---------- categories ----------
 
-export function addCategory() {
-  let name = 'New Category';
-  for (let n = 2; categoryNamed(name); n++) name = `New Category ${n}`;
-  const category = { id: newId(), name, color: null, archived: false }; // save() assigns the color
-  state.categories.push(category);
-  save();
-  return category;
-}
+export const categoryIsUsed = (id) => state.expenses.some((e) => e.categoryId === id);
 
-export function updateCategory(id, changes) {
-  Object.assign(getCategory(id), changes);
-  save();
-}
-
-// Categories with expenses are archived so past summaries keep them; unused ones are deleted.
+// Applies the Categories screen's edits in one go. draft: [{ id (null for a new one), name,
+// archived }] for every category to keep. Categories left out are removed: archived if they have
+// expenses (so past summaries keep them), deleted otherwise. save() then sorts and recolors.
 // Returns an undo function.
-export function removeCategory(id) {
-  const index = state.categories.findIndex((c) => c.id === id);
-  const category = state.categories[index];
-  if (state.expenses.some((e) => e.categoryId === id)) {
-    category.archived = true;
-    save();
-    return () => updateCategory(id, { archived: false });
-  }
-  state.categories.splice(index, 1);
+export function saveCategories(draft) {
+  const before = state.categories.map((c) => ({ ...c }));
+  const kept = draft.map((d) => {
+    const existing = d.id && getCategory(d.id);
+    const name = d.name.trim();
+    return existing ? { ...existing, name, archived: d.archived } : { id: newId(), name, color: null, archived: d.archived };
+  });
+  const keptIds = new Set(kept.map((c) => c.id));
+  const archivedNow = state.categories.filter((c) => !keptIds.has(c.id) && categoryIsUsed(c.id)).map((c) => ({ ...c, archived: true }));
+  state.categories.splice(0, state.categories.length, ...kept, ...archivedNow);
   save();
   return () => {
-    state.categories.splice(index, 0, category);
+    state.categories.splice(0, state.categories.length, ...before);
     save();
   };
 }
-
-// ---------- main screen choices ----------
 
 export function setInputPrefs(prefs) {
   Object.assign(state.input, prefs);

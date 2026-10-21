@@ -5,7 +5,7 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared } = require('./helpers');
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette } = require('./helpers');
 let failures = 0;
 const check = (label, actual, expected) => {
   const ok = actual === expected;
@@ -271,7 +271,9 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await openMenuItem('Categories');
   const housingRow = await page.locator('.cat-row input').evaluateAll((ns) => ns.findIndex((n) => n.value === 'Housing'));
   await page.locator('.cat-row').nth(housingRow).locator('.mini').tap();
-  check('unused category deleted (undo offered)', await page.locator('#help span').first().textContent(), 'Housing deleted');
+  check('unused category removed (undo offered)', await page.locator('#help span').first().textContent(), 'Housing removed');
+  await page.locator('#page .actions .primary', { hasText: 'Save' }).tap();
+  await page.waitForTimeout(300);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(400);
   check('selection moved to an active category', await page.locator('.strip .chip.selected').textContent(), 'Bills');
@@ -449,55 +451,65 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('desktop: clicking the middle of the date button opens the picker', await deskPage.evaluate(() => window.pickerOpened), 1);
   await desktop.close();
 
-  // Category names can't clash (ignoring capitalization); new ones get a free name.
+  // Categories screen: names can't clash (ignoring capitalization) or be empty; new ones get a free
+  // name; nothing is saved until Save; Back with unsaved changes asks first.
   const clash = await browser.newContext({ ...devices['iPhone 13'] });
   await mockRates(clash, RATE);
   const p5 = await newPage(clash);
   await p5.goto(URL);
   await startFirstPeriod(p5, '100000');
-  await p5.locator('#nav-btn').tap();
-  await p5.waitForTimeout(250);
-  await p5.locator('#menu button', { hasText: 'Categories' }).tap();
-  await p5.waitForTimeout(300);
+  const openCategories = async () => {
+    await p5.locator('#nav-btn').tap();
+    await p5.waitForTimeout(250);
+    await p5.locator('#menu button', { hasText: 'Categories' }).tap();
+    await p5.waitForTimeout(300);
+  };
+  const savedNames = () => p5.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).categories.filter((c) => !c.archived).map((c) => c.name).sort().join(','));
+  const save5 = p5.locator('#page .actions .primary', { hasText: 'Save' });
+  await openCategories();
+  const before = await savedNames();
+  check('Save is in view above the bottom bar without scrolling', await p5.evaluate(() => {
+    const save = document.querySelector('#page .actions .primary').getBoundingClientRect();
+    return save.top >= 0 && save.bottom <= document.querySelector('.dock').getBoundingClientRect().top;
+  }), true);
   const nameField = (n) => p5.locator('.cat-row input').nth(n);
-  const funIndex = await p5.locator('.cat-row input').evaluateAll((ns) => ns.findIndex((n) => n.value === 'Fun'));
+  const funIndex = (await categoryRows(p5)).indexOf('Fun');
   await nameField(funIndex).fill('groceries');
-  await nameField(funIndex).press('Enter');
-  await p5.waitForTimeout(300);
-  check('rename to an existing name is refused', await p5.locator('#help span').first().textContent(), "There's already a category called Groceries.");
-  check('and the name goes back', (await p5.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value))).includes('Fun'), true);
+  await save5.tap();
+  await p5.waitForTimeout(200);
+  check('saving a clashing name is refused', await p5.locator('#help span').first().textContent(), "There's already a category called Groceries.");
+  check('and nothing is saved', await savedNames(), before);
+  await nameField(funIndex).fill('');
+  await save5.tap();
+  await p5.waitForTimeout(200);
+  check('saving an empty name is refused', await p5.locator('#help span').first().textContent(), "Category names can't be empty.");
+  await nameField(funIndex).fill('Fun');
+  check('Save turns off again when the draft matches what\'s saved', await save5.isDisabled(), true);
   await messageCleared(p5);
   await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
-  await p5.waitForTimeout(200);
   await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
-  await p5.waitForTimeout(200);
-  const names = await p5.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value));
-  check('second new category gets a free name', names.includes('New Category') && names.includes('New Category 2'), true);
+  const rows = await categoryRows(p5);
+  check('new ones get free names, at the bottom until saved', rows.slice(-2).join(','), 'New Category,New Category 2');
+  check('colors follow the list in GF order', (await categoryDotColors(p5)).join(','), readPalette().map((c) => c.hex).slice(0, rows.length).join(','));
+  await p5.locator('.cat-row').last().locator('.mini').tap();
+  check('removing an unsaved one', await p5.locator('#help span').first().textContent(), 'New Category 2 removed');
+  await p5.locator('#undo-btn').tap();
+  check('Undo brings it back', (await categoryRows(p5)).at(-1), 'New Category 2');
 
-  // While the Categories screen is open, rows keep their places and colors: new ones join at the
-  // bottom, and a renamed row stays where it was. Leaving re-sorts them.
-  const rowNames = () => p5.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value));
-  const firstDot = () => p5.locator('.cat-row .dot').first().evaluate((d) => d.style.getPropertyValue('--c'));
-  check('new categories added at the bottom while editing', (await rowNames()).slice(-2).join(','), 'New Category,New Category 2');
-  const colorBefore = await firstDot();
-  await nameField(0).fill('Zoo');
-  await nameField(0).press('Enter');
-  await p5.waitForTimeout(300);
-  check('renamed row stays in place while editing', (await rowNames())[0], 'Zoo');
-  check('renamed row keeps its color while editing', await firstDot(), colorBefore);
-  await messageCleared(p5).catch(() => {});
-  await p5.locator('#nav-btn').tap(); // leave
-  await p5.waitForTimeout(300);
+  // Back with unsaved changes: Cancel stays, OK leaves without saving.
+  p5.once('dialog', (d) => d.dismiss());
   await p5.locator('#nav-btn').tap();
-  await p5.waitForTimeout(250);
-  await p5.locator('#menu button', { hasText: 'Categories' }).tap();
+  await p5.waitForTimeout(200);
+  check('Back with unsaved changes: Cancel stays', await titleText(p5), 'Categories');
+  p5.once('dialog', (d) => d.accept());
+  await p5.locator('#nav-btn').tap();
   await p5.waitForTimeout(300);
-  const resorted = await rowNames();
-  check('leaving re-sorts alphabetically', resorted.join(','), [...resorted].sort((a, b) => a.localeCompare(b)).join(','));
-  check('renamed row moved to its alphabetical place', resorted.at(-1), 'Zoo');
+  check('Back with unsaved changes: OK leaves', await p5.locator('#page').isHidden(), true);
+  check('and the changes are discarded', await savedNames(), before);
 
   // Add category with the keyboard open: the new name field ends up above the keyboard, not behind
   // it. (A 300px keyboard is faked by shrinking the visual viewport, as iOS does.)
+  await openCategories();
   await p5.evaluate(() => Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => innerHeight - 300 }));
   await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
   await p5.evaluate(() => visualViewport.dispatchEvent(new Event('resize')));

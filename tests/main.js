@@ -3,7 +3,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const ENGINE = process.env.ENGINE || 'chromium';
 const fs = require('fs');
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, asInstalledApp, mockRates } = require('./helpers');
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
 const check = (label, actual, expected) => console.log(`${actual === expected ? 'PASS' : 'FAIL'}  ${label}: ${JSON.stringify(actual)}${actual === expected ? '' : ` (expected ${JSON.stringify(expected)})`}`);
 
@@ -161,7 +161,9 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   check('back to periods', await titleText(page), 'Past Periods');
   await page.locator('#nav-btn').tap();
 
-  // Categories: recolor, add, archive used one
+  // Categories: edits are a draft until Save, which sorts them; colors always follow GF order down
+  // the list. Add one, archive a used one, save.
+  const gfOrder = readPalette().map((c) => c.hex);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
   await page.locator('#menu button', { hasText: 'Categories' }).tap();
@@ -171,16 +173,24 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
     return s.categories.filter((c) => !c.archived).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 3).map((c) => c.color).join(',');
   }), '#94cc3a,#8fd0f5,#e2682b');
   check('no reorder arrows', await page.locator('.mini', { hasText: '↑' }).count(), 0);
+  const saveButton = page.locator('#page .actions .primary', { hasText: 'Save' });
+  check('Save is off until something changes', await saveButton.isDisabled(), true);
   await page.locator('.wide-btn', { hasText: 'Add category' }).tap();
   check('category added', await page.locator('.cat-row input').count(), 10);
   check('new category name selected', await page.evaluate(() => document.activeElement.value), 'New Category');
   await page.keyboard.type('Coffee');
   await page.keyboard.press('Enter');
-  // Rows hold their places while the screen is open (it re-sorts when you leave): Coffee stays at the bottom.
-  check('editor holds order while editing', (await page.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value))).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport,Coffee');
-  const transportRow = await page.locator('.cat-row input').evaluateAll((ns) => ns.findIndex((n) => n.value === 'Transport'));
+  check('unsaved: new one stays at the bottom', (await categoryRows(page)).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport,Coffee');
+  check('unsaved: colors still in GF order down the list', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
+  const transportRow = (await categoryRows(page)).indexOf('Transport');
   await page.locator('.cat-row').nth(transportRow).locator('.mini', { hasText: '✕' }).tap();
   check('Transport archived', await page.locator('#help span').first().textContent(), 'Transport archived');
+  check('colors in GF order after removing one', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
+  await saveButton.tap();
+  await page.waitForTimeout(300);
+  check('saved message', await page.locator('#help span').first().textContent(), 'Categories saved');
+  check('Save sorts them right away', (await categoryRows(page)).join(','), 'Bills,Coffee,Dining,Fun,Groceries,Health,Housing,Other,Shopping');
+  check('colors in GF order after saving', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
   await page.screenshot({ path: `${OUT}/${ENGINE}-4-categories.png`, fullPage: true });
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
