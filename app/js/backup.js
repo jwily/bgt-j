@@ -32,7 +32,57 @@ export async function readBackup(file) {
 
 // The restored data is, by definition, backed up, so the reminder clock restarts.
 export function restoreBackup(data) {
+  takeSnapshot('before restoring a backup');
   replaceState({ ...data, lastBackupAt: Date.now() });
+}
+
+// ---------- safety snapshots ----------
+// Copies of all the data, kept on the phone apart from it: one a day (as it was when the app was
+// first opened that day) and one before anything drastic. They undo mistakes; they don't protect
+// against losing the phone (exported backups do). Never included in exported backups.
+
+const SNAPSHOT_KEY = 'budget-tracker-snapshots';
+const SNAPSHOT_LIMIT = 7;
+const DAILY = 'start of the day';
+
+// Newest first: [{ at, reason, data }] (data is the saved JSON text).
+export function snapshots() {
+  try {
+    return JSON.parse(localStorage.getItem(SNAPSHOT_KEY)) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function takeSnapshot(reason) {
+  const list = [{ at: Date.now(), reason, data: JSON.stringify(state) }, ...snapshots()].slice(0, SNAPSHOT_LIMIT);
+  // If the phone's storage for the app is full, drop the oldest snapshots until it fits;
+  // snapshots must never get in the way of saving the real data.
+  while (list.length) {
+    try {
+      localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(list));
+      return;
+    } catch {
+      list.pop();
+    }
+  }
+}
+
+export function takeDailySnapshot() {
+  const last = snapshots().find((snapshot) => snapshot.reason === DAILY);
+  if (last && new Date(last.at).toDateString() === new Date().toDateString()) return;
+  takeSnapshot(DAILY);
+}
+
+// Goes back to a snapshot, after snapshotting the current data so this can be undone too.
+// Keeps the newer "last backed up" time, since backups made since then still exist.
+export function restoreSnapshot(at) {
+  const snapshot = snapshots().find((s) => s.at === at);
+  const data = snapshot && migrate(JSON.parse(snapshot.data));
+  if (!isValid(data)) return false;
+  takeSnapshot('before going back to a snapshot');
+  replaceState({ ...data, lastBackupAt: Math.max(data.lastBackupAt ?? 0, state.lastBackupAt ?? 0) || null });
+  return true;
 }
 
 // { short, label, stale }: short is "today" / "3 days ago" / "never" for tight spaces,

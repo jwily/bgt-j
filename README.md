@@ -43,7 +43,7 @@ Add one line to `CURRENCIES` in `app/js/money.js`, e.g. `EUR: { decimals: 2, max
 
 ## Exchange rates
 
-Each time the app opens, it downloads today's rates for every currency in the table from [Frankfurter](https://frankfurter.dev) (free, publishes European Central Bank rates) unless it already has today's. Offline, it uses the last rates it had. That download is the app's only network request.
+When the app opens without today's rates, it downloads them from [Frankfurter](https://frankfurter.dev) (free, publishes European Central Bank rates), checking at most every 3 hours. New rates come out once per business day, around 9am in Mexico City, so checking more often wouldn't help. Offline, it uses the last rates it had. That download is the app's only network request.
 
 ## Your data
 
@@ -52,6 +52,7 @@ Data is stored on the phone in `localStorage`, tied to the URL you installed fro
 Two safeguards:
 
 - **Persistent storage.** On launch the app asks the browser not to clear its data when the phone is low on space. The browser decides silently; the Backup screen shows whether it was granted.
+- **Safety snapshots.** The app keeps copies of all your data on the phone: one a day and one before anything drastic (restoring a backup, deleting a period, going back to a snapshot). The newest 7 are listed under **Menu → Backup → Snapshots** with **Go back**. They undo mistakes; they're lost with the phone, unlike exported backups.
 - **Backup reminders.** The menu shows when you last backed up. After 30 days (or if you've never backed up and have expenses), that line turns red and a dot appears on Menu. Starting a New Period also offers **Back up first**.
 
 ## Tests

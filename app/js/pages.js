@@ -10,7 +10,7 @@ import {
 import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
 import { el, svg, toast, setHelp, formatDate, colorDot, gauge, keypad } from './ui.js';
 import { openExpenseSheet } from './sheets.js';
-import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus } from './backup.js';
+import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, snapshots, takeSnapshot, restoreSnapshot } from './backup.js';
 
 const page = document.getElementById('page');
 const body = document.getElementById('page-body');
@@ -167,6 +167,7 @@ function removePeriod(period) {
   const what = `${name} and its ${count} expense${count === 1 ? '' : 's'}`;
   const reopens = !period.end && state.periods.length > 1;
   if (!confirm(`Delete ${what}?${reopens ? ' The previous period becomes current again.' : ''}`)) return;
+  takeSnapshot(`before deleting ${name}`);
   goBack(); // leave this summary first; it can't be shown once its period is gone
   const undo = deletePeriod(period.id);
   if (!currentPeriod()) showPage('budget', { mode: 'first' }); // that was the only period
@@ -334,6 +335,18 @@ function renderBackup() {
       : 'Storage: standard. iOS may clear it if the phone runs very low on space.';
   }).catch(() => {});
 
+  const snapshotRows = snapshots().map((snapshot) => {
+    const when = snapshotTime(snapshot.at);
+    const goBackButton = el('button', { className: 'link', textContent: 'Go back' });
+    goBackButton.addEventListener('click', () => {
+      if (!confirm(`Go back to how everything was ${when} (${snapshot.reason})? Your current data is snapshotted first, so you can undo this.`)) return;
+      if (restoreSnapshot(snapshot.at)) toast(`Back to ${when}`);
+    });
+    return el('div', { className: 'snapshot-row' },
+      el('span', { className: 'grow' }, el('span', { textContent: when }), el('small', { textContent: snapshot.reason })),
+      goBackButton);
+  });
+
   fill('Backup', 'Keep a copy of your data somewhere safe.',
     panel('Status',
       el('p', { className: `backup-status${status.stale ? ' bad' : ''}`, textContent: status.label }),
@@ -342,8 +355,19 @@ function renderBackup() {
     csvButton,
     restore,
     el('p', { className: 'empty-note', textContent: 'Restoring replaces everything in the app with the backup.' }),
+    panel('Snapshots',
+      ...snapshotRows,
+      el('p', { className: 'hint', textContent: 'Kept on this phone automatically: one a day, and one before anything drastic. For undoing mistakes; they\u2019re lost with the phone, unlike exported backups.' })),
     storage,
   );
+}
+
+// "Today, 9:41 AM" or "Oct 19, 9:41 AM".
+function snapshotTime(at) {
+  const date = new Date(at);
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const iso = new Date(at - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return `${date.toDateString() === new Date().toDateString() ? 'Today' : formatDate(iso)}, ${time}`;
 }
 
 // ---------- budget: first budget, New Period, edit budget ----------

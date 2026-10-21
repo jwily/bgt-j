@@ -5,7 +5,7 @@ import { formatUsd } from './money.js';
 import { setHelp } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack } from './pages.js';
-import { backupStatus } from './backup.js';
+import { backupStatus, takeDailySnapshot } from './backup.js';
 
 const $ = (id) => document.getElementById(id);
 const navButton = $('nav-btn');
@@ -74,6 +74,7 @@ function refresh() {
   renderChrome();
 }
 
+takeDailySnapshot(); // before anything changes today
 initInput();
 initPages({ onNavigate: refresh });
 refresh();

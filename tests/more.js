@@ -316,6 +316,50 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('offline estimate line', (await p2.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $10.00 | ~18.5 MXN per USD (estimate until online)');
   await offline.close();
 
+  // Safety snapshots: one a day, one before anything drastic, and going back works (and is undoable).
+  const snap = await browser.newContext({ ...devices['iPhone 13'] });
+  await fakeShareSheet(snap);
+  await snap.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+  const p6 = await newPage(snap);
+  const snaps = () => p6.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker-snapshots') ?? '[]').map((s) => s.reason));
+  const expensesNow = () => p6.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).expenses.length);
+  await p6.goto(URL);
+  await p6.waitForTimeout(300);
+  check('snapshots: one taken on first launch', (await snaps()).join('|'), 'start of the day');
+  for (const k of '100000') await p6.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+  await p6.locator('#page .primary').tap();
+  await p6.waitForTimeout(300);
+  for (const k of '500') await p6.locator('#view-input .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+  await p6.locator('.add-btn').tap();
+  await p6.waitForTimeout(300);
+  await p6.reload();
+  await p6.waitForTimeout(300);
+  check('snapshots: still one a day after reopening', (await snaps()).length, 1);
+  await p6.waitForSelector('#help:not(.message)', { timeout: 6000 });
+  await p6.locator('#nav-btn').tap();
+  await p6.waitForTimeout(250);
+  await p6.locator('#menu button', { hasText: 'Current Period' }).tap();
+  await p6.waitForTimeout(300);
+  p6.once('dialog', (d) => d.accept());
+  await p6.locator('.delete-btn').tap(); // the only period: back to First Budget
+  await p6.waitForTimeout(300);
+  check('snapshots: taken before deleting a period', (await snaps())[0], 'before deleting Current Period');
+  check('the expense is gone', await expensesNow(), 0);
+  for (const k of '100000') await p6.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+  await p6.locator('#page .primary').tap();
+  await p6.waitForTimeout(4300);
+  await p6.locator('#nav-btn').tap();
+  await p6.waitForTimeout(250);
+  await p6.locator('#menu button', { hasText: 'Backup' }).tap();
+  await p6.waitForTimeout(300);
+  check('snapshots: listed on the Backup screen', await p6.locator('.snapshot-row').count(), 2);
+  p6.once('dialog', (d) => d.accept());
+  await p6.locator('.snapshot-row', { hasText: 'before deleting' }).locator('.link').tap();
+  await p6.waitForTimeout(300);
+  check('going back restores the deleted expense', await expensesNow(), 1);
+  check('going back snapshots the current data first', (await snaps())[0], 'before going back to a snapshot');
+  await snap.close();
+
   // Category names can't clash (ignoring capitalization); new ones get a free name.
   const clash = await browser.newContext({ ...devices['iPhone 13'] });
   await clash.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));

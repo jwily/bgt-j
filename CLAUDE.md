@@ -31,6 +31,12 @@ Read README.md for what the app does; this file covers how to work on it.
   edits only (edit expense, category grid).
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Check changes with `npm run palette`.
+- **Category names are unique** ignoring case (`categoryNamed`); new ones get a free name.
+- **Snapshots** (`backup.js`): taken once a day and before anything drastic; call `takeSnapshot(reason)`
+  before any new destructive action. Stored under their own localStorage key, never in backups.
+- **Rates** download when the app opens without today's rates, at most every 3 hours (the source
+  publishes once per business day).
+- **Dates** always go through `formatDate()` in `ui.js` (year shown only when it isn't this year).
 - Build DOM with `el()` from `ui.js`; it skips `false`/`null` children (so `cond && el(...)` is safe).
 
 ## Design rules (measured from the reference screenshots, not guessed)
