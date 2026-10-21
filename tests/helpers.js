@@ -31,3 +31,25 @@ exports.openSummary = async (page) => {
   await page.locator('#menu button', { hasText: 'Current Period' }).tap();
   await page.waitForTimeout(250);
 };
+
+// Serves ../app on http://localhost:8765 (the address the passes and tools use). Resolves to the
+// server; call server.close() when done.
+const APP = require('path').join(__dirname, '..', 'app');
+const TYPES = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
+  '.png': 'image/png', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.svg': 'image/svg+xml',
+};
+exports.APP_URL = 'http://localhost:8765/';
+exports.serveApp = () => new Promise((resolve) => {
+  const path = require('path');
+  const server = require('http').createServer((req, res) => {
+    const urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    const file = path.join(APP, urlPath.endsWith('/') ? `${urlPath}index.html` : urlPath);
+    if (!file.startsWith(APP)) return res.writeHead(403).end();
+    fs.readFile(file, (err, data) => {
+      if (err) return res.writeHead(404).end();
+      res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream' }).end(data);
+    });
+  });
+  server.listen(8765, () => resolve(server));
+});

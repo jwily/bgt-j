@@ -82,6 +82,22 @@ const check = (label, ok, detail) => {
     }
     check(`${name}: every category centered when selected`, Math.abs(worstOffset) <= 2, `worst ${worstOffset}px`);
     check(`${name}: hand stays clear of the diamond`, smallestGap >= 8, `${smallestGap}px`);
+
+    // A long note must not make the summary wider than the screen (it ends in "…" instead).
+    await key('⌫'); // clear the 9s typed above (hold ⌫)
+    const back = page.locator('#view-input .key').filter({ hasText: /^⌫$/ });
+    await back.hover();
+    await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
+    await key('5');
+    await page.locator('.note').fill('A very long note that goes on and on well past the width of any phone screen');
+    await page.locator('.add-btn').tap();
+    await page.waitForSelector('#help:not(.message)', { timeout: 6000 });
+    await page.locator('#help').click({ position: { x: 20, y: 30 } });
+    await page.waitForTimeout(300);
+    await page.locator('.cat-head').first().tap();
+    await page.waitForTimeout(300);
+    const overflow = await page.evaluate(() => document.getElementById('page').scrollWidth - document.getElementById('page').clientWidth);
+    check(`${name}: summary never wider than the screen`, overflow <= 0, `${overflow}px too wide`);
     await context.close();
   }
   console.log(errors.length ? `ERRORS:\n${errors.join('\n')}` : 'No console errors');

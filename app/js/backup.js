@@ -3,10 +3,7 @@
 
 import { state, getPeriod, getCategory, isValid, migrate, replaceState, markBackedUp, todayISO } from './store.js';
 import { saveFile } from './ui.js';
-import { CURRENCIES } from './money.js';
-
-// An expense's original amount as a plain number in its currency, e.g. 300 (pesos) or 12.50.
-const formatAmount = ({ amount, currency }) => (amount / 10 ** CURRENCIES[currency].decimals).toFixed(CURRENCIES[currency].decimals);
+import { HOME, plainAmount } from './money.js';
 
 const REMINDER_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -55,8 +52,8 @@ function toCsv() {
   const sorted = [...state.expenses].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
   for (const e of sorted) {
     lines.push([
-      getPeriod(e.periodId)?.start, e.date, getCategory(e.categoryId)?.name, (e.usdCents / 100).toFixed(2), e.note,
-      e.original?.currency, e.original && formatAmount(e.original), e.original?.perUsd,
+      getPeriod(e.periodId)?.start, e.date, getCategory(e.categoryId)?.name, plainAmount(e.usdCents, HOME), e.note,
+      e.original?.currency, e.original && plainAmount(e.original.amount, e.original.currency), e.original?.perUsd,
     ].map(cell).join(','));
   }
   return lines.join('\n');

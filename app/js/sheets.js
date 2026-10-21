@@ -1,20 +1,18 @@
 // Bottom sheets: editing an expense, and the category grid.
 
 import { activeCategories, sortedCategories, updateExpense, deleteExpense } from './store.js';
-import { CURRENCIES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
+import { CURRENCIES, HOME, formatMoney, formatUsd, plainAmount, parseAmount, toUsdCents } from './money.js';
 import { el, openSheet, closeSheet, toast, nudge, categoryChip } from './ui.js';
 
 export function openExpenseSheet(expense) {
   // Expenses entered in another currency are edited in that currency, at the rate saved with them.
   const foreign = expense.original && expense.original.currency !== HOME ? expense.original : null;
   const currency = foreign?.currency ?? HOME;
-  const { decimals } = CURRENCIES[currency];
-  const typed = foreign ? foreign.amount : expense.usdCents; // in the currency's smallest typed unit
 
   const amount = el('input', {
     type: 'text',
-    inputMode: decimals ? 'decimal' : 'numeric',
-    value: (typed / 10 ** decimals).toFixed(decimals),
+    inputMode: CURRENCIES[currency].decimals ? 'decimal' : 'numeric',
+    value: plainAmount(foreign ? foreign.amount : expense.usdCents, currency),
   });
   const category = el('select', {}, ...sortedCategories()
     .filter((c) => !c.archived || c.id === expense.categoryId)
@@ -25,7 +23,7 @@ export function openExpenseSheet(expense) {
 
   const saveButton = el('button', { className: 'primary', textContent: 'Save' });
   saveButton.addEventListener('click', () => {
-    const units = Math.round(Number(amount.value.replace(/[^0-9.]/g, '')) * 10 ** decimals);
+    const units = parseAmount(amount.value, currency);
     if (!(units > 0)) return nudge(amount);
     const changes = { categoryId: category.value, date: date.value || expense.date, note: note.value.trim() };
     if (foreign) {

@@ -26,7 +26,13 @@ const formats = Object.fromEntries(CURRENCY_CODES.map((code) => [code, new Intl.
 })]));
 
 // Amounts are whole numbers in each currency's smallest typed unit: US cents, whole pesos, ...
-export const formatMoney = (amount, code) => formats[code].format(amount / 10 ** CURRENCIES[code].decimals);
+const toNumber = (amount, code) => amount / 10 ** CURRENCIES[code].decimals; // 1250 USD → 12.5
+export const formatMoney = (amount, code) => formats[code].format(toNumber(amount, code));
+
+// Plain text for editing and spreadsheets: 1250 USD → "12.50", 300 MXN → "300".
+export const plainAmount = (amount, code) => toNumber(amount, code).toFixed(CURRENCIES[code].decimals);
+// The reverse, from typed text ("$12.5" → 1250 for USD); anything but digits and "." is ignored.
+export const parseAmount = (text, code) => Math.round(Number(String(text).replace(/[^0-9.]/g, '')) * 10 ** CURRENCIES[code].decimals);
 export const formatUsd = (cents) => formatMoney(cents, HOME);
 
 // Budget minus spent, signed: "+$1,442.50" when under, "−$325.50" when over.
@@ -35,5 +41,5 @@ export const formatDiff = (cents) => `${cents >= 0 ? '+' : '−'}${formatUsd(Mat
 // perUsd: how many units of `code` one US dollar buys.
 export function toUsdCents(amount, code, perUsd) {
   if (code === HOME) return amount;
-  return Math.round(((amount / 10 ** CURRENCIES[code].decimals) * 100) / perUsd);
+  return Math.round((toNumber(amount, code) * 100) / perUsd);
 }
