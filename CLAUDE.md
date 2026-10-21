@@ -99,6 +99,8 @@ Read README.md for what the app does; this file covers how to work on it.
 - Category chips are as wide as their name; long-pressing the strip opens the grid level with it.
 - New Period / first budget / edit budget is a full screen, not a sheet.
 - Backups are whole-history JSON; CSV export is for spreadsheets only.
+- Animations ignore the phone's Reduce Motion setting: the user keeps it on elsewhere but wants the
+  hand to bob and windows to unfold here.
 
 ## Branches
 

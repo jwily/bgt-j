@@ -131,9 +131,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
    (--unfold, set on :root). */
 @keyframes unfold { from { transform: scaleY(0.05); opacity: 0.5; } }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
+/* The phone's Reduce Motion setting is deliberately not honored: the app has one user, who keeps
+   Reduce Motion on for the rest of the phone but wants this app's animations. */
 
 /* ---------- top bar: HELP window + title window ---------- */
 
