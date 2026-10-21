@@ -93,6 +93,11 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('grid has no duplicate heading', await page.locator('#sheet h2').count(), 0);
   check('grid opens level with the strip', await page.evaluate(() =>
     Math.abs(document.querySelector('#sheet').getBoundingClientRect().top - document.querySelector('.strip-window').getBoundingClientRect().top) < 2), true);
+  check('grid reads down the left column, then the right', await page.evaluate(() => {
+    const chips = [...document.querySelectorAll('#sheet .grid .chip')].map((c) => c.getBoundingClientRect());
+    const half = Math.ceil(chips.length / 2);
+    return chips.slice(1, half).every((c, i) => c.left === chips[0].left && c.top > chips[i].top) && chips[half].left > chips[0].left && chips[half].top === chips[0].top;
+  }), true);
   check('grid alphabetical', (await page.locator('#sheet .grid .chip').allTextContents()).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');
   check('grid marks current', await page.locator('#sheet .grid .chip.selected').textContent(), 'Groceries');
   // The grid opens like every other window: the same unfold, from its middle
