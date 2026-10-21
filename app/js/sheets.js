@@ -56,7 +56,8 @@ export function openExpenseSheet(expense) {
 
 // anchor: the element the grid opens level with (the category strip).
 export function openCategoryGrid(selectedId, onPick, anchor) {
-  const grid = el('div', { className: 'grid' }, ...activeCategories().map((category) => {
+  const categories = activeCategories();
+  const grid = el('div', { className: 'grid' }, ...categories.map((category) => {
     const chip = categoryChip(category, { selected: category.id === selectedId });
     chip.addEventListener('click', () => {
       closeSheet();
@@ -64,5 +65,7 @@ export function openCategoryGrid(selectedId, onPick, anchor) {
     });
     return chip;
   }));
+  // Two columns, filled top to bottom (left column first), so the list reads alphabetically downward.
+  grid.style.setProperty('--rows', Math.ceil(categories.length / 2));
   openSheet(grid, { label: 'Category', anchor });
 }

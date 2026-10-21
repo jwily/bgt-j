@@ -474,7 +474,7 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
   border-radius: 0;
 }
 
-.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 8px; margin-top: 4px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(var(--rows, 1), auto); grid-auto-flow: column; gap: 6px 8px; margin-top: 4px; }
 .grid .chip { padding-left: 57px; }
 .grid .chip::before { left: 39px; }
 .grid .chip.selected::after { left: 0; }
