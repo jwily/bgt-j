@@ -91,6 +91,14 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     Math.abs(document.querySelector('#sheet').getBoundingClientRect().top - document.querySelector('.strip-window').getBoundingClientRect().top) < 2), true);
   check('grid alphabetical', (await page.locator('#sheet .grid .chip').allTextContents()).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');
   check('grid marks current', await page.locator('#sheet .grid .chip.selected').textContent(), 'Groceries');
+  // The grid opens like every other window: the same unfold, from its middle
+  const gridOpening = await page.locator('#sheet').evaluate((sheet) => {
+    const style = getComputedStyle(sheet);
+    const [, y] = style.transformOrigin.split(' ').map(parseFloat);
+    return `${style.animationName} ${style.animationDuration} ${Math.round(y / sheet.offsetHeight * 100)}%`;
+  });
+  const unfold = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--unfold').trim());
+  check('grid unfolds like other windows', gridOpening, `unfold ${unfold.split(' ')[0]} 50%`);
   await page.screenshot({ path: `${OUT}/${ENGINE}-x1-grid.png` });
   await page.locator('#sheet .grid .chip', { hasText: 'Health' }).tap();
   await page.waitForTimeout(700);
