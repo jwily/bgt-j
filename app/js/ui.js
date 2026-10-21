@@ -20,8 +20,11 @@ export function svg(tag, attrs = {}) {
   return node;
 }
 
-export function formatDate(iso, options = { month: 'short', day: 'numeric' }) {
-  return new Date(`${iso}T00:00`).toLocaleDateString('en-US', options);
+// "Oct 20" for dates this year, "Oct 20, 2025" for any other year. Used for every date the app shows.
+export function formatDate(iso) {
+  const date = new Date(`${iso}T00:00`);
+  const thisYear = date.getFullYear() === new Date().getFullYear();
+  return date.toLocaleDateString('en-US', thisYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // A category name with its color gem. Used by the main screen's strip and the long-press grid.

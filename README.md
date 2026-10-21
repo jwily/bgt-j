@@ -47,7 +47,7 @@ Each time the app opens, it downloads today's rates for every currency in the ta
 
 ## Your data
 
-Data is stored on the phone in `localStorage`, tied to the URL you installed from. Deleting the home-screen app or clearing Safari's website data erases it, so use **Menu → Backup → Export backup** now and then. Backups contain your whole history. **Restore from backup** loads one back (it replaces everything; it doesn't merge). Backups from older versions of the app are upgraded when restored.
+Data is stored on the phone in `localStorage`, tied to the URL you installed from. A home-screen app's storage is separate from Safari's (opening the URL in a Safari tab shows an empty app) and is exempt from Safari's 7-day cleanup. Deleting the home-screen app erases it; whether clearing Safari's data reaches it isn't documented, so don't count on either way. Use **Menu → Backup → Export backup** now and then. Backups contain your whole history. **Restore from backup** loads one back (it replaces everything; it doesn't merge). Backups from older versions of the app are upgraded when restored.
 
 Two safeguards:
 

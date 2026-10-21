@@ -5,7 +5,7 @@
 
 import {
   state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories,
-  addCategory, updateCategory, removeCategory, todayISO, startPeriod, setBudget, deletePeriod,
+  addCategory, updateCategory, removeCategory, categoryNamed, startPeriod, setBudget, deletePeriod,
 } from './store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
 import { el, svg, toast, setHelp, formatDate, colorDot, gauge, keypad } from './ui.js';
@@ -84,11 +84,7 @@ export function renderPage() {
   PAGES[top.name](top.params);
 }
 
-// "Oct 20" this year, "Oct 20, 2025" otherwise (keeps the HELP line short).
-const longDate = (iso) => formatDate(iso, iso.startsWith(todayISO().slice(0, 4))
-  ? { month: 'short', day: 'numeric' }
-  : { month: 'short', day: 'numeric', year: 'numeric' });
-const periodDates = (period) => `${longDate(period.start)} – ${period.end ? longDate(period.end) : 'ongoing'}`;
+const periodDates = (period) => `${formatDate(period.start)} – ${period.end ? formatDate(period.end) : 'ongoing'}`;
 const periodName = (period) => (period.end ? `Period ${periodNumber(period)}` : 'Current Period');
 const tone = (diffCents) => (diffCents >= 0 ? 'good' : 'bad'); // budget minus spent: under is good
 
@@ -259,8 +255,15 @@ function renderCategories() {
     name.addEventListener('keydown', (event) => { if (event.key === 'Enter') name.blur(); });
     name.addEventListener('change', () => {
       const value = name.value.trim();
-      if (value && value !== category.name) updateCategory(category.id, { name: value });
-      else name.value = category.name;
+      const clash = categoryNamed(value);
+      if (clash && clash.id !== category.id) {
+        toast(`There's already ${clash.archived ? 'an archived' : 'a'} category called ${clash.name}${clash.archived ? '. Restore it instead' : ''}.`);
+        name.value = category.name;
+      } else if (value && value !== category.name) {
+        updateCategory(category.id, { name: value });
+      } else {
+        name.value = category.name;
+      }
     });
 
     const remove = el('button', { className: 'mini', textContent: '✕', 'aria-label': `Remove ${category.name}` });
@@ -334,7 +337,7 @@ function renderBackup() {
   fill('Backup', 'Keep a copy of your data somewhere safe.',
     panel('Status',
       el('p', { className: `backup-status${status.stale ? ' bad' : ''}`, textContent: status.label }),
-      el('p', { className: 'hint', textContent: 'Your data lives only on this phone. Deleting the app from your home screen or clearing Safari’s website data erases it, so export a backup now and then and keep it in Files or iCloud Drive.' })),
+      el('p', { className: 'hint', textContent: 'Your data lives only on this phone, inside this home-screen app (separate from Safari). Deleting the app from your home screen erases it, so export a backup now and then and keep it in Files or iCloud Drive.' })),
     backupButton,
     csvButton,
     restore,
@@ -353,7 +356,7 @@ const BUDGET_SCREENS = {
   },
   new: {
     title: 'New Period',
-    help: (current) => `Ends the period that started ${longDate(current.start)} and starts a new one.`,
+    help: (current) => `Ends the period that started ${formatDate(current.start)} and starts a new one.`,
     button: 'Start new period',
   },
   edit: {

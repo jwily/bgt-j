@@ -149,6 +149,8 @@ export const currentPeriod = () => state.periods.find((p) => !p.end);
 export const getPeriod = (id) => state.periods.find((p) => p.id === id);
 export const periodNumber = (period) => state.periods.indexOf(period) + 1;
 export const getCategory = (id) => state.categories.find((c) => c.id === id);
+// Names are unique, ignoring capitalization ("groceries" and "Groceries" clash), archived ones included.
+export const categoryNamed = (name) => state.categories.find((c) => c.name.toLowerCase() === name.trim().toLowerCase());
 export const sortedCategories = () => [...state.categories].sort(byName);
 export const activeCategories = () => sortedCategories().filter((c) => !c.archived);
 export const periodExpenses = (periodId) => state.expenses.filter((e) => e.periodId === periodId);
@@ -218,7 +220,9 @@ export function deleteExpense(id) {
 // ---------- categories ----------
 
 export function addCategory() {
-  const category = { id: newId(), name: 'New Category', color: null, archived: false }; // save() assigns the color
+  let name = 'New Category';
+  for (let n = 2; categoryNamed(name); n++) name = `New Category ${n}`;
+  const category = { id: newId(), name, color: null, archived: false }; // save() assigns the color
   state.categories.push(category);
   save();
   return category;

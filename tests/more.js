@@ -316,6 +316,34 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('offline estimate line', (await p2.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $10.00 | ~18.5 MXN per USD (estimate until online)');
   await offline.close();
 
+  // Category names can't clash (ignoring capitalization); new ones get a free name.
+  const clash = await browser.newContext({ ...devices['iPhone 13'] });
+  await clash.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+  const p5 = await newPage(clash);
+  await p5.goto(URL);
+  for (const k of '100000') await p5.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+  await p5.locator('#page .primary').tap();
+  await p5.waitForTimeout(4300);
+  await p5.locator('#nav-btn').tap();
+  await p5.waitForTimeout(250);
+  await p5.locator('#menu button', { hasText: 'Categories' }).tap();
+  await p5.waitForTimeout(300);
+  const nameField = (n) => p5.locator('.cat-row input').nth(n);
+  const funIndex = await p5.locator('.cat-row input').evaluateAll((ns) => ns.findIndex((n) => n.value === 'Fun'));
+  await nameField(funIndex).fill('groceries');
+  await nameField(funIndex).press('Enter');
+  await p5.waitForTimeout(300);
+  check('rename to an existing name is refused', await p5.locator('#help span').first().textContent(), "There's already a category called Groceries.");
+  check('and the name goes back', (await p5.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value))).includes('Fun'), true);
+  await p5.waitForTimeout(4300);
+  await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
+  await p5.waitForTimeout(200);
+  await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
+  await p5.waitForTimeout(200);
+  const names = await p5.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value));
+  check('second new category gets a free name', names.includes('New Category') && names.includes('New Category 2'), true);
+  await clash.close();
+
   // Rates: re-check every 3 hours until today's rate arrives, then stop for the day.
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10); // local date, like the app
