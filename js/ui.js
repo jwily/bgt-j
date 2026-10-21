@@ -185,10 +185,22 @@ export function toast(message, undo) {
 // ---------- sheets ----------
 
 // label: the small tab on the sheet's top edge, like FF8's "HELP" / "STATUS" tabs.
-export function openSheet(content, { dismissable = true, label = '' } = {}) {
-  $('sheet').dataset.label = label;
-  $('sheet').replaceChildren(content);
-  $('sheet').scrollTop = 0;
+// anchor: optional element. The sheet then opens with its top edge level with the anchor's top
+// (moving up only as far as it must to stay on screen) instead of at the bottom of the screen.
+export function openSheet(content, { dismissable = true, label = '', anchor = null } = {}) {
+  const sheet = $('sheet');
+  sheet.dataset.label = label;
+  sheet.replaceChildren(content);
+  sheet.scrollTop = 0;
+  sheet.classList.toggle('anchored', Boolean(anchor));
+  sheet.style.top = '';
+  sheet.style.bottom = '';
+  if (anchor) {
+    const margin = 8;
+    const lowestTop = window.innerHeight - sheet.offsetHeight - margin;
+    sheet.style.top = `${Math.max(margin, Math.min(anchor.getBoundingClientRect().top, lowestTop))}px`;
+    sheet.style.bottom = 'auto';
+  }
   const backdrop = $('sheet-backdrop');
   backdrop.classList.add('open');
   backdrop.onclick = dismissable ? (event) => { if (event.target === backdrop) closeSheet(); } : null;

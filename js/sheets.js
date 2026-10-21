@@ -55,7 +55,8 @@ export function openExpenseSheet(expense) {
   ), { label: 'Expense' });
 }
 
-export function openCategoryGrid(selectedId, onPick) {
+// anchor: the element the grid opens level with (the category strip).
+export function openCategoryGrid(selectedId, onPick, anchor) {
   const grid = el('div', { className: 'grid' }, ...activeCategories().map((category) => {
     const chip = categoryChip(category, { selected: category.id === selectedId });
     chip.addEventListener('click', () => {
@@ -64,5 +65,5 @@ export function openCategoryGrid(selectedId, onPick) {
     });
     return chip;
   }));
-  openSheet(el('div', {}, el('h2', { textContent: 'Category' }), grid), { label: 'Category' });
+  openSheet(grid, { label: 'Category', anchor });
 }

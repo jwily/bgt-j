@@ -28,7 +28,7 @@ export function initInput() {
   // Category: a snapping strip; whichever chip is centered is selected. Long-press for a grid.
   parts.strip = el('div', { className: 'strip' });
   parts.strip.addEventListener('scroll', pickCenteredChip, { passive: true });
-  onLongPress(parts.strip, () => openCategoryGrid(state.input.categoryId, selectCategory));
+  onLongPress(parts.strip, () => openCategoryGrid(state.input.categoryId, selectCategory, parts.strip.parentElement));
 
   parts.note = el('input', { type: 'text', className: 'note', placeholder: 'Optional', enterKeyHint: 'done', 'aria-label': 'Note' });
   parts.note.addEventListener('keydown', (event) => { if (event.key === 'Enter') parts.note.blur(); });
