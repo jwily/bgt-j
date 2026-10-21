@@ -132,7 +132,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   // New Period
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
-  check('menu labels', (await page.locator('#menu button').allTextContents()).map((t) => t.replace(/Backup.*/, 'Backup')).join(','), 'Backup,New Period,Categories,Past Periods,Current Period'); // bottom-up from the Menu button
+  check('menu labels', (await page.locator('#menu button').allTextContents()).map((t) => t.replace(/Backup.*/, 'Backup')).join(','), 'Backup,Categories,New Period,Past Periods,Current Period'); // setup on top, periods nearest the thumb
   check('menu backup line', await page.locator('#backup-status').textContent(), 'never');
   check('backup line red', await page.locator('#backup-status.bad').count(), 1);
   check('dot on menu button', await page.locator('#nav-btn.alert').count(), 1);
