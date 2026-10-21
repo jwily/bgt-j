@@ -85,6 +85,12 @@ const check = (label, ok, detail) => {
     check(`${name}: every category centered when selected`, Math.abs(worstOffset) <= 2, `worst ${worstOffset}px`);
     check(`${name}: hand stays clear of the diamond`, smallestGap >= 8, `${smallestGap}px`);
 
+    // Top to bottom: amount, note + date, category strip (changed more often, so nearer the thumb), keypad.
+    const order = await page.evaluate(() => ['.currency-zone', '.details', '.strip-window', '#view-input .keypad']
+      .map((s) => document.querySelector(s).getBoundingClientRect().top)
+      .every((top, i, tops) => i === 0 || top > tops[i - 1]));
+    check(`${name}: main screen order is amount, note/date, category, keypad`, order);
+
     // ADD, Undo and Menu sit side by side in the bottom bar, in that order, and ADD's hand stays
     // clear of its label even when Undo is showing and ADD is at its narrowest.
     const bar = await page.evaluate(() => {
