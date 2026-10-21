@@ -25,8 +25,12 @@
   --window-fill: linear-gradient(90deg, #3d3d3d 0%, #474747 10%, #525252 22%, #5f5f5f 34%, #646464 44%, #646464 78%, #5d5d5d 87%, #535353 100%);
   --bevel: inset 2px 2px 0 #747474, inset -2px -2px 0 #323232;
   --ink: #141414;          /* text shadow */
-  --hud-h: calc(env(safe-area-inset-top) + 74px);
-  --dock-h: calc(env(safe-area-inset-bottom) + 70px); /* the bottom bar: Undo and Menu/Back */
+  /* Spacing: one gap between any two windows or buttons, either direction; keypad keys sit a
+     little tighter, as one group. */
+  --gap: 8px;
+  --gap-keys: 6px;
+  --hud-h: calc(env(safe-area-inset-top) + 76px); /* top bar: 12px + 56px window + --gap */
+  --dock-h: calc(env(safe-area-inset-bottom) + 72px); /* bottom bar: --gap + 54px buttons + 10px */
 
   /* The pointing hand: FF8's glove cursor. The outline is traced from a reference capture of the game's cursor; the shading is drawn. */
   --hand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 102 52'%3E%3Cdefs%3E%3CclipPath id='c'%3E%3Cpath d='M31.5 1.0L56.8 1.0L60.2 3.1L92.4 3.1L99.7 4.4L101.0 5.7L101.0 14.7L95.0 21.5L92.8 23.2L75.7 24.1L84.3 33.5L83.8 39.0L79.5 43.3L76.5 43.7L71.0 43.7L63.7 40.3L52.5 47.6L45.2 48.0L41.8 51.0L31.5 51.0L28.0 48.0L7.4 47.2L1.0 39.9L1.4 14.2L13.4 3.1L28.0 3.1L31.0 1.4Z'/%3E%3C/clipPath%3E%3CradialGradient id='s' cx='.52' cy='.2' r='.85'%3E%3Cstop offset='0' stop-color='%23fff'/%3E%3Cstop offset='.32' stop-color='%23f3f3f3'/%3E%3Cstop offset='.68' stop-color='%23b4b4b4'/%3E%3Cstop offset='1' stop-color='%23717171'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cg clip-path='url(%23c)'%3E%3Cpath d='M31.5 1.0L56.8 1.0L60.2 3.1L92.4 3.1L99.7 4.4L101.0 5.7L101.0 14.7L95.0 21.5L92.8 23.2L75.7 24.1L84.3 33.5L83.8 39.0L79.5 43.3L76.5 43.7L71.0 43.7L63.7 40.3L52.5 47.6L45.2 48.0L41.8 51.0L31.5 51.0L28.0 48.0L7.4 47.2L1.0 39.9L1.4 14.2L13.4 3.1L28.0 3.1L31.0 1.4Z' fill='url(%23s)'/%3E%3Cellipse cx='75.5' cy='34.3' rx='8.0' ry='7.8' fill='%236c6c6c'/%3E%3Cellipse cx='73.5' cy='31.0' rx='3.5' ry='2.8' fill='%237e7e7e'/%3E%3Cpath d='M49.0 24.5Q61.0 22.5 73.0 23.5' fill='none' stroke='%23a2a2a2' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M41.0 16.0Q45.0 23.5 48.0 31.0M48.0 12.0Q51.0 17.5 54.0 22.0' fill='none' stroke='%23cbcbcb' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M31.5 1.0L56.8 1.0L60.2 3.1L92.4 3.1L99.7 4.4L101.0 5.7L101.0 14.7L95.0 21.5L92.8 23.2L75.7 24.1L84.3 33.5L83.8 39.0L79.5 43.3L76.5 43.7L71.0 43.7L63.7 40.3L52.5 47.6L45.2 48.0L41.8 51.0L31.5 51.0L28.0 48.0L7.4 47.2L1.0 39.9L1.4 14.2L13.4 3.1L28.0 3.1L31.0 1.4Z' fill='none' stroke='%23151515' stroke-width='4.6' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E");
@@ -140,11 +144,11 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   right: 0;
   z-index: 15;
   display: flex;
-  gap: 6px;
+  gap: var(--gap);
   max-width: 560px;
   height: var(--hud-h);
   margin: 0 auto;
-  padding: calc(env(safe-area-inset-top) + 12px) 10px 6px;
+  padding: calc(env(safe-area-inset-top) + 12px) 10px var(--gap);
 }
 .help {
   flex: 1;
@@ -191,14 +195,14 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   z-index: 15;
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--gap);
   max-width: 560px;
   height: var(--dock-h);
   margin: 0 auto;
-  padding: 6px 10px calc(env(safe-area-inset-bottom) + 10px);
+  padding: var(--gap) 10px calc(env(safe-area-inset-bottom) + 10px);
   background: #000; /* scrolling screens pass behind it */
 }
-.nav-btn, .undo-btn { flex: none; min-width: 100px; padding: 0 14px; font-size: 1.1rem; white-space: nowrap; }
+.nav-btn, .undo-btn { flex: none; min-width: 90px; padding: 0 12px; font-size: 1.1rem; white-space: nowrap; }
 .undo-btn { color: var(--yellow); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
 .undo-btn:active { filter: brightness(1.18); }
 /* Red dot when a backup is overdue */
@@ -219,7 +223,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 #view-input {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: var(--gap);
   height: 100dvh;
   max-width: 560px;
   margin: 0 auto;
@@ -321,7 +325,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .chip.selected::after { left: -35px; width: 27px; height: 16px; margin-top: -8px; }
 
 
-.details { display: flex; gap: 6px; }
+.details { display: flex; gap: var(--gap); }
 .note-window { flex: 1; min-width: 0; padding: 12px 10px 2px; }
 .note {
   width: 100%;
@@ -354,7 +358,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   opacity: 0;
 }
 
-.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-keys); }
 .key {
   height: clamp(44px, 7dvh, 58px);
   font-size: 1.55rem;
@@ -371,8 +375,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   /* A stripe in the chosen category's color, inside the bevel. */
   box-shadow: var(--bevel), inset 8px 0 0 var(--c, transparent);
 }
-.add-btn::after { left: 18px; }
-.dock .add-btn { flex: 1; height: auto; padding-left: 46px; } /* the label stays clear of the hand, even beside Undo */
+.add-btn::after { left: 10px; }
+.dock .add-btn { flex: 1; height: auto; padding: 0 48px; } /* room for the hand on the left, matched on the right so the label stays centered */
 body.page-open .dock .add-btn { display: none; } /* Add is for the main screen */
 
 /* ---------- menu: command list on the right, stats box below ---------- */
@@ -395,7 +399,7 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
   right: max(10px, calc((100vw - 560px) / 2 + 10px));
   width: min(230px, 66vw);
   display: grid;
-  gap: 6px;
+  gap: var(--gap);
 }
 .backdrop.open .menu > .window { animation: unfold var(--unfold); }
 .menu-list { display: flex; flex-direction: column; padding: 8px 6px 8px 0; }
@@ -424,7 +428,9 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
 .budget-amount { margin: 2px 0; text-align: center; font-size: 2.6rem; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 .budget-amount.empty { color: var(--off); }
 
-.actions { display: flex; gap: 8px; margin-top: 12px; }
+.actions { display: flex; gap: var(--gap); }
+.actions > * { flex: 1; }
+.sheet .actions { margin-top: 12px; }
 .primary, .danger { flex: 1; height: 50px; font-weight: 800; }
 .primary { padding: 0 34px; } /* room for the hand on the left, matched on the right so the label stays centered */
 .primary::after { left: 8px; }
@@ -432,8 +438,6 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
 .danger { color: var(--bad); }
 .wide-btn:disabled { color: var(--good); cursor: default; }
 .delete-btn { color: var(--bad); }
-.actions { display: flex; gap: 6px; }
-.actions > * { flex: 1; }
 
 /* Text fields: sunken (the bevel reversed). */
 .field { display: grid; gap: 4px; margin-bottom: 12px; }
@@ -476,7 +480,7 @@ body.page-open #view-input { visibility: hidden; }
 }
 /* minmax(0, 1fr): never wider than the screen, so long one-line text (notes) ends in "…" instead. */
 /* A screen shorter than the phone sits at the bottom, near the thumb, rather than at the top. */
-.page-body { display: grid; grid-template-columns: minmax(0, 1fr); align-content: end; gap: 10px; min-height: 100%; max-width: 560px; margin: 0 auto; padding: 0 10px; }
+.page-body { display: grid; grid-template-columns: minmax(0, 1fr); align-content: end; gap: var(--gap); min-height: 100%; max-width: 560px; margin: 0 auto; padding: 0 10px; }
 .page-body.unfold > * { animation: unfold var(--unfold); }
 .panel { padding: 18px 14px 12px; }
 .empty-note { margin: 4px 0; color: var(--off); font-size: 0.85rem; text-align: center; }

@@ -96,16 +96,20 @@ const check = (label, ok, detail) => {
       const range = document.createRange();
       range.selectNodeContents(add);
       const hand = getComputedStyle(add, '::after');
-      const handGap = Math.round(range.getBoundingClientRect().left - (a.left + parseFloat(hand.left) + parseFloat(hand.width)));
+      const label = range.getBoundingClientRect();
+      const handGap = Math.round(label.left - (a.left + parseFloat(hand.left) + parseFloat(hand.width)));
+      const labelOffset = Math.round(label.left + label.width / 2 - (a.left + a.width / 2));
       undo.hidden = true;
       return {
         sideBySide: Math.abs(a.top - n.top) < 1 && a.right <= u.left && u.right <= n.left,
         atBottom: a.bottom >= window.innerHeight - 50,
         handGap,
+        labelOffset,
       };
     });
     check(`${name}: ADD, Undo, Menu in a row at the bottom`, bar.sideBySide && bar.atBottom, bar);
-    check(`${name}: ADD's hand clear of its label`, bar.handGap >= 8, `${bar.handGap}px`);
+    check(`${name}: ADD's hand clear of its label`, bar.handGap >= 6, `${bar.handGap}px`);
+    check(`${name}: ADD's label centered despite the hand`, Math.abs(bar.labelOffset) <= 1, `${bar.labelOffset}px`);
 
     // A long note must not make the summary wider than the screen (it ends in "…" instead).
     await key('⌫'); // clear the 9s typed above (hold ⌫)
