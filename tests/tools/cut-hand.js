@@ -9,6 +9,10 @@
 //    matching opacity, which keeps the edge's anti-aliasing without a white halo.
 // 3. Crop to the hand plus a 1px margin, and scale it to WIDTH: the app never shows it wider than
 //    32px, which is 96 pixels on a 3x screen.
+// 4. Bake in its drop shadow (down and to the right, like FF8's text shadows) instead of drawing it
+//    with a CSS filter. A filter's shadow paints outside the element's box, and iPhone Safari didn't
+//    always wipe that spill when the hand moved between categories in the strip, leaving a dark
+//    sliver behind.
 // Usage: npm run hand
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -17,12 +21,13 @@ const path = require('path');
 const SOURCE = path.join(__dirname, '../../../ff8-references/cursor.png'); // outside the repo: it's the game's artwork
 const CSS = path.join(__dirname, '../../app/style.css');
 const WIDTH = 128;
+const SHADOW = { x: 4, y: 8, opacity: 0.75 }; // at WIDTH; 1px × 2px when shown 32px wide
 
 (async () => {
   const data = fs.readFileSync(SOURCE).toString('base64');
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  const { uri, width, height } = await page.evaluate(async ({ data, WIDTH }) => {
+  const { uri, width, height } = await page.evaluate(async ({ data, WIDTH, SHADOW }) => {
     const img = new Image();
     img.src = `data:image/png;base64,${data}`;
     await img.decode();
@@ -65,12 +70,14 @@ const WIDTH = 128;
     }
     ctx.putImageData(image, 0, 0);
     const [cx, cy, cw, ch] = [x0 - 1, y0 - 1, x1 - x0 + 3, y1 - y0 + 3];
-    const out = Object.assign(document.createElement('canvas'), { width: WIDTH, height: Math.round((ch * WIDTH) / cw) });
+    const handHeight = Math.round((ch * WIDTH) / cw);
+    const out = Object.assign(document.createElement('canvas'), { width: WIDTH + SHADOW.x, height: handHeight + SHADOW.y });
     const outCtx = out.getContext('2d');
     outCtx.imageSmoothingQuality = 'high';
-    outCtx.drawImage(canvas, cx, cy, cw, ch, 0, 0, out.width, out.height);
+    outCtx.filter = `drop-shadow(${SHADOW.x}px ${SHADOW.y}px 0 rgba(0, 0, 0, ${SHADOW.opacity}))`;
+    outCtx.drawImage(canvas, cx, cy, cw, ch, 0, 0, WIDTH, handHeight);
     return { uri: out.toDataURL('image/png'), width: out.width, height: out.height };
-  }, { data, WIDTH });
+  }, { data, WIDTH, SHADOW });
   await browser.close();
 
   const css = fs.readFileSync(CSS, 'utf8');

@@ -495,6 +495,15 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   const resorted = await rowNames();
   check('leaving re-sorts alphabetically', resorted.join(','), [...resorted].sort((a, b) => a.localeCompare(b)).join(','));
   check('renamed row moved to its alphabetical place', resorted.at(-1), 'Zoo');
+
+  // Add category with the keyboard open: the new name field ends up above the keyboard, not behind
+  // it. (A 300px keyboard is faked by shrinking the visual viewport, as iOS does.)
+  await p5.evaluate(() => Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => innerHeight - 300 }));
+  await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
+  await p5.evaluate(() => visualViewport.dispatchEvent(new Event('resize')));
+  await p5.waitForTimeout(200);
+  const field = await p5.evaluate(() => ({ value: document.activeElement.value, bottom: document.activeElement.getBoundingClientRect().bottom, keyboardTop: innerHeight - 300 }));
+  check(`new category field is above the keyboard (bottom ${field.bottom}, keyboard at ${field.keyboardTop})`, field.value.startsWith('New Category') && field.bottom <= field.keyboardTop, true);
   await clash.close();
 
   // Rates: re-check every 3 hours until today's rate arrives, then stop for the day.
