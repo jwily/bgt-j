@@ -20,7 +20,7 @@ export function svg(tag, attrs = {}) {
   return node;
 }
 
-// A category name with its color gem. Used by the main screen's strip and the long-press grid.
+// A category name with its color gem. Used by the main screen's strip and the category grid.
 export function categoryChip(category, { selected = false } = {}) {
   const chip = el('button', { type: 'button', className: `chip${selected ? ' selected' : ''}` }, el('span', { textContent: category.name }));
   chip.dataset.id = category.id;
@@ -106,6 +106,21 @@ export function onLongPress(node, handler, ms = 450) {
   node.addEventListener('pointerup', cancel);
   node.addEventListener('pointercancel', cancel);
   node.addEventListener('contextmenu', (event) => event.preventDefault());
+}
+
+// Two taps close together in time and place. Taps that scroll (a swipe) aren't clicks, so they
+// don't count.
+export function onDoubleTap(node, handler, ms = 350) {
+  let last = null;
+  node.addEventListener('click', (event) => {
+    const tap = { at: event.timeStamp, x: event.clientX, y: event.clientY };
+    if (last && tap.at - last.at < ms && Math.hypot(tap.x - last.x, tap.y - last.y) < 40) {
+      last = null;
+      handler();
+    } else {
+      last = tap;
+    }
+  });
 }
 
 // ---------- keypad ----------
