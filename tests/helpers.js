@@ -24,7 +24,7 @@ exports.grabFile = async (page, engine, action) => {
 
 // FF8 layout helpers: "left" lives in the menu's stats box; the screen name is in the title window.
 exports.leftText = async (page) => `${await page.locator('#stat-left').textContent()} ${(await page.locator('#stat-left-label').textContent()).toLowerCase()}`;
-exports.titleText = async (page) => (await page.locator('#nav-btn').textContent()).replace(/^‹ /, '');
+exports.titleText = (page) => page.locator('#title').textContent();
 exports.openSummary = async (page) => {
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(250);

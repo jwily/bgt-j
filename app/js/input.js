@@ -13,15 +13,15 @@ let recentering = false; // true while the app (not the person) is moving the st
 const parts = {};
 
 export function initInput() {
-  // Currency: tap the options, or swipe anywhere in the Amount window to step through them. Like
+  // Currency: tap the options, or swipe anywhere in the Amount window to move between them. Like
   // FF8's Config options, the chosen one is bright with the hand beside it and the others are grey.
   parts.currencies = CURRENCY_CODES.map((code) => el('span', { textContent: code }));
   const options = el('button', { className: 'options currency-opts', 'aria-label': 'Switch currency' }, ...parts.currencies);
-  options.addEventListener('click', () => switchCurrency('left'));
+  options.addEventListener('click', cycleCurrency);
   parts.amount = el('div', { className: 'amount' });
   parts.sub = el('div', { className: 'amount-sub' });
   const zone = el('div', { className: 'window currency-zone', 'data-label': 'Amount' }, options, parts.amount, parts.sub);
-  onSwipe(zone, switchCurrency);
+  onSwipe(zone, swipeCurrency);
 
   // Category: a snapping strip; whichever chip is centered is selected. Long-press for a grid.
   parts.strip = el('div', { className: 'strip' });
@@ -56,8 +56,10 @@ export function initInput() {
     digits = next;
     renderInput();
   }, () => CURRENCIES[state.input.currency].maxDigits);
+  // Add sits in the bottom bar, left of Undo and the Menu button, under a right thumb.
   parts.add = el('button', { className: 'add-btn', textContent: 'Add' });
   parts.add.addEventListener('click', add);
+  document.getElementById('undo-btn').before(parts.add);
 
   document.getElementById('view-input').append(
     zone,
@@ -66,7 +68,6 @@ export function initInput() {
       el('label', { className: 'window note-window', 'data-label': 'Note' }, parts.note),
       dateButton),
     pad,
-    parts.add,
   );
   renderInput();
   document.fonts?.ready.then(recenter);
@@ -100,15 +101,28 @@ function rateText(code) {
   return `1 ${HOME} = ${rate.toFixed(2)} ${code}${daysBetween(state.rates.date) > 4 ? ` (rate from ${formatDate(state.rates.date)})` : ''}`;
 }
 
-// Swipe left (or tap) for the next currency, swipe right for the previous one; it wraps around.
-function switchCurrency(direction) {
-  const step = direction === 'right' ? -1 : 1;
-  const count = CURRENCY_CODES.length;
-  const next = CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + step + count) % count];
+// Swipes move the choice the way the finger goes, like the options' order on screen: a swipe left
+// picks the option to the left, a swipe right the one to the right. The ends are walls: swiping
+// past the first or last option just nudges the amount.
+function swipeCurrency(direction) {
+  const index = CURRENCY_CODES.indexOf(state.input.currency) + (direction === 'left' ? -1 : 1);
+  if (index < 0 || index >= CURRENCY_CODES.length) {
+    nudge(parts.amount);
+    return;
+  }
+  switchCurrency(CURRENCY_CODES[index], direction);
+}
+
+// Tapping the options steps to the next currency, wrapping around.
+const cycleCurrency = () =>
+  switchCurrency(CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + 1) % CURRENCY_CODES.length], 'left');
+
+// slide: which way the amount slides in, following the finger.
+function switchCurrency(next, slide) {
   digits = digits.slice(0, CURRENCIES[next].maxDigits);
   parts.amount.classList.remove('slide-left', 'slide-right');
   void parts.amount.offsetWidth; // restart the animation
-  parts.amount.classList.add(direction === 'right' ? 'slide-right' : 'slide-left');
+  parts.amount.classList.add(slide === 'right' ? 'slide-right' : 'slide-left');
   setInputPrefs({ currency: next });
 }
 

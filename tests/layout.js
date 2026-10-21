@@ -85,6 +85,32 @@ const check = (label, ok, detail) => {
     check(`${name}: every category centered when selected`, Math.abs(worstOffset) <= 2, `worst ${worstOffset}px`);
     check(`${name}: hand stays clear of the diamond`, smallestGap >= 8, `${smallestGap}px`);
 
+    // ADD, Undo and Menu sit side by side in the bottom bar, in that order, and ADD's hand stays
+    // clear of its label even when Undo is showing and ADD is at its narrowest.
+    const bar = await page.evaluate(() => {
+      const undo = document.getElementById('undo-btn');
+      undo.hidden = false;
+      const u = undo.getBoundingClientRect();
+      const add = document.querySelector('.add-btn'), nav = document.getElementById('nav-btn');
+      const a = add.getBoundingClientRect(), n = nav.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(add);
+      const hand = getComputedStyle(add, '::after');
+      const label = range.getBoundingClientRect();
+      const handGap = Math.round(label.left - (a.left + parseFloat(hand.left) + parseFloat(hand.width)));
+      const labelOffset = Math.round(label.left + label.width / 2 - (a.left + a.width / 2));
+      undo.hidden = true;
+      return {
+        sideBySide: Math.abs(a.top - n.top) < 1 && a.right <= u.left && u.right <= n.left,
+        atBottom: a.bottom >= window.innerHeight - 50,
+        handGap,
+        labelOffset,
+      };
+    });
+    check(`${name}: ADD, Undo, Menu in a row at the bottom`, bar.sideBySide && bar.atBottom, bar);
+    check(`${name}: ADD's hand clear of its label`, bar.handGap >= 6, `${bar.handGap}px`);
+    check(`${name}: ADD's label centered despite the hand`, Math.abs(bar.labelOffset) <= 1, `${bar.labelOffset}px`);
+
     // A long note must not make the summary wider than the screen (it ends in "…" instead).
     await key('⌫'); // clear the 9s typed above (hold ⌫)
     const back = page.locator('#view-input .key').filter({ hasText: /^⌫$/ });

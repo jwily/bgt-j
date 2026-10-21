@@ -48,10 +48,15 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
     await page.mouse.move(zone.x + zone.width / 2 + dx, zone.y + zone.height / 2 + 30, { steps: 5 });
     await page.mouse.up();
   };
-  await swipe(120);
-  check('swipe right -> USD', await page.locator('.currency-opts .on').textContent(), 'USD');
+  // Swipes move the choice the way the finger goes (USD is on the left), and stop at the ends.
   await swipe(-120);
-  check('swipe left -> MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
+  check('swipe left -> USD', await page.locator('.currency-opts .on').textContent(), 'USD');
+  await swipe(-120);
+  check('swipe left at the left end stays on USD', await page.locator('.currency-opts .on').textContent(), 'USD');
+  await swipe(120);
+  check('swipe right -> MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
+  await swipe(120);
+  check('swipe right at the right end stays on MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
   check('digits kept after swipes', await page.locator('.amount').textContent(), 'MX$250');
 
   // Category: tap the third chip, wait for the snap
@@ -78,7 +83,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   // Undo works
   for (const k of '100') await mainKey(k);
   await page.locator('.add-btn').tap();
-  await page.locator('#help .undo').tap();
+  await page.locator('#undo-btn').tap();
   check('left after undo', await leftText(page), '$1,477.00 left');
   check('undo stays on the main screen', await page.locator('#page').isHidden(), true);
 
@@ -89,6 +94,14 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   // Summary
   await openSummary(page);
   check('summary title', await titleText(page), 'Current Period');
+  // Nothing of the main screen can show if iOS bounces this screen: it's hidden, and the page
+  // itself can't bounce.
+  const bounce = await page.evaluate(() => [
+    getComputedStyle(document.getElementById('view-input')).visibility,
+    getComputedStyle(document.body).overscrollBehaviorY,
+    getComputedStyle(document.getElementById('page')).overscrollBehaviorY,
+  ].join(' '));
+  check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
   check('donut center', await page.locator('.donut-center strong').textContent(), '$523.00');
   check('donut slices', await page.locator('.donut circle.slice').count(), 2);
   check('diff', await page.locator('.stat.diff .value').textContent(), '+$1,477.00');
@@ -106,12 +119,12 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   check('edited MXN converts at saved rate', await page.locator('.donut-center strong').textContent(), '$525.50');
 
   // Edit budget
-  await page.locator('.stat .link').tap();
+  await page.locator('.edit-budget').tap();
   await page.waitForTimeout(300);
   check('edit budget prefilled', await page.locator('.budget-amount').textContent(), '$2,000.00');
   await sheetKey('⌫');
   await page.locator('#page .primary').tap();
-  check('budget edited', await page.locator('.stat .value').first().textContent(), '$200.00Edit');
+  check('budget edited', await page.locator('.stat .value').first().textContent(), '$200.00');
   check('over budget shown', await page.locator('.stat.diff .value').textContent(), '−$325.50');
   await page.locator('#nav-btn').tap();
   check('main shows over', await leftText(page), '$325.50 over');
@@ -119,7 +132,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   // New Period
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
-  check('menu labels', (await page.locator('#menu button').allTextContents()).map((t) => t.replace(/Backup.*/, 'Backup')).join(','), 'Current Period,Past Periods,Categories,New Period,Backup');
+  check('menu labels', (await page.locator('#menu button').allTextContents()).map((t) => t.replace(/Backup.*/, 'Backup')).join(','), 'Backup,Categories,New Period,Past Periods,Current Period'); // setup on top, periods nearest the thumb
   check('menu backup line', await page.locator('#backup-status').textContent(), 'never');
   check('backup line red', await page.locator('#backup-status.bad').count(), 1);
   check('dot on menu button', await page.locator('#nav-btn.alert').count(), 1);
@@ -143,7 +156,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   check('period rows', await page.locator('.period-row').count(), 2);
   await page.locator('.period-row').nth(1).tap();
   check('past period title', await titleText(page), 'Period 1');
-  check('past period has no Edit', await page.locator('.stat .link').count(), 0);
+  check('past period has no Edit', await page.locator('.edit-budget').count(), 0);
   await page.locator('#nav-btn').tap();
   check('back to periods', await titleText(page), 'Past Periods');
   await page.locator('#nav-btn').tap();

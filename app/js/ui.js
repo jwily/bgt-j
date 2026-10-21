@@ -151,31 +151,28 @@ export function setHelp(text, { tone = '', onTap = null } = {}) {
   if (!toastTimer) showHelpLine();
 }
 
-// Pass an undo function (as returned by the store's changes) to show an Undo button.
+// Pass an undo function (as returned by the store's changes) to show an Undo button. The message
+// shows in the HELP window; Undo appears at the bottom, beside the Menu/Back button.
 export function toast(message, undo) {
   const node = $('help');
+  const undoButton = $('undo-btn');
   const end = () => {
     clearTimeout(toastTimer);
     toastTimer = null;
+    undoButton.hidden = true;
+    undoButton.onclick = null;
     showHelpLine();
   };
-  const children = [el('span', { textContent: message })];
-  if (undo) {
-    const button = el('button', { className: 'undo', textContent: 'Undo' });
-    button.addEventListener('click', (event) => {
-      // end() makes the HELP window tappable again (it opens the summary on the main screen),
-      // so keep this click from reaching it.
-      event.stopPropagation();
-      end();
-      undo();
-    });
-    children.push(button);
-  }
+  undoButton.hidden = !undo;
+  undoButton.onclick = undo ? () => {
+    end();
+    undo();
+  } : null;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(end, 4000);
   node.className = 'window help message';
   node.onclick = null;
-  node.replaceChildren(...children);
+  node.replaceChildren(el('span', { textContent: message }));
 }
 
 // ---------- sheets ----------
