@@ -1,8 +1,9 @@
 // The main screen: type an amount, swipe to pick currency and category, tap Add.
 
-import { state, todayISO, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
+import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
+import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
-import { el, keypad, onSwipe, onLongPress, toast, nudge, formatDate, categoryChip } from './ui.js';
+import { el, keypad, onSwipe, onLongPress, toast, nudge, categoryChip } from './ui.js';
 import { openCategoryGrid } from './sheets.js';
 
 let digits = '';
@@ -82,8 +83,7 @@ export function renderInput() {
 function rateText(code) {
   const rate = rateFor(code);
   if (rateIsEstimate(code)) return `~${rate} ${code} per ${HOME} (estimate: no rates downloaded yet)`;
-  const ageDays = (new Date(`${todayISO()}T00:00`) - new Date(`${state.rates.date}T00:00`)) / 86400000;
-  return `1 ${HOME} = ${rate.toFixed(2)} ${code}${ageDays > 4 ? ` (rate from ${formatDate(state.rates.date)})` : ''}`;
+  return `1 ${HOME} = ${rate.toFixed(2)} ${code}${daysBetween(state.rates.date) > 4 ? ` (rate from ${formatDate(state.rates.date)})` : ''}`;
 }
 
 // Swipe left (or tap) for the next currency, swipe right for the previous one; it wraps around.

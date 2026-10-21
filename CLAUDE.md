@@ -14,6 +14,8 @@ Read README.md for what the app does; this file covers how to work on it.
   WebKit and Chromium (it starts its own server on port 8765). First time: `npm install && npm run setup`.
 - Four passes: `main` (core flow), `more` (edge cases), `layout` (spacing/fit on three iPhones),
   `failures` (storage full/corrupt, rate server down, bad backups, offline, overnight, big data).
+- Shared test helpers live in `tests/helpers.js` (`mockRates`, `startFirstPeriod`, `messageCleared`,
+  `asInstalledApp`, ...). Prefer waiting for a condition over fixed `waitForTimeout` sleeps.
 - Run `npm test` before every commit. When behavior changes, update or add checks in the same
   commit; when you fix a bug, add a check that would have caught it.
 - FF8 reference screenshots are in `~/projects/ff8-references/`, outside the repo on purpose
@@ -46,7 +48,8 @@ Read README.md for what the app does; this file covers how to work on it.
   install hint in the HELP window instead of the amount left.
 - **Rates** download when the app opens without today's rates, at most every 3 hours (the source
   publishes once per business day).
-- **Dates** always go through `formatDate()` in `ui.js` (year shown only when it isn't this year).
+- **Dates** all go through `app/js/dates.js`: `todayISO`, `localDay`, `daysBetween`, `formatDate` (year
+  only when it isn't this year), `formatMoment`. Never do day arithmetic with milliseconds elsewhere.
 - Build DOM with `el()` from `ui.js`; it skips `false`/`null` children (so `cond && el(...)` is safe).
 
 ## Design rules (measured from the reference screenshots, not guessed)

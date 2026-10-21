@@ -15,6 +15,7 @@
 //   settings:   { backupReminderDays }                   (the backup nudge's timing, 30 by default)
 
 import { CURRENCIES, CURRENCY_CODES, FOREIGN_CODES, HOME } from './money.js';
+import { todayISO } from './dates.js';
 
 const STORAGE_KEY = 'budget-tracker';
 const UNREADABLE_KEY = 'budget-tracker-unreadable'; // saved data that couldn't be read, kept just in case
@@ -58,11 +59,6 @@ function newId() {
   return crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-// Today's date in local time as "YYYY-MM-DD" (toISOString alone would use UTC).
-export function todayISO() {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-}
 
 function freshState() {
   const categories = DEFAULT_CATEGORIES.map((name) => ({ id: newId(), name, color: null, archived: false }));
@@ -159,9 +155,9 @@ function assignColors(data) {
 }
 
 // Returns false if the data couldn't be saved (the phone's storage for the app is full).
-export function write(data = state) {
+function write() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
   } catch {
     return false;

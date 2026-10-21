@@ -1,8 +1,9 @@
 // Entry point: wires the top bar, menu, screens and data together.
 
-import { currentPeriod, spentIn, refreshRate, todayISO, needsRecovery } from './store.js';
+import { currentPeriod, spentIn, refreshRate, needsRecovery } from './store.js';
+import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
-import { setHelp, formatMoment } from './ui.js';
+import { setHelp } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack } from './pages.js';
 import { backupStatus } from './backup.js';
@@ -46,7 +47,7 @@ const inSafariTab = navigator.standalone === false;
 const explainInstall = () => alert('To install Bgt-J, tap Share, then Add to Home Screen, and open it from there from now on. Data entered in a Safari tab stays separate from the installed app.');
 
 // Day 1 is the day the period started.
-const periodDay = (period) => Math.round((new Date(`${todayISO()}T00:00`) - new Date(`${period.start}T00:00`)) / 86400000) + 1;
+const periodDay = (period) => daysBetween(period.start) + 1;
 
 // The parts that don't belong to one screen: title window, menu stats, and the main screen's help line.
 function renderChrome() {

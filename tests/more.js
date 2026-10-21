@@ -5,7 +5,7 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, snapshotReasons, asInstalledApp } = require('./helpers');
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared } = require('./helpers');
 let failures = 0;
 const check = (label, actual, expected) => {
   const ok = actual === expected;
@@ -309,9 +309,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   const p2 = await newPage(offline);
   await p2.goto(URL);
   await p2.waitForTimeout(300);
-  for (const k of '100000') await p2.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
-  await p2.locator('#page .primary').tap();
-  await p2.waitForTimeout(300);
+  await startFirstPeriod(p2, '100000');
   await p2.locator('.currency-opts').tap();
   for (const k of '185') await p2.locator('#view-input .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
   check('offline estimate line', (await p2.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $10.00 | ~18.5 MXN per USD (estimate: no rates downloaded yet)');
@@ -320,16 +318,14 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   // Safety snapshots: one a day, one before anything drastic, and going back works (and is undoable).
   const snap = await browser.newContext({ ...devices['iPhone 13'] });
   await fakeShareSheet(snap);
-  await snap.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+  await mockRates(snap, RATE);
   const p6 = await newPage(snap);
   const snaps = () => snapshotReasons(p6);
   const expensesNow = () => p6.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).expenses.length);
   await p6.goto(URL);
   await p6.waitForTimeout(300);
   check('snapshots: one taken on first launch', (await snaps()).join('|'), 'start of the day');
-  for (const k of '100000') await p6.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
-  await p6.locator('#page .primary').tap();
-  await p6.waitForTimeout(300);
+  await startFirstPeriod(p6, '100000');
   for (const k of '500') await p6.locator('#view-input .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
   await p6.locator('.add-btn').tap();
   await p6.waitForTimeout(300);
@@ -346,9 +342,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p6.waitForTimeout(300);
   check('snapshots: taken before deleting a period', (await snaps())[0], 'before deleting Current Period');
   check('the expense is gone', await expensesNow(), 0);
-  for (const k of '100000') await p6.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
-  await p6.locator('#page .primary').tap();
-  await p6.waitForTimeout(4300);
+  await startFirstPeriod(p6, '100000');
   await p6.locator('#nav-btn').tap();
   await p6.waitForTimeout(250);
   await p6.locator('#menu button', { hasText: 'Backup' }).tap();
@@ -364,12 +358,10 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   // The backup reminder: adjustable on the Backup screen, and the nudge follows it.
   {
     const ctx = await browser.newContext({ ...devices['iPhone 13'] });
-    await ctx.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+    await mockRates(ctx, RATE);
     const p7 = await newPage(ctx);
     await p7.goto(URL);
-    for (const k of '100000') await p7.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
-    await p7.locator('#page .primary').tap();
-    await p7.waitForTimeout(4300);
+    await startFirstPeriod(p7, '100000');
     await p7.evaluate(() => { // backed up 10 days ago
       const s = JSON.parse(localStorage.getItem('budget-tracker'));
       s.lastBackupAt = Date.now() - 10 * 86400000;
@@ -396,12 +388,11 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   // In a Safari tab (not installed), the HELP window explains how to install.
   {
     const ctx = await browser.newContext({ ...devices['iPhone 13'] });
-    await ctx.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+    await mockRates(ctx, RATE);
     await ctx.addInitScript(() => Object.defineProperty(navigator, 'standalone', { value: false })); // a Safari tab, not installed
     const p8 = await newPage(ctx);
     await p8.goto(URL);
-    for (const k of '100000') await p8.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
-    await p8.locator('#page .primary').tap();
+    await startFirstPeriod(p8, '100000');
     await p8.waitForSelector('#help:not(.message)', { timeout: 6000 });
     check('Safari tab: HELP shows how to install', await p8.locator('#help span').textContent(), 'Install: Share → Add to Home Screen');
     let explained = '';
@@ -414,12 +405,10 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
 
   // Category names can't clash (ignoring capitalization); new ones get a free name.
   const clash = await browser.newContext({ ...devices['iPhone 13'] });
-  await clash.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+  await mockRates(clash, RATE);
   const p5 = await newPage(clash);
   await p5.goto(URL);
-  for (const k of '100000') await p5.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
-  await p5.locator('#page .primary').tap();
-  await p5.waitForTimeout(4300);
+  await startFirstPeriod(p5, '100000');
   await p5.locator('#nav-btn').tap();
   await p5.waitForTimeout(250);
   await p5.locator('#menu button', { hasText: 'Categories' }).tap();
@@ -431,7 +420,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p5.waitForTimeout(300);
   check('rename to an existing name is refused', await p5.locator('#help span').first().textContent(), "There's already a category called Groceries.");
   check('and the name goes back', (await p5.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value))).includes('Fun'), true);
-  await p5.waitForTimeout(4300);
+  await messageCleared(p5);
   await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
   await p5.waitForTimeout(200);
   await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
@@ -487,7 +476,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   });
   const old = await browser.newContext({ ...devices['iPhone 13'] });
   await fakeShareSheet(old);
-  await old.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+  await mockRates(old, RATE);
   await old.addInitScript((data) => { if (!localStorage.getItem('budget-tracker')) localStorage.setItem('budget-tracker', data); }, JSON.stringify(v1('saved before the upgrade')));
   const p3 = await newPage(old);
   await p3.goto(URL);

@@ -8,7 +8,8 @@ import {
   addCategory, updateCategory, removeCategory, categoryNamed, startPeriod, setBudget, deletePeriod, setBackupReminder,
 } from './store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
-import { el, svg, toast, setHelp, formatDate, formatMoment, colorDot, gauge, keypad } from './ui.js';
+import { el, svg, toast, setHelp, colorDot, gauge, keypad } from './ui.js';
+import { formatDate, formatMoment } from './dates.js';
 import { openExpenseSheet } from './sheets.js';
 import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, REMINDER_CHOICES } from './backup.js';
 import { readSnapshots, takeSnapshot, restoreSnapshot } from './snapshots.js';
@@ -24,6 +25,9 @@ const expanded = new Set();   // category ids opened on the summary screen
 let budgetDigits = '';        // what's typed on the budget screen (kept across redraws)
 let budgetBackedUp = false;   // whether "Back up first" succeeded on the budget screen
 let onNavigate = () => {};    // redraws the app after showing or leaving a screen
+
+// A small grey footnote.
+const note = (text) => el('p', { className: 'empty-note', textContent: text });
 
 // A window with an FF8-style label tab on its top edge.
 const panel = (label, ...children) => el('div', { className: 'window panel', 'data-label': label }, ...children);
@@ -156,7 +160,7 @@ function renderSummary({ periodId }) {
   fill(periodName(period), periodDates(period),
     panel('Spent', donut(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent)),
     stats,
-    panel('Categories', rows.length ? list : el('p', { className: 'empty-note', textContent: 'No expenses yet.' })),
+    panel('Categories', rows.length ? list : note('No expenses yet.')),
     remove,
   );
 }
@@ -242,7 +246,7 @@ function renderPeriods() {
     return row;
   });
   fill('Past Periods', 'Select a period to see its summary.', ...rows,
-    state.periods.length < 2 && el('p', { className: 'empty-note', textContent: 'Past periods show up here after you start a new period.' }));
+    state.periods.length < 2 && note('Past periods show up here after you start a new period.'));
 }
 
 // ---------- categories ----------
@@ -297,7 +301,7 @@ function renderCategories() {
     }));
 
   fill('Categories', 'Tap a name to rename it.', list, addButton, archivedPanel,
-    el('p', { className: 'empty-note', textContent: 'Colors follow alphabetical order. Removing a category that has expenses archives it, so past summaries stay intact.' }));
+    note('Colors follow alphabetical order. Removing a category that has expenses archives it, so past summaries stay intact.'));
 }
 
 // ---------- backup ----------
@@ -329,7 +333,7 @@ function renderBackup() {
   const restore = el('label', { className: 'wide-btn' }, 'Restore from backup', file);
 
   // Whether the browser agreed to protect this app's storage from automatic cleanup.
-  const storage = el('p', { className: 'empty-note' });
+  const storage = note(''); // filled in once the browser answers
   navigator.storage?.persisted?.().then((protectedStorage) => {
     storage.textContent = protectedStorage
       ? 'Storage: protected from automatic cleanup.'
@@ -358,7 +362,7 @@ function renderBackup() {
     backupButton,
     csvButton,
     restore,
-    el('p', { className: 'empty-note', textContent: 'Restoring replaces everything in the app with the backup.' }),
+    note('Restoring replaces everything in the app with the backup.'),
     panel('Snapshots',
       snapshotList,
       el('p', { className: 'hint', textContent: 'Kept on this phone automatically: one a day, and one before anything drastic. For undoing mistakes; they\u2019re lost with the phone, unlike exported backups.' })),

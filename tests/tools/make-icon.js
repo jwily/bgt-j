@@ -1,5 +1,5 @@
 // Renders the app icon: the first four category colors (Quezacotl, Shiva, Ifrit, Siren) as diamonds
-// spiralling into the distance, the first closest, on a dark charcoal glow (FF8's dark menu
+// spiralling counter-clockwise from 12 o'clock into the distance, the first closest, on a dark charcoal glow (FF8's dark menu
 // backdrop, without hard corners, since iOS rounds the icon itself). Colors come from the app's
 // palette. Usage: npm run icon
 const { webkit } = require('playwright');
@@ -8,15 +8,20 @@ const { readPalette } = require('../helpers');
 
 const OUT = path.join(__dirname, '../../app/icons');
 
-// Each diamond along the spiral, as fractions of the icon: center x/y, size, a slight dimming and
-// softening for distance (kept light, so the GF colors stay true). Each one tucks against the
-// previous, curling clockwise toward a vanishing point.
+// The diamonds sit on a spiral around a vanishing point: the first at 12 o'clock and closest,
+// the rest curling counter-clockwise (12 → 9 → 6 → 3) as they shrink into the distance, each
+// a little dimmer and softer (kept light, so the GF colors stay true). Fractions of the icon.
+const CENTER = { x: 0.52, y: 0.53 };
+const TURN = 95;            // degrees between diamonds, counter-clockwise
 const SPIRAL = [
-  { x: 0.36, y: 0.60, size: 0.42, light: 1, blur: 0 },
-  { x: 0.645, y: 0.55, size: 0.26, light: 0.95, blur: 0 },
-  { x: 0.67, y: 0.335, size: 0.16, light: 0.9, blur: 0.0012 },
-  { x: 0.53, y: 0.27, size: 0.10, light: 0.85, blur: 0.0024 },
-];
+  { radius: 0.255, size: 0.40, light: 1, blur: 0 },
+  { radius: 0.215, size: 0.27, light: 0.95, blur: 0 },
+  { radius: 0.165, size: 0.175, light: 0.9, blur: 0.0012 },
+  { radius: 0.115, size: 0.11, light: 0.85, blur: 0.0024 },
+].map((d, i) => {
+  const angle = ((90 + i * TURN) * Math.PI) / 180; // 90° = 12 o'clock; increasing = counter-clockwise
+  return { ...d, x: CENTER.x + d.radius * Math.cos(angle), y: CENTER.y - d.radius * Math.sin(angle) };
+});
 
 (async () => {
   const colors = readPalette().slice(0, 4).map((c) => c.hex);
@@ -35,7 +40,7 @@ const SPIRAL = [
     }).join('');
     await p.setContent(`<!doctype html><meta charset="utf-8"><body style="margin:0">
       <div style="position:relative;width:${size}px;height:${size}px;overflow:hidden;
-        background:radial-gradient(circle at 57% 40%, #575757 0%, #383838 26%, #1b1b1b 60%, #070707 100%)">${diamonds}</div></body>`);
+        background:radial-gradient(circle at 52% 53%, #575757 0%, #383838 26%, #1b1b1b 60%, #070707 100%)">${diamonds}</div></body>`);
     await p.screenshot({ path: path.join(OUT, `icon-${size}.png`) });
     await p.close();
   }

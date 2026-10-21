@@ -3,7 +3,7 @@
 // user's own iPhone 14 Pro.
 // (Sizes are Safari's visible area; as a home-screen app the screen is taller still.)
 const { chromium, webkit, devices } = require('playwright');
-const { asInstalledApp } = require('./helpers');
+const { asInstalledApp, mockRates } = require('./helpers');
 const ENGINE = process.env.ENGINE || 'chromium';
 let failures = 0;
 const check = (label, ok, detail) => {
@@ -16,7 +16,7 @@ const check = (label, ok, detail) => {
   const errors = [];
   for (const [name, device] of [['13 mini', devices['iPhone 13 Mini']], ['SE 3', devices['iPhone SE (3rd gen)']], ['13', devices['iPhone 13']], ['14 Pro', devices['iPhone 14 Pro']]]) {
     const context = await browser.newContext(device);
-    await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"date":"2026-10-20","rates":{"MXN":18.5}}' }));
+    await mockRates(context, '{"date":"2026-10-20","rates":{"MXN":18.5}}');
     const page = await context.newPage();
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('http://localhost:8765/');

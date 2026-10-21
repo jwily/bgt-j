@@ -4,7 +4,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { fakeShareSheet, grabFile, APP_URL, asInstalledApp } = require('./helpers');
+const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = path.join(__dirname, 'output');
@@ -38,7 +38,7 @@ const sample = (overrides = {}) => ({
   async function open({ saved, snapshots, rate = RATE(), status = 200, serviceWorkers = 'block', clock } = {}) {
     const context = await browser.newContext({ ...devices['iPhone 13'], serviceWorkers });
     await fakeShareSheet(context);
-    await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: rate }));
+    await mockRates(context, rate, status);
     if (saved !== undefined || snapshots) {
       await context.addInitScript(([data, snaps]) => {
         if (sessionStorage.getItem('seeded')) return; // seed once, not on every reload

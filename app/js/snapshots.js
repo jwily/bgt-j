@@ -7,6 +7,7 @@
 // called, so one taken just before a change never includes that change.
 
 import { state, parse, replaceState } from './store.js';
+import { localDay, todayISO } from './dates.js';
 
 const STORE = 'snapshots';
 const LIMIT = 7;
@@ -66,7 +67,7 @@ async function keep(snapshots) {
 export async function takeDailySnapshot() {
   const data = JSON.stringify(state); // as it is right now, before today's changes
   const last = (await readSnapshots()).find((s) => s.reason === DAILY);
-  if (last && new Date(last.at).toDateString() === new Date().toDateString()) return;
+  if (last && localDay(last.at) === todayISO()) return;
   lastAt = Math.max(Date.now(), lastAt + 1);
   await keep([{ at: lastAt, reason: DAILY, data }]);
 }

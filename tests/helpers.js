@@ -86,3 +86,17 @@ exports.asInstalledApp = (browser) => {
   };
   return browser;
 };
+
+// Answers the app's exchange-rate requests with `body` (JSON text) instead of the real service.
+exports.mockRates = (context, body, status = 200) => context.route('https://api.frankfurter.dev/**', (r) =>
+  r.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body }));
+
+// On the first-budget screen: type a budget and start the first period.
+exports.startFirstPeriod = async (page, digits = '100000') => {
+  for (const k of digits) await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+  await page.locator('#page .primary').tap();
+  await page.waitForTimeout(300);
+};
+
+// Waits until a message (like "Added ...") has left the HELP window, so it can be tapped again.
+exports.messageCleared = (page) => page.waitForSelector('#help:not(.message)', { timeout: 8000 });

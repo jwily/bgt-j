@@ -4,7 +4,7 @@
 const { webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { serveApp, APP_URL, asInstalledApp } = require('../helpers');
+const { serveApp, APP_URL, asInstalledApp, mockRates } = require('../helpers');
 
 const OUT = path.join(__dirname, '..', 'output', 'screens');
 const RATE = '{"date":"2026-10-20","rates":{"MXN":18.5}}';
@@ -15,7 +15,7 @@ const RATE = '{"date":"2026-10-20","rates":{"MXN":18.5}}';
   const browser = asInstalledApp(await webkit.launch());
   for (const [phone, device] of [['13mini', devices['iPhone 13 Mini']], ['14pro', devices['iPhone 14 Pro']]]) {
     const context = await browser.newContext(device);
-    await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+    await mockRates(context, RATE);
     const page = await context.newPage();
     const shot = (name, fullPage = false) => page.screenshot({ path: path.join(OUT, `${phone}-${name}.png`), fullPage });
     const pause = (ms = 350) => page.waitForTimeout(ms);

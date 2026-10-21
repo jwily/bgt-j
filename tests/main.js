@@ -3,7 +3,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const ENGINE = process.env.ENGINE || 'chromium';
 const fs = require('fs');
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, asInstalledApp } = require('./helpers');
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, asInstalledApp, mockRates } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
 const check = (label, actual, expected) => console.log(`${actual === expected ? 'PASS' : 'FAIL'}  ${label}: ${JSON.stringify(actual)}${actual === expected ? '' : ` (expected ${JSON.stringify(expected)})`}`);
 
@@ -15,7 +15,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await page.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}' }));
+  await mockRates(page, '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}');
   await page.goto('http://localhost:8765/');
 
   const sheetKey = (k) => page.locator('#page .key', { hasText: new RegExp(`^${k === '⌫' ? '⌫' : k}$`) }).first().tap();

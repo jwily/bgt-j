@@ -1,13 +1,13 @@
 // Backup files: a full JSON copy of the app's data (restorable), a CSV for spreadsheets,
 // and how long it has been since the last backup.
 
-import { state, getPeriod, getCategory, isValid, migrate, replaceState, markBackedUp, todayISO, VERSION } from './store.js';
+import { state, getPeriod, getCategory, isValid, migrate, replaceState, markBackedUp, VERSION } from './store.js';
+import { todayISO, localDay, daysBetween } from './dates.js';
 import { takeSnapshot } from './snapshots.js';
 import { saveFile } from './ui.js';
 import { HOME, plainAmount } from './money.js';
 
 export const REMINDER_CHOICES = [7, 14, 30, 60]; // days; the user picks one on the Backup screen
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Returns true if the file was saved (or at least not cancelled).
 export async function exportBackup() {
@@ -46,8 +46,7 @@ export function restoreBackup(data) {
 export function backupStatus() {
   const last = state.lastBackupAt;
   if (!last) return { short: 'never', label: 'Never backed up', stale: state.expenses.length > 0 };
-  const startOfDay = (time) => new Date(time).setHours(0, 0, 0, 0);
-  const days = Math.round((startOfDay(Date.now()) - startOfDay(last)) / DAY_MS);
+  const days = daysBetween(localDay(last));
   const short = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
   return { short, label: `Backed up ${short}`, stale: days >= state.settings.backupReminderDays };
 }
