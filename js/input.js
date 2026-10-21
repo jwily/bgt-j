@@ -10,6 +10,7 @@ const MAX_DIGITS = { USD: 8, MXN: 7 }; // $999,999.99 and MX$9,999,999
 let digits = '';
 let date = todayISO();
 let stripKey = ''; // which categories the strip was last built from
+let recentering = false; // true while the app (not the person) is moving the strip
 const parts = {};
 
 export function initInput() {
@@ -24,8 +25,7 @@ export function initInput() {
   const zone = el('div', { className: 'window currency-zone', 'data-label': 'Amount' }, options, parts.amount, parts.sub);
   onSwipe(zone, switchCurrency);
 
-  // Category: a vertical snapping list beside the amount; whichever chip is centered is selected.
-  // Long-press for a grid.
+  // Category: a snapping strip; whichever chip is centered is selected. Long-press for a grid.
   parts.strip = el('div', { className: 'strip' });
   parts.strip.addEventListener('scroll', pickCenteredChip, { passive: true });
   onLongPress(parts.strip, () => openCategoryGrid(state.input.categoryId, selectCategory));
@@ -47,7 +47,8 @@ export function initInput() {
   parts.add.addEventListener('click', add);
 
   document.getElementById('view-input').append(
-    el('div', { className: 'entry' }, zone, el('div', { className: 'window strip-window', 'data-label': 'Category' }, parts.strip)),
+    zone,
+    el('div', { className: 'window strip-window', 'data-label': 'Category' }, parts.strip),
     el('div', { className: 'details' },
       el('label', { className: 'window note-window', 'data-label': 'Note' }, parts.note),
       el('label', { className: 'window date-btn', 'data-label': 'Date' }, parts.dateLabel, parts.dateInput)),
@@ -55,6 +56,7 @@ export function initInput() {
     parts.add,
   );
   renderInput();
+  document.fonts?.ready.then(recenter);
 }
 
 export function renderInput() {
@@ -104,24 +106,36 @@ function renderStrip() {
       chip.addEventListener('click', () => centerChip(chip, 'smooth'));
       return chip;
     }));
-    requestAnimationFrame(() => centerChip(chipFor(state.input.categoryId), 'auto'));
+    recenter();
   }
   for (const chip of parts.strip.children) chip.classList.toggle('selected', chip.dataset.id === state.input.categoryId);
+}
+
+// Put the selected chip back in the middle after the strip's layout changed (rebuilt, or its font
+// finished loading and chip widths shifted). The scrolling this causes isn't a choice by the
+// person, so pickCenteredChip ignores it until things settle.
+function recenter() {
+  recentering = true;
+  requestAnimationFrame(() => {
+    centerChip(chipFor(state.input.categoryId), 'auto');
+    setTimeout(() => { recentering = false; }, 150);
+  });
 }
 
 const chipFor = (id) => [...parts.strip.children].find((chip) => chip.dataset.id === id);
 
 function centerChip(chip, behavior) {
   if (!chip) return;
-  parts.strip.scrollTo({ top: chip.offsetTop - (parts.strip.clientHeight - chip.offsetHeight) / 2, behavior });
+  parts.strip.scrollTo({ left: chip.offsetLeft - (parts.strip.clientWidth - chip.offsetWidth) / 2, behavior });
 }
 
 function pickCenteredChip() {
-  const middle = parts.strip.scrollTop + parts.strip.clientHeight / 2;
+  if (recentering) return;
+  const middle = parts.strip.scrollLeft + parts.strip.clientWidth / 2;
   let best = null;
   let bestDistance = Infinity;
   for (const chip of parts.strip.children) {
-    const distance = Math.abs(chip.offsetTop + chip.offsetHeight / 2 - middle);
+    const distance = Math.abs(chip.offsetLeft + chip.offsetWidth / 2 - middle);
     if (distance < bestDistance) {
       best = chip;
       bestDistance = distance;

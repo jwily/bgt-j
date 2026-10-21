@@ -4,8 +4,7 @@ import { currentPeriod, spentIn, refreshRate, todayISO } from './store.js';
 import { formatUsd } from './money.js';
 import { setHelp } from './ui.js';
 import { initInput, renderInput } from './input.js';
-import { initPages, showPage, renderPage, isPageOpen, pageTitle, goBack } from './pages.js';
-import { openBudgetSheet } from './sheets.js';
+import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack } from './pages.js';
 import { backupStatus } from './backup.js';
 
 const $ = (id) => document.getElementById(id);
@@ -18,9 +17,13 @@ const openCurrentSummary = () => showPage('summary', { periodId: currentPeriod()
 
 // The title window: "Menu" on the main screen, "‹ <screen>" (Back) everywhere else.
 navButton.addEventListener('click', () => {
-  if (isPageOpen()) goBack();
-  else if (isMenuOpen()) closeMenu();
-  else openMenu();
+  if (isPageOpen()) {
+    if (canGoBack()) goBack();
+  } else if (isMenuOpen()) {
+    closeMenu();
+  } else {
+    openMenu();
+  }
 });
 
 menuBackdrop.addEventListener('click', (event) => { if (event.target === menuBackdrop) closeMenu(); });
@@ -29,7 +32,7 @@ $('menu').addEventListener('click', (event) => {
   if (!action) return;
   closeMenu();
   if (action === 'current') openCurrentSummary();
-  else if (action === 'new-period') openBudgetSheet('new');
+  else if (action === 'new-period') showPage('budget', { mode: 'new' });
   else showPage(action);
 });
 
@@ -40,8 +43,10 @@ const periodDay = (period) => Math.round((new Date(`${todayISO()}T00:00`) - new 
 function renderChrome() {
   const pageOpen = isPageOpen();
   const status = backupStatus();
-  navButton.textContent = pageOpen ? `‹ ${pageTitle()}` : 'Menu';
-  navButton.setAttribute('aria-label', pageOpen ? 'Back' : 'Menu');
+  const back = pageOpen && canGoBack();
+  navButton.textContent = pageOpen ? `${back ? '‹ ' : ''}${pageTitle()}` : 'Menu';
+  navButton.setAttribute('aria-label', back ? 'Back' : pageOpen ? pageTitle() : 'Menu');
+  navButton.disabled = pageOpen && !back;
   navButton.classList.toggle('alert', !pageOpen && status.stale);
   $('backup-status').textContent = status.short;
   $('backup-status').classList.toggle('bad', status.stale);
@@ -71,7 +76,7 @@ initPages({ onNavigate: refresh });
 refresh();
 window.addEventListener('budget:change', refresh);
 
-if (!currentPeriod()) openBudgetSheet('first');
+if (!currentPeriod()) showPage('budget', { mode: 'first' });
 
 // Ask the browser not to clear this app's data when the phone is low on space.
 // The browser decides silently; the Backup screen shows the answer.

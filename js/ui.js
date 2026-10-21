@@ -26,7 +26,7 @@ export function formatDate(iso, options = { month: 'short', day: 'numeric' }) {
 
 // A category name with its color gem. Used by the main screen's strip and the long-press grid.
 export function categoryChip(category, { selected = false } = {}) {
-  const chip = el('button', { type: 'button', className: `chip${selected ? ' selected' : ''}`, textContent: category.name });
+  const chip = el('button', { type: 'button', className: `chip${selected ? ' selected' : ''}` }, el('span', { textContent: category.name }));
   chip.dataset.id = category.id;
   chip.style.setProperty('--c', category.color);
   return chip;

@@ -1,24 +1,27 @@
-// Secondary screens behind the menu: period summaries, the list of periods, categories, backup.
+// Secondary screens: period summaries, the list of periods, categories, backup, and the budget
+// screen (first budget, New Period, edit budget).
 // Each screen sets its title (shown in the top-right title window) and its HELP line, then
 // fills the page with labelled windows.
 
 import {
   state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories,
-  addCategory, updateCategory, removeCategory, todayISO,
+  addCategory, updateCategory, removeCategory, todayISO, startPeriod, setBudget,
 } from './store.js';
 import { formatUsd, formatMxn, formatDiff } from './money.js';
-import { el, svg, toast, setHelp, formatDate, colorDot, gauge } from './ui.js';
-import { openBudgetSheet, openExpenseSheet } from './sheets.js';
+import { el, svg, toast, setHelp, formatDate, colorDot, gauge, keypad } from './ui.js';
+import { openExpenseSheet } from './sheets.js';
 import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus } from './backup.js';
 
 const page = document.getElementById('page');
 const body = document.getElementById('page-body');
 
-const PAGES = { summary: renderSummary, periods: renderPeriods, categories: renderCategories, backup: renderBackup };
+const PAGES = { summary: renderSummary, periods: renderPeriods, categories: renderCategories, backup: renderBackup, budget: renderBudget };
 
 let stack = [];               // [{ name, params }], so Back returns to the previous screen
 let title = '';               // the showing screen's name, for the title window
 const expanded = new Set();   // category ids opened on the summary screen
+let budgetDigits = '';        // what's typed on the budget screen (kept across redraws)
+let budgetBackedUp = false;   // whether "Back up first" succeeded on the budget screen
 let onNavigate = () => {};    // redraws the app after showing or leaving a screen
 
 // A window with an FF8-style label tab on its top edge.
@@ -38,11 +41,17 @@ export function initPages(options) {
 
 export const isPageOpen = () => !page.hidden;
 export const pageTitle = () => title;
+// The first-budget screen can't be left: the app needs a period before anything else works.
+export const canGoBack = () => !(stack.at(-1)?.name === 'budget' && !currentPeriod());
 
 // push: keep the current screen underneath (Back returns to it).
 export function showPage(name, params = {}, { push = false } = {}) {
   stack = push ? [...stack, { name, params }] : [{ name, params }];
   expanded.clear();
+  if (name === 'budget') {
+    budgetDigits = params.mode === 'edit' ? String(currentPeriod().budgetCents) : '';
+    budgetBackedUp = false;
+  }
   page.hidden = false;
   page.scrollTop = 0;
   unfold();
@@ -53,6 +62,13 @@ export function goBack() {
   stack.pop();
   if (stack.length) unfold();
   else page.hidden = true;
+  onNavigate();
+}
+
+// Leave every screen and return to the main screen.
+export function closePages() {
+  stack = [];
+  page.hidden = true;
   onNavigate();
 }
 
@@ -105,7 +121,7 @@ function renderSummary({ periodId }) {
   const budgetValue = el('span', { className: 'value', textContent: formatUsd(period.budgetCents) });
   if (isCurrent) {
     const edit = el('button', { className: 'link', textContent: 'Edit' });
-    edit.addEventListener('click', () => openBudgetSheet('edit'));
+    edit.addEventListener('click', () => showPage('budget', { mode: 'edit' }, { push: true }));
     budgetValue.append(edit);
   }
 
@@ -271,7 +287,7 @@ function renderBackup() {
     if (!confirm(`Replace everything in the app with this backup (${data.periods.length} periods, ${data.expenses.length} expenses)?`)) return;
     restoreBackup(data);
     toast('Backup restored');
-    if (!currentPeriod()) openBudgetSheet('first');
+    if (!currentPeriod()) showPage('budget', { mode: 'first' });
   });
   const restore = el('label', { className: 'wide-btn' }, 'Restore from backup', file);
 
@@ -293,4 +309,64 @@ function renderBackup() {
     el('p', { className: 'empty-note', textContent: 'Restoring replaces everything in the app with the backup.' }),
     storage,
   );
+}
+
+// ---------- budget: first budget, New Period, edit budget ----------
+
+const BUDGET_SCREENS = {
+  first: {
+    title: 'First Budget',
+    help: () => 'Set a budget to start your first period.',
+    button: 'Start period',
+  },
+  new: {
+    title: 'New Period',
+    help: (current) => `Ends the period that started ${formatDate(current.start)} and starts a new one.`,
+    button: 'Start new period',
+  },
+  edit: {
+    title: 'Edit Budget',
+    help: () => "Changes this period's budget only.",
+    button: 'Save',
+  },
+};
+
+function renderBudget({ mode }) {
+  const current = currentPeriod();
+  if (!current) mode = 'first';
+  const screen = BUDGET_SCREENS[mode];
+
+  const amount = el('div', { className: `budget-amount${budgetDigits ? '' : ' empty'}`, textContent: formatUsd(Number(budgetDigits || '0')) });
+  const pad = keypad(() => budgetDigits, (next) => {
+    budgetDigits = next;
+    renderPage();
+  }, () => 8);
+
+  const confirm = el('button', { className: 'primary', textContent: screen.button, disabled: !budgetDigits });
+  confirm.addEventListener('click', () => {
+    const cents = Number(budgetDigits || '0');
+    if (!cents) return;
+    if (mode === 'edit') {
+      setBudget(current.id, cents);
+      goBack(); // to the summary it was opened from
+      toast(`Budget set to ${formatUsd(cents)}`);
+    } else {
+      startPeriod(cents);
+      closePages();
+      toast(`New Period started · ${formatUsd(cents)}`);
+    }
+  });
+
+  // A natural moment to back up: once per paycheck, right before closing a period.
+  let backupButton = null;
+  if (mode === 'new') {
+    backupButton = el('button', { className: 'wide-btn', textContent: budgetBackedUp ? 'Backed up ✓' : 'Back up first', disabled: budgetBackedUp });
+    backupButton.addEventListener('click', async () => {
+      if (!(await exportBackup())) return;
+      budgetBackedUp = true;
+      renderPage();
+    });
+  }
+
+  fill(screen.title, screen.help(current), panel('Budget', amount), pad, backupButton, confirm);
 }
