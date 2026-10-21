@@ -13,15 +13,15 @@ let recentering = false; // true while the app (not the person) is moving the st
 const parts = {};
 
 export function initInput() {
-  // Currency: tap the options, or swipe anywhere in the Amount window to step through them. Like
+  // Currency: tap the options, or swipe anywhere in the Amount window to move between them. Like
   // FF8's Config options, the chosen one is bright with the hand beside it and the others are grey.
   parts.currencies = CURRENCY_CODES.map((code) => el('span', { textContent: code }));
   const options = el('button', { className: 'options currency-opts', 'aria-label': 'Switch currency' }, ...parts.currencies);
-  options.addEventListener('click', () => switchCurrency('left'));
+  options.addEventListener('click', cycleCurrency);
   parts.amount = el('div', { className: 'amount' });
   parts.sub = el('div', { className: 'amount-sub' });
   const zone = el('div', { className: 'window currency-zone', 'data-label': 'Amount' }, options, parts.amount, parts.sub);
-  onSwipe(zone, switchCurrency);
+  onSwipe(zone, swipeCurrency);
 
   // Category: a snapping strip; whichever chip is centered is selected. Long-press for a grid.
   parts.strip = el('div', { className: 'strip' });
@@ -52,16 +52,14 @@ export function initInput() {
     }
   });
 
-  // Add and the currency switch sit in the keypad's right column, under a right thumb. The switch
-  // key names the currency it switches to.
-  parts.add = el('button', { type: 'button', className: 'add-btn', textContent: 'Add' });
-  parts.add.addEventListener('click', add);
-  parts.switchKey = el('button', { type: 'button', className: 'key switch-key' });
-  parts.switchKey.addEventListener('click', () => switchCurrency('left'));
   const pad = keypad(() => digits, (next) => {
     digits = next;
     renderInput();
-  }, () => CURRENCIES[state.input.currency].maxDigits, { side: parts.add, corner: parts.switchKey });
+  }, () => CURRENCIES[state.input.currency].maxDigits);
+  // Add sits in the bottom bar, left of Undo and the Menu button, under a right thumb.
+  parts.add = el('button', { className: 'add-btn', textContent: 'Add' });
+  parts.add.addEventListener('click', add);
+  document.getElementById('undo-btn').before(parts.add);
 
   document.getElementById('view-input').append(
     zone,
@@ -81,9 +79,6 @@ export function renderInput() {
   const amount = Number(digits || '0');
 
   parts.currencies.forEach((span, i) => span.classList.toggle('on', CURRENCY_CODES[i] === currency));
-  const next = nextCurrency(1);
-  parts.switchKey.textContent = `⇄ ${next}`;
-  parts.switchKey.setAttribute('aria-label', `Switch to ${next}`);
   parts.amount.textContent = formatMoney(amount, currency);
   parts.amount.classList.toggle('empty', !amount);
   parts.sub.replaceChildren(...(currency === HOME ? [] : [
@@ -112,13 +107,27 @@ function nextCurrency(step) {
   return CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + step + count) % count];
 }
 
-// Swipe left (or tap) for the next currency, swipe right for the previous one; it wraps around.
-function switchCurrency(direction) {
-  const next = nextCurrency(direction === 'right' ? -1 : 1);
+// Swipes move the choice the way the finger goes, like the options' order on screen: a swipe left
+// picks the option to the left, a swipe right the one to the right. The ends are walls: swiping
+// past the first or last option just nudges the amount.
+function swipeCurrency(direction) {
+  const index = CURRENCY_CODES.indexOf(state.input.currency) + (direction === 'left' ? -1 : 1);
+  if (index < 0 || index >= CURRENCY_CODES.length) {
+    nudge(parts.amount);
+    return;
+  }
+  switchCurrency(CURRENCY_CODES[index], direction);
+}
+
+// Tapping the options steps to the next currency, wrapping around.
+const cycleCurrency = () => switchCurrency(nextCurrency(1), 'left');
+
+// slide: which way the amount slides in, following the finger.
+function switchCurrency(next, slide) {
   digits = digits.slice(0, CURRENCIES[next].maxDigits);
   parts.amount.classList.remove('slide-left', 'slide-right');
   void parts.amount.offsetWidth; // restart the animation
-  parts.amount.classList.add(direction === 'right' ? 'slide-right' : 'slide-left');
+  parts.amount.classList.add(slide === 'right' ? 'slide-right' : 'slide-left');
   setInputPrefs({ currency: next });
 }
 

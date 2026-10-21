@@ -106,7 +106,7 @@ const sample = (overrides = {}) => ({
   // --- Corrupted data and no snapshot: starts fresh, but the unreadable copy is still kept.
   {
     const { context, page, dialogs, stored } = await open({ saved: 'not json at all' });
-    check('corrupted, no snapshot: starts fresh', await page.locator('#nav-btn').textContent(), 'First Budget');
+    check('corrupted, no snapshot: starts fresh', await page.locator('#title').textContent(), 'First Budget');
     check('corrupted, no snapshot: no recovery message', dialogs.length, 0);
     check('corrupted, no snapshot: unreadable copy kept', await stored('budget-tracker-unreadable'), 'not json at all');
     await context.close();

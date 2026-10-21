@@ -20,7 +20,7 @@ const openCurrentSummary = () => {
   showPage('summary', { periodId: currentPeriod().id });
 };
 
-// The title window: "Menu" on the main screen, "‹ <screen>" (Back) everywhere else.
+// The button at the bottom right: "Menu" on the main screen, "‹ Back" everywhere else.
 navButton.addEventListener('click', () => {
   if (isPageOpen()) {
     if (canGoBack()) goBack();
@@ -49,15 +49,18 @@ const explainInstall = () => alert('To install Bgt-J, tap Share, then Add to Hom
 // Day 1 is the day the period started.
 const periodDay = (period) => daysBetween(period.start) + 1;
 
-// The parts that don't belong to one screen: title window, menu stats, and the main screen's help line.
+// The parts that don't belong to one screen: the title window, the Menu/Back button, menu stats,
+// and the main screen's help line.
 function renderChrome() {
   const pageOpen = isPageOpen();
   document.body.classList.toggle('page-open', pageOpen);
   const status = backupStatus();
-  const back = pageOpen && canGoBack();
-  navButton.textContent = pageOpen ? `${back ? '‹ ' : ''}${pageTitle()}` : 'Menu';
-  navButton.setAttribute('aria-label', back ? 'Back' : pageOpen ? pageTitle() : 'Menu');
-  navButton.disabled = pageOpen && !back;
+  $('title').hidden = !pageOpen;
+  $('title').textContent = pageOpen ? pageTitle() : '';
+  navButton.textContent = pageOpen ? '‹ Back' : 'Menu';
+  // The first-budget screen can't be left, so it has no Back.
+  navButton.hidden = pageOpen && !canGoBack();
+  navButton.disabled = navButton.hidden;
   navButton.classList.toggle('alert', !pageOpen && status.stale);
   $('backup-status').textContent = status.short;
   $('backup-status').classList.toggle('bad', status.stale);

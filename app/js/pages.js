@@ -120,15 +120,8 @@ function renderSummary({ periodId }) {
     }))
     .sort((a, b) => b.cents - a.cents);
 
-  const budgetValue = el('span', { className: 'value', textContent: formatUsd(period.budgetCents) });
-  if (isCurrent) {
-    const edit = el('button', { className: 'link', textContent: 'Edit' });
-    edit.addEventListener('click', () => showPage('budget', { mode: 'edit' }, { push: true }));
-    budgetValue.append(edit);
-  }
-
   const stats = panel('Budget',
-    el('div', { className: 'stat' }, el('span', { textContent: 'Budget' }), budgetValue),
+    el('div', { className: 'stat' }, el('span', { textContent: 'Budget' }), el('span', { className: 'value', textContent: formatUsd(period.budgetCents) })),
     el('div', { className: 'stat' }, el('span', { textContent: 'Spent' }), el('span', { className: 'value', textContent: formatUsd(spent) })),
     el('div', { className: `stat diff ${tone(diff)}` },
       el('span', { textContent: diff >= 0 ? 'Under budget' : 'Over budget' }),
@@ -154,14 +147,20 @@ function renderSummary({ periodId }) {
       isOpen && el('ul', { className: 'items' }, ...row.items.map(itemRow))));
   }
 
+  // The screen's actions sit at the bottom, under the thumb; the safer one on the right, nearer it.
   const remove = el('button', { className: 'wide-btn delete-btn', textContent: 'Delete period' });
   remove.addEventListener('click', () => removePeriod(period));
+  let edit = null;
+  if (isCurrent) {
+    edit = el('button', { className: 'wide-btn edit-budget', textContent: 'Edit budget' });
+    edit.addEventListener('click', () => showPage('budget', { mode: 'edit' }, { push: true }));
+  }
 
   fill(periodName(period), periodDates(period),
     panel('Spent', donut(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent)),
     stats,
     panel('Categories', rows.length ? list : note('No expenses yet.')),
-    remove,
+    el('div', { className: 'actions' }, remove, edit),
   );
 }
 

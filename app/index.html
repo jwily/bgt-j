@@ -15,12 +15,19 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- On every screen: the HELP window (which also shows messages) and the title window,
-       which is "Menu" on the main screen and "‹ <screen name>" (Back) elsewhere. -->
+  <!-- Top of every screen, for reading: the HELP window (which also shows messages) and, on
+       screens other than the main one, the title window with the screen's name. -->
   <header class="hud">
     <div id="help" class="window help" data-label="Help" role="status"></div>
-    <button id="nav-btn" class="window nav-btn">Menu</button>
+    <div id="title" class="window title" hidden></div>
   </header>
+
+  <!-- Bottom of every screen, under the thumb: Undo (while a message offers it) and the
+       Menu button, which is Back on screens other than the main one. -->
+  <footer class="dock">
+    <button id="undo-btn" class="window undo-btn" hidden>Undo</button>
+    <button id="nav-btn" class="window nav-btn">Menu</button>
+  </footer>
 
   <!-- Main screen: built by js/input.js -->
   <main id="view-input"></main>
@@ -31,18 +38,19 @@
   </section>
 
   <div id="menu-backdrop" class="backdrop">
+    <!-- Opens upward from the Menu button: the most used command at the bottom, nearest the thumb. -->
     <nav id="menu" class="menu">
-      <div class="window menu-list">
-        <button data-action="current">Current Period</button>
-        <button data-action="periods">Past Periods</button>
-        <button data-action="categories">Categories</button>
-        <button data-action="new-period">New Period</button>
-        <button data-action="backup">Backup</button>
-      </div>
       <div class="window menu-stats">
         <div><span class="label">Day</span><span id="stat-day"></span></div>
         <div><span id="stat-left-label" class="label">Left</span><span id="stat-left"></span></div>
         <div><span class="label">Backup</span><span id="backup-status"></span></div>
+      </div>
+      <div class="window menu-list">
+        <button data-action="backup">Backup</button>
+        <button data-action="new-period">New Period</button>
+        <button data-action="categories">Categories</button>
+        <button data-action="periods">Past Periods</button>
+        <button data-action="current">Current Period</button>
       </div>
     </nav>
   </div>

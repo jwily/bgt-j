@@ -112,16 +112,9 @@ export function onLongPress(node, handler, ms = 450) {
 
 // Digits-only keypad. Amounts are built from the digit string, so there is no "." key:
 // for dollars the last two digits are cents. Hold ⌫ to clear.
-// side and corner (optional, together): a fourth column for the right thumb. ⌫ moves to its top,
-// side fills the rest of it (three keys tall), and corner takes ⌫'s old place at the bottom right.
-export function keypad(getDigits, onChange, getMaxDigits, { side = null, corner = null } = {}) {
-  const pad = el('div', { className: side ? 'keypad with-side' : 'keypad' });
-  const order = side ? ['1', '2', '3', '⌫', '4', '5', '6', side, '7', '8', '9', '00', '0', corner] : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', '⌫'];
-  for (const key of order) {
-    if (typeof key !== 'string') {
-      pad.append(key);
-      continue;
-    }
+export function keypad(getDigits, onChange, getMaxDigits) {
+  const pad = el('div', { className: 'keypad' });
+  for (const key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', '⌫']) {
     const button = el('button', { type: 'button', className: 'key', textContent: key });
     if (key === '⌫') {
       button.setAttribute('aria-label', 'Delete');
@@ -158,31 +151,28 @@ export function setHelp(text, { tone = '', onTap = null } = {}) {
   if (!toastTimer) showHelpLine();
 }
 
-// Pass an undo function (as returned by the store's changes) to show an Undo button.
+// Pass an undo function (as returned by the store's changes) to show an Undo button. The message
+// shows in the HELP window; Undo appears at the bottom, beside the Menu/Back button.
 export function toast(message, undo) {
   const node = $('help');
+  const undoButton = $('undo-btn');
   const end = () => {
     clearTimeout(toastTimer);
     toastTimer = null;
+    undoButton.hidden = true;
+    undoButton.onclick = null;
     showHelpLine();
   };
-  const children = [el('span', { textContent: message })];
-  if (undo) {
-    const button = el('button', { className: 'undo', textContent: 'Undo' });
-    button.addEventListener('click', (event) => {
-      // end() makes the HELP window tappable again (it opens the summary on the main screen),
-      // so keep this click from reaching it.
-      event.stopPropagation();
-      end();
-      undo();
-    });
-    children.push(button);
-  }
+  undoButton.hidden = !undo;
+  undoButton.onclick = undo ? () => {
+    end();
+    undo();
+  } : null;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(end, 4000);
   node.className = 'window help message';
   node.onclick = null;
-  node.replaceChildren(...children);
+  node.replaceChildren(el('span', { textContent: message }));
 }
 
 // ---------- sheets ----------
