@@ -34,7 +34,10 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 
-html, body { height: 100%; }
+/* The page itself never scrolls or bounces: only the windows inside it that need to scroll do.
+   (iOS rubber-bands the whole page when a drag reaches the end of something, which would drag
+   the screens around and show what's behind them.) */
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body {
   margin: 0;
   background: #000;
@@ -43,7 +46,6 @@ body {
   font-weight: 600;
   letter-spacing: 0.02em;
   text-shadow: 2px 2px 0 var(--ink);
-  overscroll-behavior: none;
 }
 
 button {
@@ -429,6 +431,9 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 
 /* ---------- secondary screens ---------- */
 
+/* While another screen is open the main screen is hidden, not just covered, so nothing of it can
+   show around the edges when iOS bounces a scrolling screen. */
+body.page-open #view-input { visibility: hidden; }
 .page {
   position: fixed;
   top: var(--hud-h);
@@ -437,6 +442,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   bottom: 0;
   z-index: 10;
   overflow-y: auto;
+  overscroll-behavior: contain; /* its bounce stays inside it */
   background: #000;
   padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
 }

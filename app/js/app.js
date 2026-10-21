@@ -52,6 +52,7 @@ const periodDay = (period) => daysBetween(period.start) + 1;
 // The parts that don't belong to one screen: title window, menu stats, and the main screen's help line.
 function renderChrome() {
   const pageOpen = isPageOpen();
+  document.body.classList.toggle('page-open', pageOpen);
   const status = backupStatus();
   const back = pageOpen && canGoBack();
   navButton.textContent = pageOpen ? `${back ? '‹ ' : ''}${pageTitle()}` : 'Menu';

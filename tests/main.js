@@ -89,6 +89,14 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   // Summary
   await openSummary(page);
   check('summary title', await titleText(page), 'Current Period');
+  // Nothing of the main screen can show if iOS bounces this screen: it's hidden, and the page
+  // itself can't bounce.
+  const bounce = await page.evaluate(() => [
+    getComputedStyle(document.getElementById('view-input')).visibility,
+    getComputedStyle(document.body).overscrollBehaviorY,
+    getComputedStyle(document.getElementById('page')).overscrollBehaviorY,
+  ].join(' '));
+  check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
   check('donut center', await page.locator('.donut-center strong').textContent(), '$523.00');
   check('donut slices', await page.locator('.donut circle.slice').count(), 2);
   check('diff', await page.locator('.stat.diff .value').textContent(), '+$1,477.00');
