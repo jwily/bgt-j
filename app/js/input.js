@@ -37,11 +37,13 @@ export function initInput() {
     pickedDate = chosen && chosen !== todayISO() ? chosen : null;
     renderInput();
   });
-  // iPhone Safari doesn't always size the hidden input to cover the whole button, so a tap that lands
-  // on the label (like the middle of "Today") opens the picker directly.
+  // A click anywhere on the button opens the picker. Desktop browsers otherwise only open it from
+  // the input's small calendar icon (a click elsewhere just selects the hidden day or month), and
+  // iPhone Safari doesn't always stretch the input over the whole button. A tap on the input itself
+  // on a touch screen already opens the native picker, so that one is left alone.
   const dateButton = el('label', { className: 'window date-btn', 'data-label': 'Date' }, parts.dateLabel, parts.dateInput);
   dateButton.addEventListener('click', (event) => {
-    if (event.target === parts.dateInput) return;
+    if (event.target === parts.dateInput && matchMedia('(pointer: coarse)').matches) return;
     event.preventDefault();
     try {
       parts.dateInput.showPicker();

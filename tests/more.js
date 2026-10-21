@@ -419,6 +419,23 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await ctx.close();
   }
 
+  // In a desktop browser, a mouse click on the middle of the date button opens the picker (by
+  // itself the hidden date field would only select its day or month there).
+  const desktop = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+  await mockRates(desktop, RATE);
+  const deskPage = await newPage(desktop);
+  await deskPage.goto(URL);
+  await deskPage.locator('#page .key').filter({ hasText: /^1$/ }).first().click();
+  await deskPage.locator('#page .primary').click();
+  await deskPage.waitForSelector('.date-btn');
+  await deskPage.evaluate(() => {
+    window.pickerOpened = 0;
+    HTMLInputElement.prototype.showPicker = function () { window.pickerOpened += 1; };
+  });
+  await deskPage.locator('.date-btn').click();
+  check('desktop: clicking the middle of the date button opens the picker', await deskPage.evaluate(() => window.pickerOpened), 1);
+  await desktop.close();
+
   // Category names can't clash (ignoring capitalization); new ones get a free name.
   const clash = await browser.newContext({ ...devices['iPhone 13'] });
   await mockRates(clash, RATE);
