@@ -24,6 +24,7 @@ let title = '';               // the showing screen's name, for the title window
 const expanded = new Set();   // category ids opened on the summary screen
 let budgetDigits = '';        // what's typed on the budget screen (kept across redraws)
 let budgetBackedUp = false;   // whether "Back up first" succeeded on the budget screen
+let categoryView = null;      // the Categories screen's row order and colors, held while it's open
 let onNavigate = () => {};    // redraws the app after showing or leaving a screen
 
 // A small grey footnote.
@@ -57,6 +58,7 @@ export function showPage(name, params = {}, { push = false } = {}) {
     budgetDigits = params.mode === 'edit' ? String(currentPeriod().budgetCents) : '';
     budgetBackedUp = false;
   }
+  if (name === 'categories') categoryView = null; // alphabetical again on each visit
   page.hidden = false;
   page.scrollTop = 0;
   unfold();
@@ -250,8 +252,25 @@ function renderPeriods() {
 
 // ---------- categories ----------
 
+// Changes save as they're made, but rows keep the places and colors they had when the screen
+// opened, so a renamed row doesn't jump away (the store re-sorts and recolors on every save). New
+// and restored categories join at the bottom. The next visit is alphabetical again.
+function heldCategoryView() {
+  if (!categoryView) categoryView = { order: [], colors: new Map() };
+  for (const category of sortedCategories()) {
+    if (!categoryView.colors.has(category.id)) categoryView.colors.set(category.id, category.color);
+  }
+  for (const category of activeCategories()) {
+    if (!categoryView.order.includes(category.id)) categoryView.order.push(category.id);
+  }
+  return categoryView;
+}
+
 function renderCategories() {
-  const active = activeCategories();
+  const view = heldCategoryView();
+  const live = activeCategories();
+  const active = view.order.map((id) => live.find((c) => c.id === id)).filter(Boolean);
+  const dot = (category) => colorDot(view.colors.get(category.id));
   const list = panel('Categories');
 
   for (const category of active) {
@@ -281,13 +300,13 @@ function renderCategories() {
       toast(`${category.name} ${getCategory(category.id) ? 'archived' : 'deleted'}`, undo);
     });
 
-    list.append(el('div', { className: 'cat-row' }, colorDot(category.color), name, remove));
+    list.append(el('div', { className: 'cat-row' }, dot(category), name, remove));
   }
 
   const addButton = el('button', { className: 'wide-btn', textContent: 'Add category' });
   addButton.addEventListener('click', () => {
     const { id } = addCategory();
-    // Categories are alphabetical, so find the new one's name field and select it for typing.
+    // Find the new one's name field (at the bottom) and select it for typing.
     [...body.querySelectorAll('.cat-row input')].find((input) => input.dataset.id === id)?.select();
   });
 
@@ -296,11 +315,11 @@ function renderCategories() {
     ...archived.map((category) => {
       const restore = el('button', { className: 'link', textContent: 'Restore' });
       restore.addEventListener('click', () => updateCategory(category.id, { archived: false }));
-      return el('div', { className: 'cat-row' }, colorDot(category.color), el('span', { className: 'grow', textContent: category.name }), restore);
+      return el('div', { className: 'cat-row' }, dot(category), el('span', { className: 'grow', textContent: category.name }), restore);
     }));
 
   fill('Categories', 'Tap a name to rename it.', list, addButton, archivedPanel,
-    note('Colors follow alphabetical order. Removing a category that has expenses archives it, so past summaries stay intact.'));
+    note('Categories are sorted alphabetically, and colored in that order, when you leave this screen. Removing a category that has expenses archives it, so past summaries stay intact.'));
 }
 
 // ---------- backup ----------

@@ -473,6 +473,28 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p5.waitForTimeout(200);
   const names = await p5.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value));
   check('second new category gets a free name', names.includes('New Category') && names.includes('New Category 2'), true);
+
+  // While the Categories screen is open, rows keep their places and colors: new ones join at the
+  // bottom, and a renamed row stays where it was. Leaving re-sorts them.
+  const rowNames = () => p5.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value));
+  const firstDot = () => p5.locator('.cat-row .dot').first().evaluate((d) => d.style.getPropertyValue('--c'));
+  check('new categories added at the bottom while editing', (await rowNames()).slice(-2).join(','), 'New Category,New Category 2');
+  const colorBefore = await firstDot();
+  await nameField(0).fill('Zoo');
+  await nameField(0).press('Enter');
+  await p5.waitForTimeout(300);
+  check('renamed row stays in place while editing', (await rowNames())[0], 'Zoo');
+  check('renamed row keeps its color while editing', await firstDot(), colorBefore);
+  await messageCleared(p5).catch(() => {});
+  await p5.locator('#nav-btn').tap(); // leave
+  await p5.waitForTimeout(300);
+  await p5.locator('#nav-btn').tap();
+  await p5.waitForTimeout(250);
+  await p5.locator('#menu button', { hasText: 'Categories' }).tap();
+  await p5.waitForTimeout(300);
+  const resorted = await rowNames();
+  check('leaving re-sorts alphabetically', resorted.join(','), [...resorted].sort((a, b) => a.localeCompare(b)).join(','));
+  check('renamed row moved to its alphabetical place', resorted.at(-1), 'Zoo');
   await clash.close();
 
   // Rates: re-check every 3 hours until today's rate arrives, then stop for the day.
