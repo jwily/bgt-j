@@ -1,11 +1,11 @@
 // Entry point: wires the top bar, menu, screens and data together.
 
-import { currentPeriod, spentIn, refreshRate, todayISO } from './store.js';
+import { currentPeriod, spentIn, refreshRate, todayISO, recoveredFrom, write } from './store.js';
 import { formatUsd } from './money.js';
-import { setHelp } from './ui.js';
+import { setHelp, formatMoment } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack } from './pages.js';
-import { backupStatus, takeDailySnapshot } from './backup.js';
+import { backupStatus, takeDailySnapshot, clearSnapshots } from './backup.js';
 
 const $ = (id) => document.getElementById(id);
 const navButton = $('nav-btn');
@@ -74,6 +74,17 @@ function refresh() {
   renderChrome();
 }
 
+// The phone's storage for the app is full: snapshots share that space, so drop them and try once
+// more. If it still fails, say so plainly: the change is on screen but won't survive closing the app.
+window.addEventListener('budget:save-failed', () => {
+  if (clearSnapshots() && write()) return;
+  alert("Couldn't save: this phone's storage for the app is full. Export a backup now (Menu → Backup).");
+});
+
+if (recoveredFrom) {
+  alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
+}
+
 takeDailySnapshot(); // before anything changes today
 initInput();
 initPages({ onNavigate: refresh });
@@ -87,12 +98,12 @@ if (!currentPeriod()) showPage('budget', { mode: 'first' });
 navigator.storage?.persist?.().catch(() => {});
 
 // Fetch today's exchange rate on launch, and when the app comes back from the background.
-// Coming back is also when the period's day count and "days since last backup" may tick over.
+// Coming back is also when the date, the period's day count and "days since last backup" may tick over.
 refreshRate();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   refreshRate();
-  renderChrome();
+  refresh(); // e.g. "Today" may be a new day
 });
 
 // The service worker lets the app open offline. It only registers on HTTPS or localhost.

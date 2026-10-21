@@ -6,7 +6,7 @@ import { el, keypad, onSwipe, onLongPress, toast, nudge, formatDate, categoryChi
 import { openCategoryGrid } from './sheets.js';
 
 let digits = '';
-let date = todayISO();
+let pickedDate = null; // a date chosen with the date button; null means "today" (whenever Add is tapped)
 let stripKey = ''; // which categories the strip was last built from
 let recentering = false; // true while the app (not the person) is moving the strip
 const parts = {};
@@ -32,7 +32,8 @@ export function initInput() {
   parts.dateLabel = el('span');
   parts.dateInput = el('input', { type: 'date', 'aria-label': 'Expense date' });
   parts.dateInput.addEventListener('change', () => {
-    date = parts.dateInput.value || todayISO();
+    const chosen = parts.dateInput.value;
+    pickedDate = chosen && chosen !== todayISO() ? chosen : null;
     renderInput();
   });
 
@@ -72,13 +73,17 @@ export function renderInput() {
   renderStrip();
   parts.add.style.setProperty('--c', getCategory(state.input.categoryId).color);
 
-  parts.dateLabel.textContent = date === todayISO() ? 'Today' : formatDate(date);
-  parts.dateInput.value = date;
+  parts.dateLabel.textContent = pickedDate ? formatDate(pickedDate) : 'Today';
+  parts.dateInput.value = pickedDate ?? todayISO();
 }
 
+// "1 USD = 18.52 MXN", with the rate's date if it's more than 4 days old (offline, or the source
+// is down), or "~18.5 MXN per USD (estimate...)" before any rate has downloaded.
 function rateText(code) {
   const rate = rateFor(code);
-  return rateIsEstimate(code) ? `~${rate} ${code} per ${HOME} (estimate until online)` : `1 ${HOME} = ${rate.toFixed(2)} ${code}`;
+  if (rateIsEstimate(code)) return `~${rate} ${code} per ${HOME} (estimate: no rates downloaded yet)`;
+  const ageDays = (new Date(`${todayISO()}T00:00`) - new Date(`${state.rates.date}T00:00`)) / 86400000;
+  return `1 ${HOME} = ${rate.toFixed(2)} ${code}${ageDays > 4 ? ` (rate from ${formatDate(state.rates.date)})` : ''}`;
 }
 
 // Swipe left (or tap) for the next currency, swipe right for the previous one; it wraps around.
@@ -160,11 +165,11 @@ function add() {
   const rate = rateFor(currency);
   const usdCents = toUsdCents(amount, currency, rate);
   const note = parts.note.value.trim();
-  const expenseDate = date;
+  const expenseDate = pickedDate ?? todayISO(); // today as of now, even if the app was left open overnight
 
   // Reset the form before saving so the redraw shows it cleared.
   digits = '';
-  date = todayISO();
+  pickedDate = null;
   parts.note.value = '';
   parts.note.blur();
 

@@ -16,7 +16,9 @@
 import { CURRENCIES, CURRENCY_CODES, FOREIGN_CODES, HOME } from './money.js';
 
 const STORAGE_KEY = 'budget-tracker';
-const VERSION = 2;
+export const SNAPSHOT_KEY = 'budget-tracker-snapshots'; // see backup.js
+const UNREADABLE_KEY = 'budget-tracker-unreadable'; // saved data that couldn't be read, kept just in case
+export const VERSION = 2;
 const RATES_URL = `https://api.frankfurter.dev/v1/latest?base=${HOME}&symbols=${FOREIGN_CODES.join(',')}`;
 
 // 16 colors, each loosely after one of FF8's Guardian Force portraits, in the order the GFs appear
@@ -45,6 +47,8 @@ const DEFAULT_CATEGORIES = ['Groceries', 'Dining', 'Transport', 'Housing', 'Bill
 
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 
+// Set when the saved data couldn't be read and the newest snapshot was loaded instead (its time).
+export let recoveredFrom = null;
 export let state = load();
 
 // ---------- basics ----------
@@ -101,16 +105,48 @@ export function isValid(data) {
     && data.input !== null && typeof data.input === 'object'; // typeof null is also 'object'
 }
 
-function load() {
-  let loaded = freshState();
+// Saved data (as JSON text), upgraded and checked, or null if it can't be used.
+function parse(text) {
   try {
-    const saved = migrate(JSON.parse(localStorage.getItem(STORAGE_KEY)));
-    if (isValid(saved)) loaded = saved;
+    const data = migrate(JSON.parse(text));
+    return isValid(data) ? data : null;
   } catch {
-    // Corrupt data: start fresh.
+    return null;
   }
+}
+
+// Newest first: [{ at, reason, data }] (data is the saved JSON text).
+export function readSnapshots() {
+  try {
+    return JSON.parse(localStorage.getItem(SNAPSHOT_KEY)) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// If the saved data can't be read, keep it aside and fall back to the newest readable snapshot
+// rather than silently starting over.
+function load() {
+  const text = localStorage.getItem(STORAGE_KEY);
+  let loaded = text === null ? null : parse(text);
+  if (text !== null && !loaded) {
+    try {
+      localStorage.setItem(UNREADABLE_KEY, text);
+    } catch {
+      // No room to keep it; recovering matters more.
+    }
+    for (const snapshot of readSnapshots()) {
+      loaded = parse(snapshot.data);
+      if (loaded) {
+        recoveredFrom = snapshot.at;
+        break;
+      }
+    }
+  }
+  loaded ??= freshState();
   keepInputCategoryActive(loaded);
   assignColors(loaded);
+  if (recoveredFrom) write(loaded);
   return loaded;
 }
 
@@ -131,10 +167,22 @@ function assignColors(data) {
   ordered.forEach((category, i) => { category.color = PALETTE[i % PALETTE.length]; });
 }
 
+// Returns false if the data couldn't be saved (the phone's storage for the app is full).
+export function write(data = state) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// A failed save fires "budget:save-failed" (app.js frees space and retries, or warns); the screen
+// still redraws so it shows what you did.
 export function save() {
   keepInputCategoryActive(state);
   assignColors(state);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!write()) window.dispatchEvent(new Event('budget:save-failed'));
   window.dispatchEvent(new Event('budget:change'));
 }
 

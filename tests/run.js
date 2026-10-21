@@ -9,7 +9,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { serveApp } = require('./helpers');
 
-const PASSES = ['main', 'more', 'layout'];
+const PASSES = ['main', 'more', 'layout', 'failures'];
 const ENGINES = ['webkit', 'chromium'];
 
 function runPass(pass, engine) {

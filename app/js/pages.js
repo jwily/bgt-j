@@ -5,12 +5,12 @@
 
 import {
   state, currentPeriod, getPeriod, periodNumber, periodExpenses, spentIn, totalUsd, getCategory, activeCategories, sortedCategories,
-  addCategory, updateCategory, removeCategory, categoryNamed, startPeriod, setBudget, deletePeriod,
+  addCategory, updateCategory, removeCategory, categoryNamed, startPeriod, setBudget, deletePeriod, readSnapshots,
 } from './store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
-import { el, svg, toast, setHelp, formatDate, colorDot, gauge, keypad } from './ui.js';
+import { el, svg, toast, setHelp, formatDate, formatMoment, colorDot, gauge, keypad } from './ui.js';
 import { openExpenseSheet } from './sheets.js';
-import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, snapshots, takeSnapshot, restoreSnapshot } from './backup.js';
+import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, takeSnapshot, restoreSnapshot } from './backup.js';
 
 const page = document.getElementById('page');
 const body = document.getElementById('page-body');
@@ -315,9 +315,9 @@ function renderBackup() {
     const chosen = file.files[0];
     file.value = '';
     if (!chosen) return;
-    const data = await readBackup(chosen);
-    if (!data) {
-      toast("That file isn't a budget backup.");
+    const { data, error } = await readBackup(chosen);
+    if (error) {
+      toast(error);
       return;
     }
     if (!confirm(`Replace everything in the app with this backup (${data.periods.length} periods, ${data.expenses.length} expenses)?`)) return;
@@ -335,8 +335,8 @@ function renderBackup() {
       : 'Storage: standard. iOS may clear it if the phone runs very low on space.';
   }).catch(() => {});
 
-  const snapshotRows = snapshots().map((snapshot) => {
-    const when = snapshotTime(snapshot.at);
+  const snapshotRows = readSnapshots().map((snapshot) => {
+    const when = formatMoment(snapshot.at);
     const goBackButton = el('button', { className: 'link', textContent: 'Go back' });
     goBackButton.addEventListener('click', () => {
       if (!confirm(`Go back to how everything was ${when} (${snapshot.reason})? Your current data is snapshotted first, so you can undo this.`)) return;
@@ -360,14 +360,6 @@ function renderBackup() {
       el('p', { className: 'hint', textContent: 'Kept on this phone automatically: one a day, and one before anything drastic. For undoing mistakes; they\u2019re lost with the phone, unlike exported backups.' })),
     storage,
   );
-}
-
-// "Today, 9:41 AM" or "Oct 19, 9:41 AM".
-function snapshotTime(at) {
-  const date = new Date(at);
-  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  const iso = new Date(at - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  return `${date.toDateString() === new Date().toDateString() ? 'Today' : formatDate(iso)}, ${time}`;
 }
 
 // ---------- budget: first budget, New Period, edit budget ----------

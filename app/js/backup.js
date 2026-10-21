@@ -1,7 +1,7 @@
 // Backup files: a full JSON copy of the app's data (restorable), a CSV for spreadsheets,
 // and how long it has been since the last backup.
 
-import { state, getPeriod, getCategory, isValid, migrate, replaceState, markBackedUp, todayISO } from './store.js';
+import { state, getPeriod, getCategory, isValid, migrate, replaceState, markBackedUp, todayISO, readSnapshots, SNAPSHOT_KEY, VERSION } from './store.js';
 import { saveFile } from './ui.js';
 import { HOME, plainAmount } from './money.js';
 
@@ -19,15 +19,18 @@ export function exportCsv() {
   return saveFile(`budget-${todayISO()}.csv`, toCsv(), 'text/csv');
 }
 
-// Returns the backup's data (brought up to date if it came from an older version), or null if
-// the file isn't a backup.
+// Returns { data } (brought up to date if it came from an older version), or { error } saying why
+// the file can't be used.
 export async function readBackup(file) {
+  let data;
   try {
-    const data = migrate(JSON.parse(await file.text()));
-    return isValid(data) ? data : null;
+    data = JSON.parse(await file.text());
   } catch {
-    return null;
+    data = null;
   }
+  if (data?.version > VERSION) return { error: 'That backup is from a newer version of the app. Reopen the app to update it, then try again.' };
+  data = migrate(data);
+  return isValid(data) ? { data } : { error: "That file isn't a budget backup." };
 }
 
 // The restored data is, by definition, backed up, so the reminder clock restarts.
@@ -41,21 +44,11 @@ export function restoreBackup(data) {
 // first opened that day) and one before anything drastic. They undo mistakes; they don't protect
 // against losing the phone (exported backups do). Never included in exported backups.
 
-const SNAPSHOT_KEY = 'budget-tracker-snapshots';
 const SNAPSHOT_LIMIT = 7;
 const DAILY = 'start of the day';
 
-// Newest first: [{ at, reason, data }] (data is the saved JSON text).
-export function snapshots() {
-  try {
-    return JSON.parse(localStorage.getItem(SNAPSHOT_KEY)) ?? [];
-  } catch {
-    return [];
-  }
-}
-
 export function takeSnapshot(reason) {
-  const list = [{ at: Date.now(), reason, data: JSON.stringify(state) }, ...snapshots()].slice(0, SNAPSHOT_LIMIT);
+  const list = [{ at: Date.now(), reason, data: JSON.stringify(state) }, ...readSnapshots()].slice(0, SNAPSHOT_LIMIT);
   // If the phone's storage for the app is full, drop the oldest snapshots until it fits;
   // snapshots must never get in the way of saving the real data.
   while (list.length) {
@@ -68,8 +61,16 @@ export function takeSnapshot(reason) {
   }
 }
 
+// Frees the space snapshots use (when the phone's storage for the app is full). Returns whether
+// there were any to remove.
+export function clearSnapshots() {
+  const had = readSnapshots().length > 0;
+  localStorage.removeItem(SNAPSHOT_KEY);
+  return had;
+}
+
 export function takeDailySnapshot() {
-  const last = snapshots().find((snapshot) => snapshot.reason === DAILY);
+  const last = readSnapshots().find((snapshot) => snapshot.reason === DAILY);
   if (last && new Date(last.at).toDateString() === new Date().toDateString()) return;
   takeSnapshot(DAILY);
 }
@@ -77,7 +78,7 @@ export function takeDailySnapshot() {
 // Goes back to a snapshot, after snapshotting the current data so this can be undone too.
 // Keeps the newer "last backed up" time, since backups made since then still exist.
 export function restoreSnapshot(at) {
-  const snapshot = snapshots().find((s) => s.at === at);
+  const snapshot = readSnapshots().find((s) => s.at === at);
   const data = snapshot && migrate(JSON.parse(snapshot.data));
   if (!isValid(data)) return false;
   takeSnapshot('before going back to a snapshot');

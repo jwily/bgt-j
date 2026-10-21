@@ -27,6 +27,15 @@ export function formatDate(iso) {
   return date.toLocaleDateString('en-US', thisYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// A moment in time: "Today, 9:41 AM" or "Oct 19, 9:41 AM".
+export function formatMoment(at) {
+  const date = new Date(at);
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (date.toDateString() === new Date().toDateString()) return `Today, ${time}`;
+  const iso = new Date(at - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return `${formatDate(iso)}, ${time}`;
+}
+
 // A category name with its color gem. Used by the main screen's strip and the long-press grid.
 export function categoryChip(category, { selected = false } = {}) {
   const chip = el('button', { type: 'button', className: `chip${selected ? ' selected' : ''}` }, el('span', { textContent: category.name }));

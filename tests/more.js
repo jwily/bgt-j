@@ -313,7 +313,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p2.waitForTimeout(300);
   await p2.locator('.currency-opts').tap();
   for (const k of '185') await p2.locator('#view-input .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
-  check('offline estimate line', (await p2.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $10.00 | ~18.5 MXN per USD (estimate until online)');
+  check('offline estimate line', (await p2.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $10.00 | ~18.5 MXN per USD (estimate: no rates downloaded yet)');
   await offline.close();
 
   // Safety snapshots: one a day, one before anything drastic, and going back works (and is undoable).

@@ -69,6 +69,7 @@ npm test           # all passes on WebKit (Safari's engine) and Chromium
 - `main.js`: the core flow, from first launch through entering, editing, summaries, periods, categories and backups
 - `more.js`: edge cases (keypad limits, long-press grid, backdating, CSV, restore, deleting periods, offline rates, upgrading old data)
 - `layout.js`: centering, spacing and fit on an iPhone 13 mini, SE (3rd gen) and 13
+- `failures.js`: when things go wrong: storage full or corrupted, the rate server failing, newer or broken backups, opening offline, the app left open overnight, a period spanning New Year, and lots of data
 
 Tools: `npm run palette` checks the category colors are distinct. `npm run icon` redraws the app icon (the first four category colors). `npm run hand` re-traces the hand cursor from the reference capture in `~/projects/ff8-references/cursor.png`. `npm run screens` screenshots every screen on two iPhone sizes into `tests/output/screens/`.
 

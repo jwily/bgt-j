@@ -10,6 +10,8 @@ Read README.md for what the app does; this file covers how to work on it.
   Serve it with `cd app && python3 -m http.server 8000`.
 - `tests/` holds the Playwright suites and design tools. `cd tests && npm test` runs every pass on
   WebKit and Chromium (it starts its own server on port 8765). First time: `npm install && npm run setup`.
+- Four passes: `main` (core flow), `more` (edge cases), `layout` (spacing/fit on three iPhones),
+  `failures` (storage full/corrupt, rate server down, bad backups, offline, overnight, big data).
 - Run `npm test` before every commit. When behavior changes, update or add checks in the same
   commit; when you fix a bug, add a check that would have caught it.
 - FF8 reference screenshots are in `~/projects/ff8-references/`, outside the repo on purpose
@@ -32,6 +34,9 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Check changes with `npm run palette`.
 - **Category names are unique** ignoring case (`categoryNamed`); new ones get a free name.
+- **Saving can fail** (storage full): `save()` fires `budget:save-failed`; app.js drops snapshots and
+  retries, else alerts. Unreadable saved data is kept under `budget-tracker-unreadable` and the newest
+  snapshot is loaded instead.
 - **Snapshots** (`backup.js`): taken once a day and before anything drastic; call `takeSnapshot(reason)`
   before any new destructive action. Stored under their own localStorage key, never in backups.
 - **Rates** download when the app opens without today's rates, at most every 3 hours (the source
