@@ -51,7 +51,9 @@ Read README.md for what the app does; this file covers how to work on it.
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
   undo) and sorts right then. Back with unsaved changes asks first (`confirmLeave`). Colors always
   go by position down the list in GF order (`paletteColor(i)`), in the draft too, so the color
-  order never breaks. Names must be unique ignoring case and non-empty; new ones get a free name.
+  order never breaks. Names must be unique ignoring case. New categories start blank (scrolled into
+  view); one still blank when the keyboard closes is dropped, and on Save any blank one is removed
+  (an existing one like ✕: archived if it has expenses).
   (Tried and replaced: instant saving with an instant re-sort, then re-sorting on leaving.)
 - Buttons that must stay reachable on a long screen use `.actions.pinned` (fixed above the bar; a
   sticky row bounced with the list).

@@ -304,14 +304,14 @@ function renderCategories() {
 
   const saveButton = el('button', { className: 'primary', textContent: 'Save', disabled: !categoryDraftChanged() });
   saveButton.addEventListener('click', () => {
-    // Blank names don't count: a new category left blank is dropped, and an existing one keeps the
-    // name it had.
-    const savedNames = new Map(categoriesFromState().map((c) => [c.id, c.name]));
-    for (const category of [...draft]) {
-      if (category.name.trim()) continue;
-      if (category.id) category.name = savedNames.get(category.id);
-      else draft.splice(draft.indexOf(category), 1);
+    // A category left blank is dropped: a new one just goes, an existing one is removed like with ✕
+    // (saveCategories archives it if it has expenses, so past summaries keep it).
+    const blank = draft.filter((c) => !c.name.trim());
+    if (blank.length && draft.every((c) => c.archived || !c.name.trim())) {
+      toast('You need at least one category.');
+      return;
     }
+    blank.forEach((category) => draft.splice(draft.indexOf(category), 1));
     const problem = categoryDraftProblem();
     if (problem) {
       toast(problem);
@@ -375,7 +375,12 @@ function renderCategories() {
     // New ones start blank and go after the other active categories, until Save sorts them.
     draft.splice(draft.filter((c) => !c.archived).length, 0, { key, id: null, name: '', archived: false });
     renderPage();
-    body.querySelector(`.cat-row input[data-key="${key}"]`)?.focus();
+    // Bring the new row into view (a long list puts it below the buttons pinned at the bottom), then
+    // type into it. Scrolling it ourselves rather than leaving it to focus(), which iOS doesn't do
+    // reliably inside a scrolling screen.
+    const field = body.querySelector(`.cat-row input[data-key="${key}"]`);
+    field?.closest('.cat-row').scrollIntoView({ block: 'center' });
+    field?.focus({ preventScroll: true });
   });
 
   const archivedPanel = archived.length > 0 && panel('Archived',
