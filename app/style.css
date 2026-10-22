@@ -600,7 +600,8 @@ body.page-open #view-input { visibility: hidden; }
 }
 
 /* FF8's gauge (FFVIII_Status_Menu_5): a silver capsule, brightest at its rounded ends, around a dark
-   trough with a black liner; the fill is darker at the bottom and fades out where it ends. The
+   trough with a black liner; the fill is nearly flat and a little muted, with a slightly lighter
+   band along its top (measured: about a quarter of its height), and fades out where it ends. The
    number sits under the bar's right end, overlapping its bottom rim (compatibility.png). */
 .gauge { position: relative; display: block; padding-bottom: 10px; }
 .gauge .bar {
@@ -618,7 +619,8 @@ body.page-open #view-input { visibility: hidden; }
 .gauge .bar span {
   display: block;
   height: 100%;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 85%, #fff) 0%, var(--c) 35%, color-mix(in srgb, var(--c) 60%, #000) 100%);
+  --fill: color-mix(in srgb, var(--c) 75%, #323232);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fill) 88%, #fff) 0 25%, var(--fill) 25% 75%, color-mix(in srgb, var(--fill) 90%, #000) 100%);
   -webkit-mask-image: linear-gradient(to left, transparent, #000 6px);
   mask-image: linear-gradient(to left, transparent, #000 6px);
 }
