@@ -142,7 +142,6 @@ function renderSummary({ periodId }) {
     const head = el('button', { className: 'cat-head', 'aria-expanded': String(isOpen) },
       colorDot(row.category.color),
       el('span', { className: 'name', textContent: row.category.name }),
-      el('span', { className: 'pct', textContent: `${Math.round((row.cents / spent) * 100)}%` }),
       el('span', { className: 'value', textContent: formatUsd(row.cents) }),
       el('span', { className: 'chev', textContent: '›' }),
       gauge(row.cents / spent, row.category.color));
