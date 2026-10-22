@@ -518,12 +518,16 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
 
 .field input, .field select, .cat-row input {
   width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   background: #3a3a3a;
   border: 2px solid;
   border-color: var(--edge-dark) var(--edge-light) var(--edge-light) var(--edge-dark);
   border-radius: 0;
 }
+/* iOS gives a date field its own minimum width and look, which pushed it out past the sheet. */
+.field input[type=date] { -webkit-appearance: none; appearance: none; height: 46px; text-align: left; } /* as tall as the other fields */
+.field input[type=date]::-webkit-date-and-time-value { text-align: left; }
 
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(var(--rows, 1), auto); grid-auto-flow: column; gap: 6px 8px; margin-top: 4px; }
 .grid .chip { padding-left: 57px; }
@@ -572,16 +576,15 @@ body.page-open #view-input { visibility: hidden; }
 .cat-list > li + li { border-top: 1px solid rgba(255, 255, 255, 0.14); }
 .cat-head {
   display: grid;
-  grid-template-columns: 12px 1fr auto auto 12px;
-  gap: 6px 10px;
+  grid-template-columns: 14px 1fr auto 12px;
+  gap: 6px 14px;
   align-items: center;
   width: 100%;
-  padding: 10px 0;
+  padding: 10px 0 10px 4px;
   text-align: left;
 }
 .open > .cat-head .name { color: var(--yellow); }
-.cat-head .gauge { grid-column: 2 / -1; }
-.pct { color: #cfcfcf; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.cat-head .gauge { grid-column: 2 / 4; } /* ends under the amount, so the number lines up with it */
 .chev { color: #cfcfcf; transition: transform 0.12s; }
 .open .chev { transform: rotate(90deg); }
 
@@ -597,22 +600,38 @@ body.page-open #view-input { visibility: hidden; }
   box-shadow: 0 0 0 1px #000, inset 1px 1px 0 rgba(255, 255, 255, 0.45);
 }
 
-/* FF8-style capsule gauge with a metal rim */
-.gauge {
+/* FF8's gauge (FFVIII_Status_Menu_5): a silver capsule, brightest at its rounded ends, around a dark
+   trough with a black liner; the fill is darker at the bottom and fades out where it ends. The
+   number sits under the bar's right end, overlapping its bottom rim (compatibility.png). */
+.gauge { position: relative; display: block; padding-bottom: 10px; }
+.gauge .bar {
   display: block;
-  height: 10px;
+  height: 16px;
   padding: 1px;
-  background: #1b1b1b;
-  border: 2px solid;
-  border-color: #8c8c8c #e0e0e0 #e0e0e0 #8c8c8c;
-  border-radius: 7px;
+  background: #323232;
+  border: solid;
+  border-width: 3px 5px;
+  border-color: #a0a0a0 #d3d3d3 #8a8a8a;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px #121214, 1px 2px 2px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
-.gauge span {
+.gauge .bar span {
   display: block;
   height: 100%;
-  border-radius: 4px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 55%, #fff) 0%, var(--c) 45%, color-mix(in srgb, var(--c) 70%, #000) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 85%, #fff) 0%, var(--c) 35%, color-mix(in srgb, var(--c) 60%, #000) 100%);
+  -webkit-mask-image: linear-gradient(to left, transparent, #000 6px);
+  mask-image: linear-gradient(to left, transparent, #000 6px);
+}
+.gauge .number {
+  position: absolute;
+  right: 4px;
+  top: 7px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
 }
 
 .items { margin: 0 0 8px 22px; }

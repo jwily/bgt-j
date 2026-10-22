@@ -39,12 +39,16 @@ export function colorDot(color) {
   return dot;
 }
 
-// A rounded FF8-style gauge filled to `fraction` (0–1) in `color`.
+// An FF8-style gauge filled to `fraction` (0–1) in `color`, with the fraction out of 100 under its
+// right end, as on FF8's GF Compatibility bars.
 export function gauge(fraction, color) {
+  const share = Math.max(0, Math.min(1, fraction));
   const fill = el('span');
-  fill.style.width = `${Math.max(0, Math.min(1, fraction)) * 100}%`;
+  fill.style.width = `${share * 100}%`;
   fill.style.setProperty('--c', color);
-  return el('span', { className: 'gauge' }, fill);
+  return el('span', { className: 'gauge' },
+    el('span', { className: 'bar' }, fill),
+    el('span', { className: 'number', textContent: String(Math.round(share * 100)) }));
 }
 
 // Briefly shake an element to say "can't do that".

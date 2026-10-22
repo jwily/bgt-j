@@ -132,6 +132,28 @@ const check = (label, ok, detail) => {
     await page.waitForTimeout(300);
     const overflow = await page.evaluate(() => document.getElementById('page').scrollWidth - document.getElementById('page').clientWidth);
     check(`${name}: summary never wider than the screen`, overflow <= 0, `${overflow}px too wide`);
+    // The gauge's number sits under the bar's right end, lined up with the amount above it; the
+    // gem keeps clear of the window's edge and the name.
+    const gauge = await page.evaluate(() => {
+      const head = document.querySelector('.cat-head');
+      const box = (sel) => head.querySelector(sel).getBoundingClientRect();
+      const [bar, number, value, dot, label] = ['.gauge .bar', '.gauge .number', '.value', '.dot', '.name'].map(box);
+      return { top: number.top - bar.top, height: bar.height, offset: number.right - value.right, edge: dot.left - head.getBoundingClientRect().left, room: label.left - dot.right };
+    });
+    check(`${name}: gauge number under the bar's end, lined up with the amount`,
+      gauge.top > gauge.height / 3 && gauge.top < gauge.height && Math.abs(gauge.offset) <= 4, JSON.stringify(gauge));
+    check(`${name}: summary gem has room on both sides`, gauge.edge >= 2 && gauge.room >= 12, JSON.stringify(gauge));
+    // Edit Expense: every field the same width, inside the sheet, and the same height (the date
+    // field used to stick out past the sheet on iOS).
+    await page.locator('.item').first().tap();
+    await page.waitForSelector('#sheet-backdrop.open');
+    const fields = await page.evaluate(() => {
+      const sheet = document.getElementById('sheet').getBoundingClientRect();
+      const inputs = [...document.querySelectorAll('#sheet .field input')].map((n) => n.getBoundingClientRect());
+      return { inside: inputs.every((r) => r.left >= sheet.left && r.right <= sheet.right),
+        same: new Set(inputs.map((r) => `${r.left},${r.right},${r.height}`)).size };
+    });
+    check(`${name}: Edit Expense fields line up inside the sheet`, fields.inside && fields.same === 1, JSON.stringify(fields));
     await context.close();
   }
   // The user's iPhone 14 Pro as the installed app (the full 393×852 screen, taller than Safari's
