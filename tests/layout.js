@@ -134,6 +134,27 @@ const check = (label, ok, detail) => {
     check(`${name}: summary never wider than the screen`, overflow <= 0, `${overflow}px too wide`);
     await context.close();
   }
+  // The user's iPhone 14 Pro as the installed app (the full 393×852 screen, taller than Safari's
+  // visible area above): the Amount heading shows, clear of the currency row, and nothing scrolls.
+  {
+    const context = await browser.newContext({ ...devices['iPhone 14 Pro'], viewport: { width: 393, height: 852 } });
+    await mockRates(context, '{"date":"2026-10-20","rates":{"MXN":18.5}}');
+    const page = await context.newPage();
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto('http://localhost:8765/');
+    for (const k of '200000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+    await page.locator('#page .primary').tap();
+    await page.waitForTimeout(400);
+    const amount = await page.evaluate(() => {
+      const heading = document.querySelector('.floating-heading').getBoundingClientRect();
+      const row = document.querySelector('.currency-opts').getBoundingClientRect();
+      return { shown: heading.height > 0, clear: heading.bottom <= row.top, scrolls: document.documentElement.scrollHeight > window.innerHeight + 1 };
+    });
+    check('14 Pro installed: Amount heading shows, clear of the currency row, no scrolling', amount.shown && amount.clear && !amount.scrolls, amount);
+    await page.screenshot({ path: require('path').join(__dirname, 'output', ENGINE, 'installed-14pro-main.png') });
+    await context.close();
+  }
+
   console.log(errors.length ? `ERRORS:\n${errors.join('\n')}` : 'No console errors');
   console.log(failures ? `${failures} FAILED` : 'ALL PASSED');
   await browser.close();
