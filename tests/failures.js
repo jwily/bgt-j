@@ -4,7 +4,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates } = require('./helpers');
+const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = path.join(__dirname, 'output');
@@ -212,6 +212,29 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(300);
     check('offline: and works', await page.locator('#page').isHidden(), true);
     await context.close();
+  }
+
+  // --- A deploy shows up on the next load, even though the host lets browsers reuse files for 10
+  // minutes unchecked (GitHub Pages sends max-age=600). The service worker must ask the server
+  // each time instead of taking the browser's cached copy. Chromium only, like the offline check.
+  if (ENGINE === 'chromium') {
+    let version = 'old';
+    const pages = await serveApp({
+      port: 8766,
+      headers: { 'Cache-Control': 'max-age=600' },
+      change: (urlPath, data) => (urlPath === '/js/money.js' ? `${data}\n// deploy: ${version}\n` : null),
+    });
+    const context = await browser.newContext({ ...devices['iPhone 13'], serviceWorkers: 'allow' });
+    const page = await context.newPage();
+    await page.goto('http://localhost:8766/');
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload(); // now controlled by the service worker
+    const deployed = () => page.evaluate(() => fetch('js/money.js').then((r) => r.text()).then((t) => t.match(/deploy: (\w+)/)?.[1]));
+    check('deploy: the first version loads', await deployed(), 'old');
+    version = 'new';
+    check('deploy: a new version shows up right away, not after 10 minutes', await deployed(), 'new');
+    await context.close();
+    pages.close();
   }
 
   // --- A lot of data (about three years of paychecks): still quick.

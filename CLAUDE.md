@@ -116,5 +116,6 @@ Read README.md for what the app does; this file covers how to work on it.
 - Deployed with GitHub Pages: pushing `master` to `origin` (the user's personal repo, `jwily/bgt-j`,
   through a deploy key set in this repo's git config) publishes `app/` via `.github/workflows/pages.yml`.
   The live address is under the user's own domain, `https://www.johnjylee.com/bgt-j/`. Never change
-  the address: the phone's saved data is tied to it. Ask before pushing. Commit email for this repo
+  the address: the phone's saved data is tied to it. Pushing is pre-approved for this project: push
+  `master` after each tested, merged change, then confirm the deploy. Commit email for this repo
   is the user's personal one (set in the repo's git config), not their work email.
