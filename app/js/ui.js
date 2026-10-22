@@ -90,17 +90,35 @@ export function onLongPress(node, handler, ms = 450) {
 // taps (the next finger landing before the last lifts, as in fast typing) don't cancel each other.
 const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
 
+// Watches the clicks that follow a press for `ms`, until `onClick(event)` returns true; then, if it
+// never did, calls `onTimeout`.
+function watchClicks(ms, onClick, onTimeout = () => {}) {
+  let done = false;
+  const finish = () => {
+    done = true;
+    document.removeEventListener('click', listener, { capture: true });
+  };
+  const listener = (event) => { if (onClick(event)) finish(); };
+  document.addEventListener('click', listener, { capture: true });
+  setTimeout(() => {
+    if (done) return;
+    finish();
+    onTimeout();
+  }, ms);
+}
+const stopClick = (event) => {
+  event.stopPropagation();
+  event.preventDefault();
+};
+
 // Ignores the click the browser may send to `button` right after a press we cancelled or a gesture
 // we already handled; only that button's, so another finger's tap is never caught.
 function dropClickOn(button) {
-  const stop = (event) => {
-    if (!button.contains(event.target)) return;
-    event.stopPropagation();
-    event.preventDefault();
-    document.removeEventListener('click', stop, { capture: true });
-  };
-  document.addEventListener('click', stop, { capture: true });
-  setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 400);
+  watchClicks(400, (event) => {
+    if (!button.contains(event.target)) return false;
+    stopClick(event);
+    return true;
+  });
 }
 
 // Opens the menu command under the thumb when a press lifts (none if it lifted off the commands).
@@ -108,22 +126,14 @@ function dropClickOn(button) {
 // once the thumb has strayed far enough, even if it came back. So wait for it briefly: let it
 // through if it's on the right command, otherwise stop it and click the right one ourselves.
 function openOnRelease(menu, command) {
-  let settled = false;
-  const settle = (clickIt) => {
-    if (settled) return;
-    settled = true;
-    document.removeEventListener('click', onClick, { capture: true });
-    if (clickIt) command?.click();
-  };
-  const onClick = (event) => {
-    if (!menu.contains(event.target)) return;
-    if (command?.contains(event.target)) return settle(false);
-    event.stopPropagation();
-    event.preventDefault();
-    settle(true);
-  };
-  document.addEventListener('click', onClick, { capture: true });
-  setTimeout(() => settle(true), 100);
+  watchClicks(100, (event) => {
+    if (!menu.contains(event.target)) return false;
+    if (!command?.contains(event.target)) {
+      stopClick(event);
+      command?.click();
+    }
+    return true;
+  }, () => command?.click());
 }
 
 export function trackPresses() {
