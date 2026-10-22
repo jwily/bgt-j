@@ -475,13 +475,21 @@ function renderBudget({ mode }) {
   if (!current) mode = 'first';
   const screen = BUDGET_SCREENS[mode];
 
-  const amount = el('div', { className: `budget-amount${budgetDigits ? '' : ' empty'}`, textContent: formatUsd(Number(budgetDigits || '0')) });
+  const amount = el('div', { className: 'budget-amount' });
+  const confirmButton = el('button', { className: 'primary', textContent: screen.button });
+  // Typing updates just the amount and the button, not the whole screen, so the button's hand
+  // keeps bobbing smoothly instead of restarting with every digit.
+  const showDigits = () => {
+    amount.textContent = formatUsd(Number(budgetDigits || '0'));
+    amount.classList.toggle('empty', !budgetDigits);
+    confirmButton.disabled = !budgetDigits;
+  };
+  showDigits();
   const pad = keypad(() => budgetDigits, (next) => {
     budgetDigits = next;
-    renderPage();
+    showDigits();
   }, () => 8);
 
-  const confirmButton = el('button', { className: 'primary', textContent: screen.button, disabled: !budgetDigits });
   confirmButton.addEventListener('click', () => {
     const cents = Number(budgetDigits || '0');
     if (!cents) return;

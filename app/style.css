@@ -159,13 +159,14 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   padding: 12px 12px 4px;
   font-size: 1.05rem;
 }
-/* One line; text too long for it scrolls sideways (ui.js, showHelpText). The clip leaves room
-   below for the text's shadow. */
-.help .clip { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; padding-bottom: 3px; }
+/* One line; text too long for it scrolls sideways (ui.js, showHelpText). The clip reaches 8px into
+   the window's padding on each side, where its fades sit, so they never dim the first or last
+   letter at rest; it also leaves room below for the text's shadow. */
+.help .clip { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; margin: 0 -8px; padding: 0 8px 3px; }
 .help .text { display: inline-block; line-height: 1.2; }
 .help .clip.scrolling {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 8px, #000 calc(100% - 8px), transparent);
-  mask-image: linear-gradient(to right, transparent, #000 8px, #000 calc(100% - 8px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7px, #000 calc(100% - 7px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 7px, #000 calc(100% - 7px), transparent);
 }
 .help.tappable { cursor: pointer; }
 .help.bad span { color: var(--bad); }
