@@ -3,7 +3,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
-const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
+const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 const URL = 'http://localhost:8765/';
 const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check } = require('./helpers');
 const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';

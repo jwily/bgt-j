@@ -7,7 +7,7 @@ const path = require('path');
 const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
-const OUT = path.join(__dirname, 'output');
+const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 const RATE = (date = '2026-10-21', rates = { MXN: 20 }) => JSON.stringify({ date, rates });
 const localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
@@ -224,7 +224,8 @@ const sample = (overrides = {}) => ({
         const names = (await caches.keys()).filter((n) => n.startsWith('bgt-j-')).sort();
         const newest = names.length && await caches.open(names.at(-1));
         const file = newest && await newest.match('js/money.js');
-        if (file && (await file.text()).includes(`deploy: ${want}`) && await newest.match('__complete__')) return names;
+        // Complete, and the cleanup after saving it (keeping just the one it replaced) is done.
+        if (file && (await file.text()).includes(`deploy: ${want}`) && await newest.match('__complete__') && names.length <= 2) return names;
         await new Promise((r) => setTimeout(r, 100));
       }
       return null;
