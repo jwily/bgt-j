@@ -264,10 +264,11 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 }
 
 /* The amount area: text floating on the black background, no window (like the groups on FF8's GF
-   screen). On black the usual near-black shadow vanishes; FF8's floating text has a dark grey one
-   (~#2a2a2a), offset down-right by about 5% of the text size (measured from compatibility.png). */
+   screen). On black the usual shadow vanishes; FF8's floating text has a dark grey one (~#2a2a2a at
+   its densest), offset down-right by about 5% of the text size, and soft: it fades out from each
+   letter over 2-3px with no gap (measured from compatibility.png), hence the blur. */
 .currency-zone > * { flex-shrink: 0; } /* never squeeze a part to nothing */
-.currency-zone :is(.options > *, .amount, .amount-sub span) { text-shadow: max(2px, 0.05em) max(2px, 0.05em) 0 #2a2a2a; }
+.currency-zone :is(.options > *, .amount, .amount-sub span) { text-shadow: max(2px, 0.05em) max(2px, 0.05em) 2px #3a3a3a; }
 .currency-zone {
   position: relative;
   flex: 1;
