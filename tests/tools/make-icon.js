@@ -1,19 +1,11 @@
-// Renders the app icon: the first four category colors (Quezacotl, Shiva, Ifrit, Siren) as diamonds
-// on a golden spiral, curling clockwise from 12 o'clock into the distance, on a dark charcoal glow
-// (FF8's dark menu backdrop, without hard corners, since iOS rounds the icon itself). Colors come
-// from the app's palette. Also writes a preview at home-screen size with iOS's rounded corners
-// (tests/output/icon-preview.png). Usage: npm run icon
+// Renders the app icon: the first category color (Quezacotl) as a single gem, its accent at the
+// core like the gems in the app, on a dark charcoal glow (FF8's dark menu backdrop, without hard
+// corners, since iOS rounds the icon itself). Colors come from the app's palette. Also writes a
+// preview at home-screen size with iOS's rounded corners (tests/output/icon-preview.png).
+// Usage: npm run icon
 //
-// Design rules:
-// - One proportion: each diamond is the previous one scaled by RATIO, in size and in distance from
-//   the spiral's center, at exact quarter turns (12 → 3 → 6 → 9). (The golden ratio, 0.618, was
-//   tried: it left the last diamond too small to see at home-screen size.)
-// - Clear gaps, no near-misses: neighbours are separated by the same share of the smaller one's size,
-//   so every diamond stays whole and the gaps trace the spiral.
-// - Balance: the group fills a fixed share of the icon, centered on its bounds at the optical
-//   center (a little above the middle), so the margins are even.
-// - One light source, top-left: highlights top-left, shadows down-right, longest under the nearest.
-// - Depth without losing color: farther diamonds are slightly softer and lower in contrast, same hue.
+// (Earlier versions spiralled the first four colors' gems into the distance; the user preferred
+// just the first.)
 const { webkit } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -22,34 +14,11 @@ const { readPalette } = require('../helpers');
 const OUT = path.join(__dirname, '../../app/icons');
 const PREVIEW = path.join(__dirname, '../output/icon-preview.png');
 
-const RATIO = 0.7;          // each diamond relative to the one before
-const GAP = 0.12;           // space between neighbours, as a share of the smaller one's size
-const EXTENT = 0.68;        // the group's larger dimension, as a share of the icon
-const OPTICAL_CENTER = { x: 0.5, y: 0.48 };
+const SIZE = 0.58;                           // the gem, point to point, as a share of the icon
+const OPTICAL_CENTER = { x: 0.5, y: 0.49 };  // a hair above the middle, where a centered shape looks centered
 
-// Diamond i sits at 90° − 90°·i (clockwise from 12), at a distance shrinking by RATIO each step.
-// Diamonds are |x| + |y| ≤ size/2, so two touch when |dx| + |dy| = (size_a + size_b) / 2; for
-// neighbours a quarter turn apart, |dx| + |dy| = r_i + r_{i+1} = r_i·(1 + RATIO). Laid out with
-// the first diamond 1 unit across, then scaled to fit.
 function layout() {
-  const sizes = [0, 1, 2, 3].map((i) => RATIO ** i);
-  const reach = ((sizes[0] + sizes[1]) / 2 + GAP * sizes[1]) / (1 + RATIO);
-  const diamonds = sizes.map((size, i) => {
-    const angle = ((90 - 90 * i) * Math.PI) / 180;
-    const radius = reach * RATIO ** i;
-    return { size, depth: i, x: radius * Math.cos(angle), y: -radius * Math.sin(angle) };
-  });
-  const edge = (axis, sign) => Math.max(...diamonds.map((d) => sign * d[axis] + d.size / 2));
-  const [left, right, top, bottom] = [edge('x', -1), edge('x', 1), edge('y', -1), edge('y', 1)];
-  const scale = EXTENT / Math.max(left + right, top + bottom);
-  const cx = (right - left) / 2;
-  const cy = (bottom - top) / 2;
-  return diamonds.map((d) => ({
-    ...d,
-    size: d.size * scale,
-    x: (d.x - cx) * scale + OPTICAL_CENTER.x,
-    y: (d.y - cy) * scale + OPTICAL_CENTER.y,
-  }));
+  return [{ size: SIZE, depth: 0, x: OPTICAL_CENTER.x, y: OPTICAL_CENTER.y }];
 }
 
 // color: { hex, accent } from the palette. Like the app's gems, the accent is a diamond at the core.
@@ -80,7 +49,7 @@ function iconHtml(px, colors) {
 }
 
 (async () => {
-  const colors = readPalette().slice(0, 4);
+  const colors = readPalette().slice(0, 1);
   const browser = await webkit.launch();
   for (const size of [512, 180]) {
     const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
