@@ -40,7 +40,9 @@ const TYPES = {
   '.png': 'image/png', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.svg': 'image/svg+xml',
 };
 exports.APP_URL = 'http://localhost:8765/';
-exports.serveApp = () => new Promise((resolve) => {
+// Serves ../app. Options (for tests of caching and updates): port; extra response headers; and
+// change(urlPath, data), which can return different file contents (to simulate a deploy).
+exports.serveApp = ({ port = 8765, headers = {}, change = null } = {}) => new Promise((resolve) => {
   const path = require('path');
   const server = require('http').createServer((req, res) => {
     const urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -48,10 +50,11 @@ exports.serveApp = () => new Promise((resolve) => {
     if (!file.startsWith(APP)) return res.writeHead(403).end();
     fs.readFile(file, (err, data) => {
       if (err) return res.writeHead(404).end();
-      res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream' }).end(data);
+      res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream', ...headers })
+        .end(change?.(urlPath, data) ?? data);
     });
   });
-  server.listen(8765, () => resolve(server));
+  server.listen(port, () => resolve(server));
 });
 
 // The category palette from app/js/store.js, in order: [{ hex, name }] (name = its GF).

@@ -1,5 +1,9 @@
 // Network-first: fetch the latest files when online, fall back to the cache when offline.
 // Because of this, changes you deploy show up on the next launch without bumping a version.
+// Every fetch skips the browser's own HTTP cache ('no-cache': it asks the server whether the file
+// changed, a tiny "not modified" reply when it hasn't). GitHub Pages lets browsers reuse files
+// for 10 minutes unchecked, which otherwise kept old files running after a deploy, sometimes
+// mixed with new ones.
 
 const CACHE = 'budget-tracker';
 const FILES = [
@@ -9,7 +13,7 @@ const FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES.map((file) => new Request(file, { cache: 'no-cache' })))));
   self.skipWaiting();
 });
 
@@ -21,7 +25,7 @@ self.addEventListener('fetch', (event) => {
   // Leave other sites (like the exchange-rate API) alone; the app handles those itself.
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE).then((cache) => cache.put(event.request, copy));
