@@ -121,7 +121,7 @@ Read README.md for what the app does; this file covers how to work on it.
   shows on the launch after (the user chose this over waiting on the network at every launch).
   Each launch stays on one version. Add any new app file to FILES in sw.js.
 - Animations ignore the phone's Reduce Motion setting: the user keeps it on elsewhere but wants the
-  hand to bob and windows to unfold here.
+  hand to bob and windows to fade in here.
 
 ## Branches
 

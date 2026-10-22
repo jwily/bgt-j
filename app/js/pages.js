@@ -40,8 +40,8 @@ function fill(screenTitle, help, ...nodes) {
   title = screenTitle;
   setHelp(help);
   const windows = nodes.filter((node) => node != null && node !== false);
-  if (unfoldNext) windows.forEach((node) => node.classList.add('unfolding'));
-  unfoldNext = false;
+  if (arrivingNext) windows.forEach((node) => node.classList.add('arriving'));
+  arrivingNext = false;
   body.replaceChildren(...windows);
 }
 
@@ -65,13 +65,13 @@ export function showPage(name, params = {}, { push = false } = {}) {
   if (name === 'categories') categoryDraft = null;
   page.hidden = false;
   page.scrollTop = 0;
-  unfold();
+  arrive();
   onNavigate();
 }
 
 export function goBack() {
   stack.pop();
-  if (stack.length) unfold();
+  if (stack.length) arrive();
   else page.hidden = true;
   onNavigate();
 }
@@ -83,12 +83,12 @@ function closePages() {
   onNavigate();
 }
 
-// Windows unfold when you arrive at a screen, not on every redraw: only the windows the screen
+// Windows fade in when you arrive at a screen, not on every redraw: only the windows the screen
 // arrives with get the animation. (Marking the whole screen for a moment instead replayed it when
 // something redrew the screen just after, like the exchange rate arriving on first launch.)
-let unfoldNext = false;
-function unfold() {
-  unfoldNext = true;
+let arrivingNext = false;
+function arrive() {
+  arrivingNext = true;
 }
 
 export function renderPage() {
