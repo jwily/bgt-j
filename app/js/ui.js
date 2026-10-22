@@ -92,83 +92,58 @@ export function onLongPress(node, handler, ms = 450) {
 
 // Presses, app-wide: a press that slides off its button before lifting doesn't count (iOS would
 // otherwise still tap it). In the menu, a press can slide between commands: the hand follows the
-// thumb, and lifting opens the command under it. Each finger is tracked on its own, so quick or
-// overlapping taps don't interfere.
+// thumb, and lifting opens the command under it.
 const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
+let stopClick = null; // drops the click that follows a cancelled press
 
-// Drops the click the browser sends to `button` right after a press we cancelled (only that
-// button's, so another finger's tap is never caught).
-function dropClickOn(button) {
+function dropNextClick() {
   const stop = (event) => {
-    if (!button.contains(event.target)) return;
     event.stopPropagation();
     event.preventDefault();
-    document.removeEventListener('click', stop, { capture: true });
   };
-  document.addEventListener('click', stop, { capture: true });
-  setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 400);
+  document.addEventListener('click', stop, { capture: true, once: true });
+  const remove = () => document.removeEventListener('click', stop, { capture: true });
+  setTimeout(remove, 400);
+  return remove;
 }
 
 export function trackPresses() {
-  const presses = new Map(); // pointerId -> { target, menu }
+  let press = null; // { target, menu }
   const commandAt = (event) => document.elementFromPoint(event.clientX, event.clientY)?.closest('.menu-list button') ?? null;
   const pointAt = (command) => {
     for (const button of document.querySelectorAll('.menu-list button')) button.classList.toggle('hover', button === command);
   };
   document.addEventListener('pointerdown', (event) => {
+    stopClick?.(); // a new press: nothing left over from the last one
+    stopClick = null;
     const target = event.target.closest?.(PRESSABLE);
-    if (!target || target.disabled) return;
-    const menu = target.closest('.menu-list');
-    presses.set(event.pointerId, { target, menu });
-    if (menu) pointAt(target);
+    press = target && !target.disabled ? { target, menu: target.closest('.menu-list') } : null;
+    if (press?.menu) pointAt(target);
   }, { capture: true });
   document.addEventListener('pointermove', (event) => {
-    if (presses.get(event.pointerId)?.menu) pointAt(commandAt(event));
+    if (press?.menu) pointAt(commandAt(event));
   }, { capture: true });
   document.addEventListener('pointerup', (event) => {
-    const press = presses.get(event.pointerId);
     if (!press) return;
-    presses.delete(event.pointerId);
     const { target, menu } = press;
+    press = null;
     if (menu) {
       const command = commandAt(event);
       pointAt(null);
       if (command === target) return; // an ordinary tap
-      dropClickOn(target); // the browser's own click, on the command the press started on
-      command?.click();
+      command?.click(); // first, so the drop below doesn't catch it
+      stopClick = dropNextClick(); // the browser's own click, on the command the press started on
       return;
     }
-    if (!target.contains(document.elementFromPoint(event.clientX, event.clientY))) dropClickOn(target);
+    const under = document.elementFromPoint(event.clientX, event.clientY);
+    if (!target.contains(under)) stopClick = dropNextClick();
   }, { capture: true });
-  document.addEventListener('pointercancel', (event) => {
-    presses.delete(event.pointerId);
+  document.addEventListener('pointercancel', () => {
+    press = null;
     pointAt(null);
   }, { capture: true });
 }
 
-// A button that acts the moment the finger lifts on it, without waiting for the browser's click:
-// on iPhone, a quick tap (or one that lands before the last finger has lifted) can lose its click.
-// Its click then does nothing, so a tap counts once; a click with no press before it (from a
-// keyboard, say) still works. `skip()` makes the next lift do nothing (after a long press, say).
-export function onTap(button, handler) {
-  let handledAt = -Infinity;
-  let skipNext = false;
-  button.addEventListener('pointerup', (event) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    if (!button.contains(document.elementFromPoint(event.clientX, event.clientY))) return; // slid off
-    handledAt = performance.now();
-    if (skipNext) {
-      skipNext = false;
-      return;
-    }
-    handler();
-  });
-  button.addEventListener('click', () => {
-    if (performance.now() - handledAt < 1000) return; // already handled when the finger lifted
-    handler();
-  });
-  return { skip: () => { skipNext = true; } };
-}
 // ---------- keypad ----------
 
 // Digits-only keypad. Amounts are built from the digit string, so there is no "." key:
@@ -177,16 +152,12 @@ export function keypad(getDigits, onChange, getMaxDigits) {
   const pad = el('div', { className: 'keypad' });
   for (const key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', '⌫']) {
     const button = el('button', { type: 'button', className: 'key', textContent: key });
-    // Keys act the moment the finger lifts (onTap), so fast typing never drops a digit.
     if (key === '⌫') {
       button.setAttribute('aria-label', 'Delete');
-      const tap = onTap(button, () => onChange(getDigits().slice(0, -1)));
-      onLongPress(button, () => {
-        tap.skip(); // the lift that ends the hold isn't also a delete
-        onChange('');
-      });
+      button.addEventListener('click', () => onChange(getDigits().slice(0, -1)));
+      onLongPress(button, () => onChange(''));
     } else {
-      onTap(button, () => {
+      button.addEventListener('click', () => {
         const next = (getDigits() + key).replace(/^0+/, '');
         if (next.length <= getMaxDigits()) onChange(next);
       });
