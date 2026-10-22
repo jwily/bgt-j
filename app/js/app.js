@@ -3,7 +3,7 @@
 import { currentPeriod, spentIn, refreshRate, needsRecovery } from './store.js';
 import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
-import { $, setHelp, keepFieldsAboveKeyboard } from './ui.js';
+import { $, setHelp, keepFieldsAboveKeyboard, trackPresses } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave } from './pages.js';
 import { backupStatus } from './backup.js';
@@ -103,6 +103,7 @@ document.addEventListener('touchstart', () => {}, { passive: true });
 
 takeDailySnapshot(); // before anything changes today
 keepFieldsAboveKeyboard();
+trackPresses();
 initInput();
 initPages({ onNavigate: refresh });
 refresh();

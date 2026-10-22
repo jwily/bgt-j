@@ -139,8 +139,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .chip.selected::after,
 .add-btn::after,
 .primary::after,
-.menu-list button:active::after,
-.menu-list button:focus-visible::after {
+.menu-list button::after {
   content: '';
   position: absolute;
   top: 50%;
@@ -426,9 +425,12 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
   gap: var(--gap);
 }
 .backdrop.open .menu > .window { animation: unfold var(--unfold); }
-.menu-list { display: flex; flex-direction: column; padding: 8px 6px 8px 0; }
+.menu-list { display: flex; flex-direction: column; padding: 8px 6px 8px 0; touch-action: none; } /* a press can slide between commands */
 .menu-list button { position: relative; padding: 8px 10px 8px 42px; text-align: left; font-size: 1.15rem; }
 .menu-list button::after { left: 4px; }
+/* The hand points at the command under your thumb (ui.js, trackPresses), or the keyboard-focused
+   one. It's always there, just hidden otherwise: Safari freezes a hand that only appears later. */
+.menu-list button:not(.hover):not(:focus-visible)::after { visibility: hidden; }
 .menu-stats { display: grid; gap: 4px; padding: 10px 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .menu-stats div { display: flex; justify-content: space-between; gap: 12px; }
 .label { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }

@@ -285,6 +285,46 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('Housing still gone before undo', housingAgain, -1);
   await page.locator('#nav-btn').tap();
 
+  // Presses replay what iOS sends: pointer events where the thumb goes, then a click on the button
+  // the press started on.
+  const press = (selector, text, path) => page.evaluate(([sel, txt, steps]) => {
+    const start = [...document.querySelectorAll(sel)].find((b) => b.textContent.trim() === txt);
+    const box = start.getBoundingClientRect();
+    const send = (type, x, y) => start.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 7, isPrimary: true }));
+    send('pointerdown', box.left + box.width / 2, box.top + box.height / 2);
+    const hovered = [];
+    for (const [type, target] of steps) {
+      const other = typeof target === 'string' ? [...document.querySelectorAll(sel)].find((b) => b.textContent.trim() === target).getBoundingClientRect() : null;
+      const [x, y] = other ? [other.left + other.width / 2, other.top + other.height / 2] : [box.left + box.width / 2, box.top + target];
+      send(type, x, y);
+      if (type === 'pointermove') hovered.push([...document.querySelectorAll('.menu-list button.hover')].map((b) => b.textContent).join());
+    }
+    start.click();
+    return hovered;
+  }, [selector, text, path]);
+  await page.waitForSelector('#help:not(.message)');
+  const amountBefore = await page.locator('.amount').textContent();
+  await press('#view-input .key', '7', [['pointerup', -150]]); // lift well above the key
+  check('a press that slides off a key before lifting doesn\'t type', await page.locator('.amount').textContent(), amountBefore);
+  await page.locator('#view-input .key').filter({ hasText: /^7$/ }).first().tap();
+  check('the next real tap still types', (await page.locator('.amount').textContent()) !== amountBefore, true);
+  await page.locator('#view-input .key').filter({ hasText: /^⌫$/ }).first().tap();
+  await page.locator('#nav-btn').tap();
+  await page.waitForSelector('#menu-backdrop.open');
+  const hovered = await press('.menu-list button', 'Current Period', [['pointermove', 'Past Periods'], ['pointermove', 'Categories'], ['pointerup', 'Categories']]);
+  check('menu: the hand follows the thumb between commands', hovered.join(' > '), 'Past Periods > Categories');
+  await page.waitForFunction(() => document.getElementById('title').textContent === 'Categories' && !document.getElementById('page').hidden, null, { timeout: 2000 }).catch(() => {});
+  check('menu: lifting opens the command under the thumb, not the one pressed first', await titleText(page), 'Categories');
+  await page.locator('#nav-btn').tap();
+  await page.waitForTimeout(300);
+  await page.locator('#nav-btn').tap();
+  await page.waitForSelector('#menu-backdrop.open');
+  await press('.menu-list button', 'Current Period', [['pointermove', -400], ['pointerup', -400]]); // off the menu
+  await page.waitForTimeout(300);
+  check('menu: lifting off the commands opens nothing', await page.locator('#page').isHidden(), true);
+  await page.locator('#nav-btn').tap(); // close the menu
+  await page.waitForSelector('#menu-backdrop:not(.open)');
+
   // Sideways: only the "turn your phone upright" screen shows; turning back restores the app with
   // the same category chosen (the strip's width changes while sideways).
   await page.locator('.strip .chip').last().tap();
