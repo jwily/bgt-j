@@ -84,7 +84,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   box-shadow: var(--bevel);
   color: var(--text);
 }
-:is(.key, .add-btn, .primary, .danger, .wide-btn, .period-row, .nav-btn):active {
+:is(.key, .add-btn, .primary, .danger, .wide-btn, .period-row, .nav-btn, .date-btn):active {
   filter: brightness(1.18);
 }
 
