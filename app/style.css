@@ -51,6 +51,11 @@
    (iOS rubber-bands the whole page when a drag reaches the end of something, which would drag
    the screens around and show what's behind them.) */
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+/* No double-tap zoom anywhere: Safari treats two quick taps as a possible double-tap zoom unless the
+   tapped element or one containing it opts out, so a fast tap that landed between keys (or on a
+   window's edge) could swallow the next one. Set on the root, it covers the whole app; pinch zoom
+   still works. */
+html { touch-action: manipulation; }
 /* Nothing to select or copy except what you type: no accidental highlighting or callouts. */
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 input, textarea { -webkit-user-select: text; user-select: text; }
