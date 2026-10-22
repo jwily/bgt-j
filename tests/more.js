@@ -128,10 +128,10 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     return `${style.animationName} ${style.animationDuration} ${style.animationTimingFunction}`;
   }, selector);
   check('the grid swishes in from the left like Edit Expense', await animationOf('#sheet'), 'swish-in-left 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)');
-  check('the grid\'s other categories are white, the strip\'s grey', await page.evaluate(() => [
+  check('other categories are white, in the grid and the strip', await page.evaluate(() => [
     getComputedStyle(document.querySelector('#sheet .grid .chip:not(.selected)')).color,
     getComputedStyle(document.querySelector('.strip .chip:not(.selected)')).color].join(' | ')),
-    'rgb(237, 237, 237) | rgb(143, 143, 143)');
+    'rgb(237, 237, 237) | rgb(237, 237, 237)');
   await page.screenshot({ path: `${OUT}/${ENGINE}-x1-grid.png` });
   await page.locator('#sheet .grid .chip', { hasText: 'Health' }).tap();
   await page.waitForTimeout(700);

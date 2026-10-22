@@ -85,7 +85,7 @@ Read README.md for what the app does; this file covers how to work on it.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
-  or unavailable options (except the category grid, whose other categories stay white: user's choice).
+  or unavailable options (except category names, in the strip and the grid: white, the user's choice).
 - The pointing-hand cursor sits outside whatever it points at: centering ignores it (the USD/MXN
   pair, category chips). It bobs beside buttons you'd press and sits still beside selections.
 - Capitalization: Title Case for names (screens, menu commands, period and category names:
