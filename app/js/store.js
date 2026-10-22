@@ -35,7 +35,7 @@ const PALETTE = [
   '#45d6a8', // Carbuncle: mint
   '#1f8e9e', // Leviathan: deep teal
   '#a64ee0', // Pandemona: violet
-  '#efe8d4', // Cerberus: pale bone
+  '#8a93a3', // Cerberus: steel grey (the gunmetal sheen on its heads; a true near-black would vanish in gauges)
   '#e0a2d8', // Alexander: lavender-pink
   '#7d4a28', // Doomtrain: dark bronze
   '#253f84', // Bahamut: dark steel blue
