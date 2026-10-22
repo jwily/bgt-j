@@ -243,7 +243,7 @@ function statusRow({ level, hp, share, hpTone }) {
   const fill = el('span');
   fill.style.width = `${Math.max(0, Math.min(1, share)) * 100}%`;
   return el('span', { className: 'status-row', 'aria-hidden': 'true' },
-    el('span', { className: 'stat' }, el('small', { textContent: 'Lv' }), el('b', { textContent: String(level) })),
+    el('span', { className: 'stat' }, el('small', { textContent: 'Lv' }), el('b', { className: 'level', textContent: String(level) })),
     el('span', { className: `stat hp${hpTone ? ` ${hpTone}` : ''}` }, el('small', { textContent: 'HP' }), el('b', { textContent: hp }),
       el('span', { className: 'hp-bar' }, fill)));
 }
