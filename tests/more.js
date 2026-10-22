@@ -5,19 +5,13 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette } = require('./helpers');
-let failures = 0;
-const check = (label, actual, expected) => {
-  const ok = actual === expected;
-  if (!ok) failures++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}: ${JSON.stringify(actual)}${ok ? '' : ` (expected ${JSON.stringify(expected)})`}`);
-};
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check, saved } = require('./helpers');
 const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
 
 (async () => {
   const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
   const errors = [];
-  const newPage = async (context, { rate = 'ok' } = {}) => {
+  const newPage = async (context) => {
     const page = await context.newPage();
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => m.type() === 'error' && !m.text().includes('frankfurter') && errors.push(m.text()));
@@ -31,12 +25,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.goto(URL);
   const sheetKey = (k) => page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
   const mainKey = (k) => page.locator('#view-input .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
-  const openMenuItem = async (name) => {
-    await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(250);
-    await page.locator('#menu button', { hasText: name }).tap();
-    await page.waitForTimeout(300);
-  };
+  const openMenuItem = (name) => openMenu(page, name);
 
   // First-launch sheet can't be dismissed by tapping outside it
   await page.mouse.click(200, 40);
@@ -323,6 +312,13 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   for (const k of '12') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
   check('New Period: typing keeps the same Start button and HELP text', await page.evaluate(() => window.startButton.isConnected && window.helpText.isConnected), true);
   check('New Period: amount and button still update', await page.evaluate(() => [document.querySelector('.budget-amount').textContent, document.querySelector('#page .primary').disabled].join(' ')), '$0.12 false');
+  check('text can\'t be selected except in text fields', await page.evaluate(() => [document.querySelector('.budget-amount'), document.querySelector('#help .text'), document.querySelector('.note')]
+    .map((node) => getComputedStyle(node).webkitUserSelect ?? getComputedStyle(node).userSelect).join(' ')), 'none none text');
+  // Once the button turns on, its hand bobs (Safari froze a hand that only appeared then).
+  const handAt = () => page.evaluate(() => getComputedStyle(document.querySelector('#page .primary'), '::after').transform);
+  const handBefore = await handAt();
+  await page.waitForTimeout(230); // about half a bob
+  check('New Period: the Start button\'s hand bobs after typing', (await handAt()) !== handBefore, true);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
 
@@ -498,12 +494,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   const p5 = await newPage(clash);
   await p5.goto(URL);
   await startFirstPeriod(p5, '100000');
-  const openCategories = async () => {
-    await p5.locator('#nav-btn').tap();
-    await p5.waitForTimeout(250);
-    await p5.locator('#menu button', { hasText: 'Categories' }).tap();
-    await p5.waitForTimeout(300);
-  };
+  const openCategories = () => openMenu(p5, 'Categories');
   const savedNames = () => p5.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).categories.filter((c) => !c.archived).map((c) => c.name).sort().join(','));
   const save5 = p5.locator('#page .actions .primary', { hasText: 'Save' });
   await openCategories();
@@ -671,6 +662,5 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
 
   const realErrors = errors.filter((e) => !/Failed to load resource|frankfurter|network/i.test(e));
   console.log(realErrors.length ? `ERRORS:\n${realErrors.join('\n')}` : 'No console errors');
-  console.log(failures ? `${failures} FAILED` : 'ALL PASSED');
   await browser.close();
 })().catch((e) => { console.error('TEST CRASHED:', e.message); process.exit(1); });

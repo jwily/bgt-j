@@ -8,14 +8,14 @@ import {
   saveCategories, categoryIsUsed, paletteColor, startPeriod, setBudget, deletePeriod, setBackupReminder,
 } from './store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
-import { el, svg, toast, setHelp, colorDot, gauge, keypad } from './ui.js';
+import { $, el, svg, toast, setHelp, colorDot, gauge, keypad } from './ui.js';
 import { formatDate, formatMoment } from './dates.js';
 import { openExpenseSheet } from './sheets.js';
 import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, REMINDER_CHOICES } from './backup.js';
 import { readSnapshots, takeSnapshot, restoreSnapshot } from './snapshots.js';
 
-const page = document.getElementById('page');
-const body = document.getElementById('page-body');
+const page = $('page');
+const body = $('page-body');
 
 const PAGES = { summary: renderSummary, periods: renderPeriods, categories: renderCategories, backup: renderBackup, budget: renderBudget };
 

@@ -4,17 +4,11 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp } = require('./helpers');
+const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = path.join(__dirname, 'output');
 const RATE = (date = '2026-10-21', rates = { MXN: 20 }) => JSON.stringify({ date, rates });
-let failures = 0;
-const check = (label, actual, expected) => {
-  const ok = actual === expected;
-  if (!ok) failures++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}: ${JSON.stringify(actual)}${ok ? '' : ` (expected ${JSON.stringify(expected)})`}`);
-};
 const localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
 // A small v2 data set for scenarios that start from saved data.
@@ -53,7 +47,7 @@ const sample = (overrides = {}) => ({
     page.on('dialog', (d) => { dialogs.push(d.message()); d.accept(); });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(APP_URL);
-    await page.waitForTimeout(400);
+    await appReady(page);
     const key = async (k) => {
       const scope = (await page.locator('#page').isVisible()) ? '#page' : '#view-input';
       await page.locator(`${scope} .key`).filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
@@ -62,13 +56,7 @@ const sample = (overrides = {}) => ({
     const stored = (k = 'budget-tracker') => page.evaluate((name) => localStorage.getItem(name), k);
     return { context, page, dialogs, type, stored };
   }
-  const menu = async (page, item) => {
-    await page.waitForSelector('#help:not(.message)', { timeout: 6000 });
-    await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(250);
-    await page.locator('#menu button', { hasText: item }).tap();
-    await page.waitForTimeout(300);
-  };
+  const menu = openMenu;
 
   // --- Storage full: an unmissable warning instead of failing silently.
   {
@@ -260,6 +248,5 @@ const sample = (overrides = {}) => ({
   }
 
   console.log(errors.length ? `ERRORS:\n${errors.join('\n')}` : 'No console errors');
-  console.log(failures ? `${failures} FAILED` : 'ALL PASSED');
   await browser.close();
 })().catch((e) => { console.error('TEST CRASHED:', e.message); process.exit(1); });

@@ -23,8 +23,8 @@ export const VERSION = 3;
 const RATES_URL = `https://api.frankfurter.dev/v1/latest?base=${HOME}&symbols=${FOREIGN_CODES.join(',')}`;
 
 // 16 colors, each loosely after one of FF8's Guardian Force portraits, in the order the GFs appear
-// in the game's GF menu. Categories take them in turn. (Every pair is at least 11 apart in OKLab
-// distance x100, where under ~10 starts to look alike.)
+// in the game's GF menu. Categories take them in turn. (Every pair is at least 10 apart in OKLab
+// distance x100, where under ~10 starts to look alike; check with npm run palette.)
 const PALETTE = [
   '#94cc3a', // Quezacotl: yellow-green
   '#8fd0f5', // Shiva: ice blue
@@ -58,7 +58,6 @@ export let state = load();
 function newId() {
   return crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
-
 
 function freshState() {
   const categories = DEFAULT_CATEGORIES.map((name) => ({ id: newId(), name, color: null, archived: false }));
@@ -136,8 +135,6 @@ function load() {
   return loaded;
 }
 
-// The main screen's choices must stay valid: an active category (one may have just been archived
-// or deleted, or come from a backup) and a currency the app still offers.
 // Run on every load and save: category names without stray spaces at either end, a valid chosen
 // category and currency on the main screen, and colors in alphabetical order.
 function tidy(data) {
@@ -146,21 +143,23 @@ function tidy(data) {
   assignColors(data);
 }
 
+// The main screen's choices must stay valid: an active category (one may have just been archived
+// or deleted, or come from a backup) and a currency the app still offers.
 function keepInputCategoryActive(data) {
   const active = data.categories.filter((c) => !c.archived);
   if (!active.some((c) => c.id === data.input.categoryId)) data.input.categoryId = [...active].sort(byName)[0]?.id;
   if (!CURRENCY_CODES.includes(data.input.currency)) data.input.currency = HOME;
 }
 
-// Colors follow alphabetical order: the first active category gets color 1, the next color 2, and
-// so on. Archived categories come after the active ones, so past summaries still tell them apart.
-// Past 16, colors repeat. Renaming, adding or removing a category can shift colors.
 // The color for the category in position i (alphabetical, active first), wrapping after 16.
 // (A function declaration: load() runs near the top of this file, before a const here would exist.)
 export function paletteColor(i) {
   return PALETTE[i % PALETTE.length];
 }
 
+// Colors follow alphabetical order: the first active category gets color 1, the next color 2, and
+// so on. Archived categories come after the active ones, so past summaries still tell them apart.
+// Past 16, colors repeat. Renaming, adding or removing a category can shift colors.
 function assignColors(data) {
   const sorted = [...data.categories].sort(byName);
   const ordered = [...sorted.filter((c) => !c.archived), ...sorted.filter((c) => c.archived)];
@@ -196,7 +195,6 @@ export const currentPeriod = () => state.periods.find((p) => !p.end);
 export const getPeriod = (id) => state.periods.find((p) => p.id === id);
 export const periodNumber = (period) => state.periods.indexOf(period) + 1;
 export const getCategory = (id) => state.categories.find((c) => c.id === id);
-// Names are unique, ignoring capitalization ("groceries" and "Groceries" clash), archived ones included.
 export const sortedCategories = () => [...state.categories].sort(byName);
 export const activeCategories = () => sortedCategories().filter((c) => !c.archived);
 export const periodExpenses = (periodId) => state.expenses.filter((e) => e.periodId === periodId);

@@ -25,12 +25,29 @@ exports.grabFile = async (page, engine, action) => {
 // FF8 layout helpers: "left" lives in the menu's stats box; the screen name is in the title window.
 exports.leftText = async (page) => `${await page.locator('#stat-left').textContent()} ${(await page.locator('#stat-left-label').textContent()).toLowerCase()}`;
 exports.titleText = (page) => page.locator('#title').textContent();
-exports.openSummary = async (page) => {
+// Opens a menu command and waits until its screen is showing and has finished unfolding (every
+// screen's title is its menu command's name).
+exports.openMenu = async (page, item) => {
   await page.locator('#nav-btn').tap();
-  await page.waitForTimeout(250);
-  await page.locator('#menu button', { hasText: 'Current Period' }).tap();
-  await page.waitForTimeout(250);
+  await page.waitForSelector('#menu-backdrop.open');
+  await page.locator('#menu button', { hasText: item }).tap();
+  await page.waitForFunction((title) => document.getElementById('title').textContent === title
+    && !document.getElementById('page').hidden && !document.getElementById('page-body').classList.contains('unfold'), item);
 };
+exports.openSummary = (page) => exports.openMenu(page, 'Current Period');
+
+// Waits until the app has finished starting (it shows a help line once it has).
+exports.appReady = (page) => page.waitForFunction(() => document.querySelector('#help .text')?.textContent);
+
+// One pass/fail line; the runner counts the FAIL lines.
+exports.check = (label, actual, expected) => {
+  const ok = actual === expected;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}: ${JSON.stringify(actual)}${ok ? '' : ` (expected ${JSON.stringify(expected)})`}`);
+  return ok;
+};
+
+// The app's saved data, parsed.
+exports.saved = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')));
 
 // Serves ../app on http://localhost:8765 (the address the passes and tools use). Resolves to the
 // server; call server.close() when done.
