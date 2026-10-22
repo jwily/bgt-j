@@ -567,7 +567,35 @@ body.page-open #view-input { visibility: hidden; }
 
 /* Summary */
 .donut { position: relative; width: min(220px, 64vw); margin: 0 auto; }
-.donut svg { display: block; width: 100%; height: auto; }
+.donut svg { position: relative; z-index: 1; display: block; width: 100%; height: auto; }
+/* The window is metal where the donut's channel is cut into it: a fine chamfer on each edge of
+   the channel (the chart's units: the ring runs 33 to 47 from the center, of 50), bright polished
+   metal with a turned sheen sweeping around it, lit from the top-left: the outer chamfer faces
+   away from the light at the top-left, the inner one at the bottom-right. */
+.donut::before, .donut::after { /* --cut: where the chamfer shows */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.donut::before {
+  background:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.05) 45%, rgba(255, 255, 255, 0.15)),
+    var(--turned-metal);
+  -webkit-mask: var(--cut);
+  mask: var(--cut);
+  --cut: radial-gradient(circle closest-side, transparent 93.6%, #000 94%, #000 95.6%, transparent 96%);
+}
+.donut::after {
+  z-index: 1;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.05) 55%, rgba(0, 0, 0, 0.4)),
+    var(--turned-metal);
+  -webkit-mask: var(--cut);
+  mask: var(--cut);
+  --cut: radial-gradient(circle closest-side, transparent 64%, #000 64.4%, #000 66%, transparent 66.4%);
+}
+.donut { --turned-metal: conic-gradient(#d8d8d8, #9a9a9a 10%, #cccccc 22%, #929292 36%, #e2e2e2 52%, #9c9c9c 66%, #c6c6c6 80%, #9a9a9a 90%, #d8d8d8); }
 .donut .ring { stroke: #2b2b2b; }
 .donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
 .donut-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
