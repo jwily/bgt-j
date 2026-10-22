@@ -99,6 +99,29 @@ function dropClickOn(button) {
   setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 400);
 }
 
+// Opens the menu command under the thumb when a press lifts (none if it lifted off the commands).
+// The browser's own click goes to the command the press started on, or to nothing: iOS sends none
+// once the thumb has strayed far enough, even if it came back. So wait for it briefly: let it
+// through if it's on the right command, otherwise stop it and click the right one ourselves.
+function openOnRelease(menu, command) {
+  let settled = false;
+  const settle = (clickIt) => {
+    if (settled) return;
+    settled = true;
+    document.removeEventListener('click', onClick, { capture: true });
+    if (clickIt) command?.click();
+  };
+  const onClick = (event) => {
+    if (!menu.contains(event.target)) return;
+    if (command?.contains(event.target)) return settle(false);
+    event.stopPropagation();
+    event.preventDefault();
+    settle(true);
+  };
+  document.addEventListener('click', onClick, { capture: true });
+  setTimeout(() => settle(true), 100);
+}
+
 export function trackPresses() {
   const presses = new Map(); // pointerId -> { target, menu }
   const commandAt = (event) => document.elementFromPoint(event.clientX, event.clientY)?.closest('.menu-list button') ?? null;
@@ -121,11 +144,8 @@ export function trackPresses() {
     presses.delete(event.pointerId);
     const { target, menu } = press;
     if (menu) {
-      const command = commandAt(event);
       pointAt(null);
-      if (command === target) return; // an ordinary tap
-      dropClickOn(target); // the browser's own click, on the command the press started on
-      command?.click();
+      openOnRelease(menu, commandAt(event));
       return;
     }
     if (!target.contains(document.elementFromPoint(event.clientX, event.clientY))) dropClickOn(target);

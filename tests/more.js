@@ -317,8 +317,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.locator('#nav-btn').tap();
 
   // Presses replay what iOS sends: pointer events where the thumb goes, then a click on the button
-  // the press started on.
-  const press = (selector, text, path) => page.evaluate(([sel, txt, steps]) => {
+  // the press started on (unless nativeClick is false: iOS sends none once the thumb strays far).
+  const press = (selector, text, path, nativeClick = true) => page.evaluate(([sel, txt, steps, nativeClick]) => {
     const start = [...document.querySelectorAll(sel)].find((b) => b.textContent.trim() === txt);
     const box = start.getBoundingClientRect();
     const send = (type, x, y) => start.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 7, isPrimary: true }));
@@ -330,9 +330,9 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
       send(type, x, y);
       if (type === 'pointermove') hovered.push([...document.querySelectorAll('.menu-list button.hover')].map((b) => b.textContent).join());
     }
-    start.click();
+    if (nativeClick) start.click();
     return hovered;
-  }, [selector, text, path]);
+  }, [selector, text, path, nativeClick]);
   await page.waitForSelector('#help:not(.message)');
   const amountBefore = await page.locator('.amount').textContent();
   await page.locator('#view-input .key').filter({ hasText: /^4$/ }).first().tap();
@@ -363,6 +363,22 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await press('.menu-list button', 'Current Period', [['pointermove', -400], ['pointerup', -400]]); // off the menu
   await page.waitForTimeout(300);
   check('menu: lifting off the commands opens nothing', await page.locator('#page').isHidden(), true);
+  await press('.menu-list button', 'Categories', [['pointermove', -400], ['pointermove', 'Categories'], ['pointerup', 'Categories']], false);
+  await page.waitForFunction(() => !document.getElementById('page').hidden, null, { timeout: 2000 }).catch(() => {});
+  check('menu: sliding off and back onto a command still opens it (iOS sends no click)', await titleText(page), 'Categories');
+  await page.locator('#nav-btn').tap();
+  await page.waitForTimeout(300);
+  await page.locator('#nav-btn').tap();
+  await page.waitForSelector('#menu-backdrop.open');
+  await menuSettled();
+  await press('.menu-list button', 'Past Periods', [['pointermove', -400], ['pointermove', 'Past Periods'], ['pointerup', 'Past Periods']]);
+  await page.waitForTimeout(400);
+  await page.locator('#nav-btn').tap(); // back: if iOS's click went through too, a second Past Periods would be underneath
+  await page.waitForTimeout(300);
+  check('menu: ...and opens it once when iOS does click', await page.locator('#page').isHidden(), true);
+  await page.locator('#nav-btn').tap();
+  await page.waitForSelector('#menu-backdrop.open');
+  await menuSettled();
   await page.locator('#nav-btn').tap(); // close the menu
   await page.waitForSelector('#menu-backdrop:not(.open)');
 
