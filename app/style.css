@@ -266,7 +266,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   container-type: inline-size; /* lets the amount size itself to this window's width */
   cursor: pointer; /* the whole window is the currency switch */
 }
-.currency-zone:active { filter: brightness(1.18); }
 /* The currencies in a row, like the category strip: the chosen one centered (input.js,
    centerCurrency), the row gliding over when it changes, fading out at the window's edges. */
 .currency-opts {
