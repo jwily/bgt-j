@@ -211,11 +211,11 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .help.tappable { cursor: pointer; }
 .help.bad span { color: var(--bad); }
 /* The main screen's status row (ui.js, statusRow), after FF8's party windows: no label, so the
-   row sits centered in the window. The HP's bar is a thin line under it, measured from
+   row sits centered in the window, both ways. The HP's bar is a thin line under it, measured from
    menuanimations.mov: translucent red (about a fifth opaque at its core, fainter at its top and
    bottom edges) over the window, with no track where HP is missing. */
 #help.status::before { display: none; }
-.help.status { padding: 8px 12px; }
+.help.status { justify-content: center; padding: 8px 12px; }
 .status-row { display: flex; align-items: baseline; gap: 24px; font-weight: 800; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .status-row small { margin-right: 10px; font-size: inherit; } /* as tall as the digits, as in FF8 */
 .status-row .level { display: inline-block; min-width: 3ch; text-align: right; } /* right-aligned in room for 100, as in FF8 */
