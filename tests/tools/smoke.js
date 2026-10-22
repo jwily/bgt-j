@@ -52,9 +52,9 @@ const ok = (label, actual, expected) => { if (!check(label, actual, expected)) f
   ok('two expenses saved', expenses.length, 2);
   ok('peso expense keeps its original amount and rate', JSON.stringify(expenses[1].original), JSON.stringify({ currency: 'MXN', amount: 300, perUsd: rate }));
 
-  // Category grid by double tap.
-  await page.locator('.strip .chip.selected').tap();
-  await page.locator('.strip .chip.selected').tap();
+  // Category grid by long press.
+  await page.locator('.strip .chip.selected').hover();
+  await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
   await page.waitForSelector('#sheet-backdrop.open');
   await page.locator('#sheet .grid .chip', { hasText: 'Health' }).tap();
   await page.waitForTimeout(600);

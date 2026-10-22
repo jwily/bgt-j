@@ -119,8 +119,8 @@ Read README.md for what the app does; this file covers how to work on it.
   the hand), Undo while offered, and Menu/Back. The menu opens upward, period commands nearest the
   thumb. A tall ADD and a currency switch key in a 4th keypad column were tried and replaced by this.
   Short screens sit at the bottom; a screen's actions go at its bottom.
-- Category chips are as wide as their name; double-tapping the strip opens the grid level with it
-  (it was a long-press before; the user asked for double tap).
+- Category chips are as wide as their name; long-pressing the strip opens the grid level with it
+  (a double tap was tried for a while; the user went back to the long press).
 - New Period / first budget / edit budget is a full screen, not a sheet.
 - Backups are whole-history JSON; CSV export is for spreadsheets only.
 - Launches are instant from a saved version (app/sw.js); a deploy downloads in the background and
