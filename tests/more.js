@@ -285,6 +285,20 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('Housing still gone before undo', housingAgain, -1);
   await page.locator('#nav-btn').tap();
 
+  // Sideways: only the "turn your phone upright" screen shows; turning back restores the app with
+  // the same category chosen (the strip's width changes while sideways).
+  await page.locator('.strip .chip').last().tap();
+  await page.waitForTimeout(700);
+  const chosen = await page.locator('.strip .chip.selected').textContent();
+  const upright = page.viewportSize();
+  await page.setViewportSize({ width: upright.height, height: upright.width });
+  await page.waitForTimeout(400);
+  check('sideways: only the turn-upright screen shows', await page.evaluate(() => [getComputedStyle(document.querySelector('.turn-upright')).display, getComputedStyle(document.getElementById('view-input')).visibility].join(' ')), 'grid hidden');
+  await page.setViewportSize(upright);
+  await page.waitForTimeout(600);
+  check('upright again: the app is back', await page.evaluate(() => [getComputedStyle(document.querySelector('.turn-upright')).display, getComputedStyle(document.getElementById('view-input')).visibility].join(' ')), 'none visible');
+  check('upright again: same category chosen', await page.locator('.strip .chip.selected').textContent(), chosen);
+
   // HELP is one line: on every screen, text scrolls sideways exactly when it doesn't fit (measured
   // after the title window appears beside it), and at rest its first letter is clear of the fade.
   const helpState = () => page.evaluate(() => {

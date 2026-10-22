@@ -10,6 +10,9 @@ let digits = '';
 let pickedDate = null; // a date chosen with the date button; null means "today" (whenever Add is tapped)
 let stripKey = ''; // which categories the strip was last built from
 let recentering = false; // true while the app (not the person) is moving the strip
+// The phone held sideways: the app is hidden then (style.css), and the strip's width changes, which
+// can shift it; that mustn't change the chosen category. Same query as in style.css.
+const SIDEWAYS = matchMedia('(orientation: landscape) and (max-height: 500px)');
 const parts = {};
 
 export function initInput() {
@@ -72,6 +75,7 @@ export function initInput() {
   );
   renderInput();
   document.fonts?.ready.then(recenter);
+  SIDEWAYS.addEventListener('change', () => { if (!SIDEWAYS.matches) recenter(); });
 }
 
 export function renderInput() {
@@ -163,7 +167,7 @@ function centerChip(chip, behavior) {
 }
 
 function pickCenteredChip() {
-  if (recentering) return;
+  if (recentering || SIDEWAYS.matches) return;
   const middle = parts.strip.scrollLeft + parts.strip.clientWidth / 2;
   let best = null;
   let bestDistance = Infinity;
