@@ -21,9 +21,22 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// The font and icons never change between versions, so they come straight from the cache when it
+// has them: no waiting on the network at launch (on a slow connection that made the font arrive
+// after the app appeared, so its text visibly swapped fonts).
+const UNCHANGING = /\/(fonts|icons)\//;
+
 self.addEventListener('fetch', (event) => {
   // Leave other sites (like the exchange-rate API) alone; the app handles those itself.
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
+  if (UNCHANGING.test(new URL(event.request.url).pathname)) {
+    event.respondWith(caches.match(event.request).then((cached) => cached ?? fetch(event.request).then((response) => {
+      const copy = response.clone();
+      caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+      return response;
+    })));
+    return;
+  }
   event.respondWith(
     fetch(event.request, { cache: 'no-cache' })
       .then((response) => {

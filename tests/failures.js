@@ -232,6 +232,16 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(250); // the 0.15s fade-in
     check('start: revealed once built', await page.evaluate(() => !document.body.classList.contains('starting') && getComputedStyle(document.body).opacity), '1');
     await context.close();
+    // On a slow connection the font can take a while; the app waits for it rather than appearing in
+    // the fallback font and swapping (the start-up "flash").
+    const slow = await browser.newContext({ ...devices['iPhone 13'], serviceWorkers: 'block' });
+    await mockRates(slow, RATE());
+    await slow.route('**/fonts/*.woff2', async (route) => { await new Promise((r) => setTimeout(r, 800)); await route.continue(); });
+    const slowPage = await slow.newPage();
+    await slowPage.goto(APP_URL);
+    await slowPage.waitForFunction(() => !document.body.classList.contains('starting'));
+    check('start: on a slow connection, the font is in before the app appears', await slowPage.evaluate(() => [...document.fonts].some((f) => f.family.includes('Nunito') && f.status === 'loaded')), true);
+    await slow.close();
     const noScript = await browser.newContext({ ...devices['iPhone 13'], javaScriptEnabled: false });
     const bare = await noScript.newPage();
     await bare.goto(APP_URL);
