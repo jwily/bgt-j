@@ -291,19 +291,38 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('Housing still gone before undo', housingAgain, -1);
   await page.locator('#nav-btn').tap();
 
-  // HELP is one line: text that fits sits still; text too long for it scrolls sideways instead of
-  // being cut off.
-  const helpMotion = () => page.evaluate(() => {
-    const text = document.querySelector('#help .text');
-    return { moving: text.getAnimations().length > 0, overflows: text.scrollWidth > text.parentElement.clientWidth, lines: Math.round(text.getBoundingClientRect().height / parseFloat(getComputedStyle(text).lineHeight)) };
+  // HELP is one line: on every screen, text scrolls sideways exactly when it doesn't fit (measured
+  // after the title window appears beside it), and at rest its first letter is clear of the fade.
+  const helpState = () => page.evaluate(() => {
+    const text = document.querySelector('#help .text'), clip = text.parentElement, style = getComputedStyle(clip);
+    const room = clip.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    return {
+      moving: text.getAnimations().length > 0,
+      overflows: text.scrollWidth > room + 1,
+      oneLine: text.getBoundingClientRect().height < 2 * parseFloat(getComputedStyle(text).lineHeight),
+      clearOfFade: text.getBoundingClientRect().left >= clip.getBoundingClientRect().left + parseFloat(style.paddingLeft) - 0.5,
+    };
   });
   await page.waitForSelector('#help:not(.message)');
-  const shortHelp = await helpMotion();
-  check('short HELP text sits still on one line', !shortHelp.moving && !shortHelp.overflows && shortHelp.lines === 1, true);
+  const results = [];
+  for (const screen of ['main', 'Current Period', 'Past Periods', 'Categories', 'New Period', 'Backup']) {
+    if (screen !== 'main') await openMenuItem(screen);
+    await page.waitForTimeout(300);
+    const h = await helpState();
+    results.push(h);
+    check(`HELP on ${screen}: scrolls exactly when it doesn't fit, one line, first letter clear`, h.moving === h.overflows && h.oneLine && h.clearOfFade, true);
+    if (screen !== 'main') { await page.locator('#nav-btn').tap(); await page.waitForTimeout(300); }
+  }
+  check('some HELP lines scroll and some sit still (the check above covers both)', results.some((r) => r.moving) && results.some((r) => !r.moving), true);
+
+  // Typing on New Period updates the amount without rebuilding the screen: the Start button (and
+  // its bobbing hand) and the scrolling HELP text carry on rather than restarting.
   await openMenuItem('New Period');
   await page.waitForTimeout(300);
-  const longHelp = await helpMotion();
-  check('long HELP text scrolls on one line', longHelp.moving && longHelp.overflows && longHelp.lines === 1, true);
+  await page.evaluate(() => { window.startButton = document.querySelector('#page .primary'); window.helpText = document.querySelector('#help .text'); });
+  for (const k of '12') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+  check('New Period: typing keeps the same Start button and HELP text', await page.evaluate(() => window.startButton.isConnected && window.helpText.isConnected), true);
+  check('New Period: amount and button still update', await page.evaluate(() => [document.querySelector('.budget-amount').textContent, document.querySelector('#page .primary').disabled].join(' ')), '$0.12 false');
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
 

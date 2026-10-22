@@ -196,9 +196,12 @@ function showHelpText(text) {
 function scrollHelpText() {
   const line = $('help').querySelector('.text');
   if (!line) return 0;
+  const clip = line.parentElement;
   line.getAnimations().forEach((animation) => animation.cancel());
-  const overflow = line.scrollWidth - line.parentElement.clientWidth;
-  line.parentElement.classList.toggle('scrolling', overflow > 1);
+  const style = getComputedStyle(clip);
+  const room = clip.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const overflow = line.scrollWidth - room;
+  clip.classList.toggle('scrolling', overflow > 1);
   if (overflow <= 1) return 0;
   const glide = (overflow / HELP_SPEED) * 1000;
   const pass = HELP_REST + glide + HELP_REST;
@@ -211,14 +214,23 @@ function scrollHelpText() {
   ], { duration: pass, iterations: Infinity });
   return pass;
 }
-// The space for the text changes with the screen's width and once the font has loaded.
-window.addEventListener('resize', scrollHelpText);
+// Measure again whenever the space for the text changes: the title window appearing beside HELP
+// (just after a screen sets its help line), the screen's width, or the font finishing loading.
+let helpWidth = 0;
+new ResizeObserver(([entry]) => {
+  if (Math.round(entry.contentRect.width) === helpWidth) return;
+  helpWidth = Math.round(entry.contentRect.width);
+  scrollHelpText();
+}).observe($('help'));
 document.fonts?.ready.then(scrollHelpText);
 
 // tone: '' or 'bad'. onTap: optional action when the help window is tapped.
 export function setHelp(text, { tone = '', onTap = null } = {}) {
+  // Screens set their help line on every redraw; only redraw HELP when it changed, so a scrolling
+  // line doesn't restart.
+  const unchanged = text === helpLine.text && tone === helpLine.tone && onTap === helpLine.onTap;
   helpLine = { text, tone, onTap };
-  if (!toastTimer) showHelpLine();
+  if (!toastTimer && !unchanged) showHelpLine();
 }
 
 // Pass an undo function (as returned by the store's changes) to show an Undo button. The message
