@@ -264,7 +264,7 @@ const sample = (overrides = {}) => ({
     const slowPage = await slow.newPage();
     await slowPage.goto(APP_URL);
     await slowPage.waitForFunction(() => !document.body.classList.contains('starting'));
-    check('start: on a slow connection, the font is in before the app appears', await slowPage.evaluate(() => [...document.fonts].some((f) => f.family.includes('Barlow') && f.status === 'loaded')), true);
+    check('start: on a slow connection, the font is in before the app appears', await slowPage.evaluate(() => [...document.fonts].some((f) => f.family.includes('Abel') && f.status === 'loaded')), true);
     await slow.close();
     const noScript = await browser.newContext({ ...devices['iPhone 13'], javaScriptEnabled: false });
     const bare = await noScript.newPage();
