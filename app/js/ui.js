@@ -66,29 +66,6 @@ function swallowNextClick(node) {
   setTimeout(() => node.removeEventListener('click', stop, { capture: true }), 400);
 }
 
-export function onSwipe(node, handler) {
-  let start = null;
-  node.addEventListener('pointerdown', (event) => { start = { x: event.clientX, y: event.clientY }; });
-  node.addEventListener('pointercancel', () => { start = null; });
-  // Once a drag is clearly sideways, keep receiving it even if it ends outside this element.
-  // (Not on pointerdown: capturing then would steal plain taps from the buttons inside.)
-  node.addEventListener('pointermove', (event) => {
-    if (start && !node.hasPointerCapture(event.pointerId) && Math.abs(event.clientX - start.x) > 10) {
-      node.setPointerCapture(event.pointerId);
-    }
-  });
-  node.addEventListener('pointerup', (event) => {
-    if (!start) return;
-    const dx = event.clientX - start.x;
-    const dy = event.clientY - start.y;
-    start = null;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-      swallowNextClick(node);
-      handler(dx < 0 ? 'left' : 'right');
-    }
-  });
-}
-
 // Press and hold (used by ⌫ to clear).
 function onLongPress(node, handler, ms = 450) {
   let timer = null;
@@ -131,7 +108,7 @@ export function onDoubleTap(node, handler, ms = 350) {
 // Presses, app-wide: a press that slides off its button before lifting doesn't count (iOS would
 // otherwise still tap it). In the menu, a press can slide between commands: the hand follows the
 // thumb, and lifting opens the command under it.
-const PRESSABLE = 'button, .date-btn, label.wide-btn';
+const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
 let stopClick = null; // drops the click that follows a cancelled press
 
 function dropNextClick() {

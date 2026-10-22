@@ -38,18 +38,18 @@ const check = (label, ok, detail) => {
     await page.locator('#page .primary').tap();
     await page.waitForTimeout(400);
 
-    // USD/MXN: centered as a pair (the hand doesn't count), and no vertical shift when switching.
+    // The chosen currency is centered in the Amount window (the hand beside it doesn't count),
+    // whichever it is, and switching doesn't shift anything up or down.
     const opts = () => page.evaluate(() => {
-      const [usd, mxn] = document.querySelectorAll('.currency-opts span');
+      const on = document.querySelector('.currency-opts .on').getBoundingClientRect();
       const zone = document.querySelector('.currency-zone').getBoundingClientRect();
-      const a = usd.getBoundingClientRect(), b = mxn.getBoundingClientRect();
-      return { top: Math.round(a.top * 10) / 10, offset: Math.round((a.left + b.right) / 2 - (zone.left + zone.width / 2)) };
+      return { top: Math.round(on.top * 10) / 10, offset: Math.round(on.left + on.width / 2 - (zone.left + zone.width / 2)) };
     });
     const usd = await opts();
-    await page.locator('.currency-opts').tap();
-    await page.waitForTimeout(300);
+    await page.locator('.currency-zone').tap();
+    await page.waitForTimeout(350); // the row's 0.2s glide
     const mxn = await opts();
-    check(`${name}: USD/MXN pair centered`, Math.abs(mxn.offset) <= 1, `${mxn.offset}px`);
+    check(`${name}: chosen currency centered (USD, then MXN)`, Math.abs(usd.offset) <= 1 && Math.abs(mxn.offset) <= 1, `${usd.offset}px, ${mxn.offset}px`);
     check(`${name}: no vertical shift switching currency`, usd.top === mxn.top, `${usd.top} -> ${mxn.top}`);
 
     // Worst-case amount fits on one line; nothing scrolls off the page.
