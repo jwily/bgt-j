@@ -603,11 +603,12 @@ body.page-open #view-input { visibility: hidden; }
    the top and bottom are shaded like a tube (darker outside, lighter toward the trough); the end
    caps are flat bright silver, about half the bar's height wide, with straight inner edges; a black
    liner runs along the trough's top and ends, not its bottom. Layers, front to back: trough, liner,
-   caps, rails. The fill is nearly flat and a little muted, with a slightly lighter band along its
-   top, and fades out where it ends. The number sits under the bar's
+   caps, rails. The fill reads as glowing liquid behind glass: translucent over the dark trough,
+   with a faint sheen along the top, and fading out where it ends. The number sits under the bar's
    right end, overlapping its bottom rim (compatibility.png). */
 .gauge { position: relative; display: block; padding-bottom: 10px; }
 .gauge .bar {
+  position: relative;
   display: block;
   height: 16px;
   padding: 1px 1px 0;
@@ -622,11 +623,17 @@ body.page-open #view-input { visibility: hidden; }
     linear-gradient(#7d7d7d, #a3a3a3 3px, #9e9e9e calc(100% - 3px), #767676) border-box;
   box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.5);
 }
+.gauge .bar::after { /* the glass's sheen, over the fill */
+  content: '';
+  position: absolute;
+  inset: 1px 1px 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04) 30%, transparent 30%);
+  pointer-events: none;
+}
 .gauge .bar span {
   display: block;
   height: 100%;
-  --fill: color-mix(in srgb, var(--c) 75%, #323232);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--fill) 88%, #fff) 0 25%, var(--fill) 25% 75%, color-mix(in srgb, var(--fill) 90%, #000) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 70%, transparent), color-mix(in srgb, var(--c) 55%, transparent) 45%, color-mix(in srgb, var(--c) 35%, transparent));
   -webkit-mask-image: linear-gradient(to left, transparent, #000 6px);
   mask-image: linear-gradient(to left, transparent, #000 6px);
 }
