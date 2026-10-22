@@ -3,13 +3,12 @@
 import { currentPeriod, spentIn, refreshRate, needsRecovery } from './store.js';
 import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
-import { setHelp, keepFieldsAboveKeyboard } from './ui.js';
+import { $, setHelp, keepFieldsAboveKeyboard } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave } from './pages.js';
 import { backupStatus } from './backup.js';
 import { moveOldSnapshots, recoverFromSnapshot, takeDailySnapshot } from './snapshots.js';
 
-const $ = (id) => document.getElementById(id);
 const navButton = $('nav-btn');
 const menuBackdrop = $('menu-backdrop');
 const isMenuOpen = () => menuBackdrop.classList.contains('open');

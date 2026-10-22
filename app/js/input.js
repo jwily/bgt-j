@@ -3,7 +3,7 @@
 import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
-import { el, keypad, onSwipe, onDoubleTap, toast, nudge, categoryChip } from './ui.js';
+import { $, el, keypad, onSwipe, onDoubleTap, toast, nudge, categoryChip } from './ui.js';
 import { openCategoryGrid } from './sheets.js';
 
 let digits = '';
@@ -59,9 +59,9 @@ export function initInput() {
   // Add sits in the bottom bar, left of Undo and the Menu button, under a right thumb.
   parts.add = el('button', { className: 'add-btn', textContent: 'Add' });
   parts.add.addEventListener('click', add);
-  document.getElementById('undo-btn').before(parts.add);
+  $('undo-btn').before(parts.add);
 
-  document.getElementById('view-input').append(
+  $('view-input').append(
     zone,
     el('div', { className: 'details' },
       el('label', { className: 'window note-window', 'data-label': 'Note' }, parts.note),

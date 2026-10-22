@@ -1,6 +1,6 @@
 // Small DOM helpers shared by every screen.
 
-const $ = (id) => document.getElementById(id);
+export const $ = (id) => document.getElementById(id);
 
 // Build an element: el('li', { className: 'row', 'aria-label': 'x' }, child, 'text', ...)
 // Keys containing "-" become attributes; everything else is set as a property.
@@ -85,7 +85,8 @@ export function onSwipe(node, handler) {
   });
 }
 
-export function onLongPress(node, handler, ms = 450) {
+// Press and hold (used by ⌫ to clear).
+function onLongPress(node, handler, ms = 450) {
   let timer = null;
   let start = null;
   const cancel = () => {
@@ -267,7 +268,6 @@ export function openSheet(content, { dismissable = true, label = '', anchor = nu
   sheet.dataset.label = label;
   sheet.replaceChildren(content);
   sheet.scrollTop = 0;
-  sheet.classList.toggle('anchored', Boolean(anchor));
   sheet.style.top = '';
   sheet.style.bottom = '';
   if (anchor) {
