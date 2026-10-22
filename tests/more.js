@@ -1,4 +1,4 @@
-// Second pass: edge cases and features the main pass doesn't cover (keypad limits, double-tap grid,
+// Second pass: edge cases and features the main pass doesn't cover (keypad limits, long-press grid,
 // backdating, editing, CSV, restore, deleting periods, offline rates, upgrading old data).
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
@@ -66,16 +66,15 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.locator('#view-input .key').filter({ hasText: /^⌫$/ }).hover();
   await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
 
-  // One tap on the strip doesn't open the grid, nor do two taps far apart in time; a double tap
-  // does. Then pick Health.
+  // Taps on the strip don't open the grid; a long press does. Then pick Health.
   const selectedChip = page.locator('.strip .chip.selected');
   await selectedChip.tap();
   await page.waitForTimeout(450);
   await selectedChip.tap();
   await page.waitForTimeout(450);
-  check('slow taps on the strip don\'t open the grid', await page.locator('#sheet-backdrop.open').count(), 0);
-  await selectedChip.tap();
-  await selectedChip.tap();
+  check('taps on the strip don\'t open the grid', await page.locator('#sheet-backdrop.open').count(), 0);
+  await selectedChip.hover();
+  await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
   await page.waitForSelector('#sheet-backdrop.open', { timeout: 5000 }).catch(() => {}); // wait for it, not a fixed time
   await page.waitForTimeout(250); // let it finish fading in before measuring
   check('grid opened', await page.locator('#sheet').getAttribute('data-label'), 'Category');

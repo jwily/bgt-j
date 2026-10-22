@@ -66,8 +66,8 @@ function swallowNextClick(node) {
   setTimeout(() => node.removeEventListener('click', stop, { capture: true }), 400);
 }
 
-// Press and hold (used by ⌫ to clear).
-function onLongPress(node, handler, ms = 450) {
+// Press and hold: ⌫ to clear, the category strip for its grid.
+export function onLongPress(node, handler, ms = 450) {
   let timer = null;
   let start = null;
   const cancel = () => {
@@ -88,21 +88,6 @@ function onLongPress(node, handler, ms = 450) {
   node.addEventListener('pointerup', cancel);
   node.addEventListener('pointercancel', cancel);
   node.addEventListener('contextmenu', (event) => event.preventDefault());
-}
-
-// Two taps close together in time and place. Taps that scroll (a swipe) aren't clicks, so they
-// don't count.
-export function onDoubleTap(node, handler, ms = 350) {
-  let last = null;
-  node.addEventListener('click', (event) => {
-    const tap = { at: event.timeStamp, x: event.clientX, y: event.clientY };
-    if (last && tap.at - last.at < ms && Math.hypot(tap.x - last.x, tap.y - last.y) < 40) {
-      last = null;
-      handler();
-    } else {
-      last = tap;
-    }
-  });
 }
 
 // Presses, app-wide: a press that slides off its button before lifting doesn't count (iOS would

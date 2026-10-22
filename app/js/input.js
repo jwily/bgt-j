@@ -3,7 +3,7 @@
 import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
-import { $, el, keypad, onDoubleTap, toast, nudge, categoryChip } from './ui.js';
+import { $, el, keypad, onLongPress, toast, nudge, categoryChip } from './ui.js';
 import { openCategoryGrid } from './sheets.js';
 
 let digits = '';
@@ -30,10 +30,10 @@ export function initInput() {
   new ResizeObserver(() => centerCurrency(false)).observe(options);
   document.fonts?.ready.then(() => centerCurrency(false));
 
-  // Category: a snapping strip; whichever chip is centered is selected. Double-tap for a grid.
+  // Category: a snapping strip; whichever chip is centered is selected. Long-press for a grid.
   parts.strip = el('div', { className: 'strip' });
   parts.strip.addEventListener('scroll', pickCenteredChip, { passive: true });
-  onDoubleTap(parts.strip, () => openCategoryGrid(state.input.categoryId, selectCategory, parts.strip.parentElement));
+  onLongPress(parts.strip, () => openCategoryGrid(state.input.categoryId, selectCategory, parts.strip.parentElement));
 
   parts.note = el('input', { type: 'text', className: 'note', placeholder: 'Optional', enterKeyHint: 'done', 'aria-label': 'Note' });
   parts.note.addEventListener('keydown', (event) => { if (event.key === 'Enter') parts.note.blur(); });

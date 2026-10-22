@@ -58,8 +58,10 @@ const RATE = '{"date":"2026-10-20","rates":{"MXN":18.5}}';
     await page.locator('.note').fill('Coffee');
     await shot('03-main-mxn-typing');
 
-    await page.locator('.strip .chip.selected').tap();
-    await page.locator('.strip .chip.selected').tap();
+    await page.locator('.strip .chip.selected').hover();
+    await page.mouse.down();
+    await pause(650);
+    await page.mouse.up();
     await pause();
     await shot('04-category-grid');
     await page.locator('#sheet .grid .chip').first().tap();

@@ -30,7 +30,7 @@ Your data is tied to the URL, so pick the site's name before you start using it.
 
 - **Amounts** fill in from the right. In dollars, 5 1 0 5 0 is $510.50. Pesos are whole numbers, so 5 1 0 5 0 is MX$51,050. Hold ⌫ to clear.
 - **Currency**: tap anywhere in the AMOUNT window for the next currency. The chosen one sits centered with the hand beside it, like the category strip.
-- **Category**: swipe the strip; the centered one is selected. Double-tap it to see every category at once. Categories are listed alphabetically and take their colors in that order. On the Categories screen, rename, add or remove categories, then tap **Save**: that applies everything at once (with Undo) and sorts them. Leaving with unsaved changes asks first.
+- **Category**: swipe the strip; the centered one is selected. Long-press it to see every category at once. Categories are listed alphabetically and take their colors in that order. On the Categories screen, rename, add or remove categories, then tap **Save**: that applies everything at once (with Undo) and sorts them. Leaving with unsaved changes asks first.
 - The top of the screen is for reading and the bottom for tapping, for a right thumb. The **HELP** window at the top shows how much is left (tap it for the current period's summary) and messages. The bar at the bottom has **Add**, **Undo** while a message offers it, and **Menu**, which opens upward and is **‹ Back** on other screens.
 - A period's summary has **Edit budget** (current period only) and **Delete period** at the bottom. Deleting also deletes that period's expenses; deleting the current period reopens the previous one.
 
@@ -66,7 +66,7 @@ npm test           # all passes on WebKit (Safari's engine) and Chromium
 `npm test -- webkit` runs one engine; `npm test -- webkit layout` runs one pass. The passes start their own web server for `app/`.
 
 - `main.js`: the core flow, from first launch through entering, editing, summaries, periods, categories and backups
-- `more.js`: edge cases (keypad limits, double-tap grid, backdating, CSV, restore, deleting periods, offline rates, upgrading old data)
+- `more.js`: edge cases (keypad limits, long-press grid, backdating, CSV, restore, deleting periods, offline rates, upgrading old data)
 - `layout.js`: centering, spacing and fit on an iPhone 13 mini, SE (3rd gen) and 13
 - `layout.js` also covers your iPhone 14 Pro.
 - `failures.js`: when things go wrong: storage full or corrupted, the rate server failing, newer or broken backups, opening offline, the app left open overnight, a period spanning New Year, and lots of data
