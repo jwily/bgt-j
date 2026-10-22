@@ -202,9 +202,9 @@ const sample = (overrides = {}) => ({
     await context.close();
   }
 
-  // --- A deploy shows up on the next load, even though the host lets browsers reuse files for 10
-  // minutes unchecked (GitHub Pages sends max-age=600). The service worker must ask the server
-  // each time instead of taking the browser's cached copy. Chromium only, like the offline check.
+  // --- Launches come straight from the saved copy; a deploy is downloaded in the background and
+  // shows up on the launch after, even though the host lets browsers reuse files for 10 minutes
+  // unchecked (GitHub Pages sends max-age=600). Chromium only, like the offline check.
   if (ENGINE === 'chromium') {
     let version = 'old';
     const pages = await serveApp({
@@ -218,9 +218,32 @@ const sample = (overrides = {}) => ({
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.reload(); // now controlled by the service worker
     const deployed = () => page.evaluate(() => fetch('js/money.js').then((r) => r.text()).then((t) => t.match(/deploy: (\w+)/)?.[1]));
+    // Waits until the saved version has the given deploy, and returns the saved versions' names.
+    const savedVersion = (wanted) => page.evaluate(async (want) => {
+      for (let i = 0; i < 60; i++) {
+        const names = (await caches.keys()).filter((n) => n.startsWith('bgt-j-')).sort();
+        const newest = names.length && await caches.open(names.at(-1));
+        const file = newest && await newest.match('js/money.js');
+        if (file && (await file.text()).includes(`deploy: ${want}`) && await newest.match('__complete__')) return names;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return null;
+    }, wanted);
     check('deploy: the first version loads', await deployed(), 'old');
+    const firstSaved = await savedVersion('old');
     version = 'new';
-    check('deploy: a new version shows up right away, not after 10 minutes', await deployed(), 'new');
+    await page.reload(); // a launch: served at once from the saved copy; the new version downloads for next time
+    check('deploy: the launch right after a deploy still runs the saved version', await deployed(), 'old');
+    check('deploy: the new version is saved in the background, next to the one in use', (await savedVersion('new'))?.length, 2);
+    await page.reload(); // the next launch
+    check('deploy: and runs on the launch after', await deployed(), 'new');
+    const before = await savedVersion('new');
+    await page.reload();
+    await page.waitForTimeout(800);
+    check('deploy: a launch with nothing new saves nothing', JSON.stringify(await savedVersion('new')), JSON.stringify(before));
+    version = 'newer';
+    await page.reload(); // another deploy: the version before last goes
+    check('deploy: only the newest two versions are kept', JSON.stringify((await savedVersion('newer'))?.includes(firstSaved?.[0])), 'false');
     await context.close();
     pages.close();
   }
