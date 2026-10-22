@@ -132,13 +132,20 @@ function load() {
     }
   }
   loaded ??= freshState();
-  keepInputCategoryActive(loaded);
-  assignColors(loaded);
+  tidy(loaded);
   return loaded;
 }
 
 // The main screen's choices must stay valid: an active category (one may have just been archived
 // or deleted, or come from a backup) and a currency the app still offers.
+// Run on every load and save: category names without stray spaces at either end, a valid chosen
+// category and currency on the main screen, and colors in alphabetical order.
+function tidy(data) {
+  for (const category of data.categories) category.name = category.name.trim();
+  keepInputCategoryActive(data);
+  assignColors(data);
+}
+
 function keepInputCategoryActive(data) {
   const active = data.categories.filter((c) => !c.archived);
   if (!active.some((c) => c.id === data.input.categoryId)) data.input.categoryId = [...active].sort(byName)[0]?.id;
@@ -173,8 +180,7 @@ function write() {
 // A failed save fires "budget:save-failed" (app.js warns); the screen still redraws so it shows
 // what you did.
 export function save() {
-  keepInputCategoryActive(state);
-  assignColors(state);
+  tidy(state);
   if (!write()) window.dispatchEvent(new Event('budget:save-failed'));
   window.dispatchEvent(new Event('budget:change'));
 }
@@ -269,8 +275,8 @@ export function saveCategories(draft) {
   const before = state.categories.map((c) => ({ ...c }));
   const kept = draft.map((d) => {
     const existing = d.id && getCategory(d.id);
-    const name = d.name.trim();
-    return existing ? { ...existing, name, archived: d.archived } : { id: newId(), name, color: null, archived: d.archived };
+    const { name, archived } = d; // save() trims the names
+    return existing ? { ...existing, name, archived } : { id: newId(), name, color: null, archived };
   });
   const keptIds = new Set(kept.map((c) => c.id));
   const archivedNow = state.categories.filter((c) => !keptIds.has(c.id) && categoryIsUsed(c.id)).map((c) => ({ ...c, archived: true }));

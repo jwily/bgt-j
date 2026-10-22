@@ -319,6 +319,11 @@ function renderCategories() {
       category.name = name.value;
       saveButton.disabled = !categoryDraftChanged();
     });
+    // Spaces at either end go when you finish typing the name (and are never saved).
+    name.addEventListener('change', () => {
+      name.value = name.value.trim();
+      category.name = name.value;
+    });
 
     const remove = el('button', { className: 'mini', textContent: '✕', 'aria-label': `Remove ${category.name}` });
     remove.addEventListener('click', () => {
