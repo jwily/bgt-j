@@ -3,7 +3,7 @@
 import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
-import { $, el, keypad, onLongPress, toast, nudge, categoryChip } from './ui.js';
+import { $, el, keypad, onLongPress, onTap, toast, nudge, categoryChip } from './ui.js';
 import { openCategoryGrid } from './sheets.js';
 
 let digits = '';
@@ -65,7 +65,7 @@ export function initInput() {
   }, () => CURRENCIES[state.input.currency].maxDigits);
   // Add sits in the bottom bar, left of Undo and the Menu button, under a right thumb.
   parts.add = el('button', { className: 'add-btn', textContent: 'Add' });
-  parts.add.addEventListener('click', add);
+  onTap(parts.add, add); // acts the moment the finger lifts, like the keys
   $('undo-btn').before(parts.add);
 
   $('view-input').append(
