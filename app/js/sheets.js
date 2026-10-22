@@ -51,7 +51,7 @@ export function openExpenseSheet(expense) {
     field('Date', date),
     field('Note', note),
     el('div', { className: 'actions' }, deleteButton, saveButton),
-  ), { label: 'Expense' });
+  ), { label: 'Expense', fromLeft: true });
 }
 
 // anchor: the element the grid opens level with (the category strip).
