@@ -32,7 +32,9 @@
      right edges (not top to bottom), and the edge is two lines deep with square corners. */
   --window-fill: linear-gradient(90deg, #3d3d3d 0%, #474747 10%, #525252 22%, #5f5f5f 34%, #646464 44%, #646464 78%, #5d5d5d 87%, #535353 100%);
   --bevel: inset 2px 2px 0 #747474, inset -2px -2px 0 #323232;
-  --ink: #141414;          /* text shadow */
+  /* Text shadow on the grey windows, measured from compatibility.png: soft, down and to the right,
+     darkening the window by about a quarter (fill 61 -> ~47 two pixels down-right). */
+  --text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.38);
   /* Spacing: one gap between any two windows or buttons, either direction; keypad keys sit a
      little tighter, as one group. */
   --gap: 8px;
@@ -63,7 +65,7 @@ body {
   font-family: var(--font);
   font-weight: 600;
   letter-spacing: 0.02em;
-  text-shadow: 2px 2px 0 var(--ink);
+  text-shadow: var(--text-shadow);
 }
 
 /* Sideways: the app is made for holding the phone upright, and iOS doesn't let a home-screen app
@@ -374,7 +376,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   padding: 4px 0;
   border: none;
   background: transparent;
-  text-shadow: 2px 2px 0 var(--ink);
+  text-shadow: var(--text-shadow);
 }
 .note::placeholder { color: var(--off); }
 .date-btn {
