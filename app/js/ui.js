@@ -128,6 +128,60 @@ export function onDoubleTap(node, handler, ms = 350) {
   });
 }
 
+// Presses, app-wide: a press that slides off its button before lifting doesn't count (iOS would
+// otherwise still tap it). In the menu, a press can slide between commands: the hand follows the
+// thumb, and lifting opens the command under it.
+const PRESSABLE = 'button, .date-btn, label.wide-btn';
+let stopClick = null; // drops the click that follows a cancelled press
+
+function dropNextClick() {
+  const stop = (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+  };
+  document.addEventListener('click', stop, { capture: true, once: true });
+  const remove = () => document.removeEventListener('click', stop, { capture: true });
+  setTimeout(remove, 400);
+  return remove;
+}
+
+export function trackPresses() {
+  let press = null; // { target, menu }
+  const commandAt = (event) => document.elementFromPoint(event.clientX, event.clientY)?.closest('.menu-list button') ?? null;
+  const pointAt = (command) => {
+    for (const button of document.querySelectorAll('.menu-list button')) button.classList.toggle('hover', button === command);
+  };
+  document.addEventListener('pointerdown', (event) => {
+    stopClick?.(); // a new press: nothing left over from the last one
+    stopClick = null;
+    const target = event.target.closest?.(PRESSABLE);
+    press = target && !target.disabled ? { target, menu: target.closest('.menu-list') } : null;
+    if (press?.menu) pointAt(target);
+  }, { capture: true });
+  document.addEventListener('pointermove', (event) => {
+    if (press?.menu) pointAt(commandAt(event));
+  }, { capture: true });
+  document.addEventListener('pointerup', (event) => {
+    if (!press) return;
+    const { target, menu } = press;
+    press = null;
+    if (menu) {
+      const command = commandAt(event);
+      pointAt(null);
+      if (command === target) return; // an ordinary tap
+      command?.click(); // first, so the drop below doesn't catch it
+      stopClick = dropNextClick(); // the browser's own click, on the command the press started on
+      return;
+    }
+    const under = document.elementFromPoint(event.clientX, event.clientY);
+    if (!target.contains(under)) stopClick = dropNextClick();
+  }, { capture: true });
+  document.addEventListener('pointercancel', () => {
+    press = null;
+    pointAt(null);
+  }, { capture: true });
+}
+
 // ---------- keypad ----------
 
 // Digits-only keypad. Amounts are built from the digit string, so there is no "." key:
