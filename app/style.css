@@ -588,7 +588,6 @@ body.page-open #view-input { visibility: hidden; }
 .chev { color: #cfcfcf; transition: transform 0.12s; }
 .open .chev { transform: rotate(90deg); }
 
-/* A category's color as a small diamond */
 /* A category's diamond: its color (--c), with its accent (--c2) as a small diamond at the core.
    Written out here, not as a variable on :root, where --c and --c2 don't exist yet. */
 .dot, .chip::before { background: linear-gradient(var(--c2), var(--c2)) center / 42% 42% no-repeat, var(--c); }

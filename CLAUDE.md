@@ -79,6 +79,9 @@ Read README.md for what the app does; this file covers how to work on it.
 - Spacing: one gap, `--gap` (8px), between any two windows or buttons in either direction; keypad
   keys use the tighter `--gap-keys` (6px). Use the variables, not new numbers.
 - Small uppercase label tabs on a window's top-left edge (HELP, CATEGORY...).
+- Gauges (the summary's category bars) follow the Status menu's (`FFVIII_Status_Menu_5.webp`):
+  silver capsule, dark trough, fill fading out at its end; the share out of 100 sits under the
+  bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
