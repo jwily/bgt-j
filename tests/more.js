@@ -339,6 +339,17 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('upright again: the app is back', await page.evaluate(() => [getComputedStyle(document.querySelector('.turn-upright')).display, getComputedStyle(document.getElementById('view-input')).visibility].join(' ')), 'none visible');
   check('upright again: same category chosen', await page.locator('.strip .chip.selected').textContent(), chosen);
 
+  // Launch screens: every one exists and is exactly the size its media query says (iOS ignores one
+  // that doesn't match the screen exactly, and shows its own launch screen instead).
+  const launch = await page.evaluate(() => Promise.all([...document.querySelectorAll('link[rel=apple-touch-startup-image]')].map((link) => new Promise((resolve) => {
+    const [, w, h, dpr] = link.media.match(/device-width: (\d+)px\) and \(device-height: (\d+)px\) and \(-webkit-device-pixel-ratio: (\d+)/).map(Number);
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth === w * dpr && img.naturalHeight === h * dpr);
+    img.onerror = () => resolve(false);
+    img.src = link.href;
+  }))));
+  check(`launch screens: ${launch.length}, all present at the right size`, launch.length >= 10 && launch.every(Boolean), true);
+
   // HELP is one line: on every screen, text scrolls sideways exactly when it doesn't fit (measured
   // after the title window appears beside it), and at rest its first letter is clear of the fade.
   const helpState = () => page.evaluate(() => {
