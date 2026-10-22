@@ -1,6 +1,7 @@
-/* Styled after the Final Fantasy VIII menu: grey brushed-metal windows with a thin bevel on a
-   black screen, small label tabs on window edges, white text with a hard shadow, yellow for the
-   selected thing, grey for unavailable or unchosen options, and a white pointing-hand cursor. */
+/* Styled after the Final Fantasy VIII menu, measured from screenshots: grey windows (shaded left to
+   right, no texture) with a thin bevel on a black screen, small label tabs on window edges, white
+   text with a soft shadow, yellow for the selected thing, grey for unavailable or unchosen options,
+   and FF8's white pointing-hand cursor. */
 
 @font-face {
   font-family: 'Nunito';

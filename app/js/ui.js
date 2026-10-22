@@ -56,16 +56,6 @@ export function nudge(node) {
 
 // ---------- gestures ----------
 
-// Stop the click the browser sends right after a gesture we already handled.
-function swallowNextClick(node) {
-  const stop = (event) => {
-    event.stopPropagation();
-    event.preventDefault();
-  };
-  node.addEventListener('click', stop, { capture: true, once: true });
-  setTimeout(() => node.removeEventListener('click', stop, { capture: true }), 400);
-}
-
 // Press and hold: ⌫ to clear, the category strip for its grid.
 export function onLongPress(node, handler, ms = 450) {
   let timer = null;
@@ -78,7 +68,7 @@ export function onLongPress(node, handler, ms = 450) {
     start = { x: event.clientX, y: event.clientY };
     timer = setTimeout(() => {
       timer = null;
-      swallowNextClick(node);
+      dropClickOn(node); // the click that follows the hold isn't also a tap
       handler();
     }, ms);
   });
@@ -96,8 +86,8 @@ export function onLongPress(node, handler, ms = 450) {
 // taps (the next finger landing before the last lifts, as in fast typing) don't cancel each other.
 const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
 
-// Ignores the click the browser may send to `button` right after a press we cancelled; only that
-// button's, so another finger's tap is never caught.
+// Ignores the click the browser may send to `button` right after a press we cancelled or a gesture
+// we already handled; only that button's, so another finger's tap is never caught.
 function dropClickOn(button) {
   const stop = (event) => {
     if (!button.contains(event.target)) return;
