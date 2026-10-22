@@ -39,7 +39,10 @@ const panel = (label, ...children) => el('div', { className: 'window panel', 'da
 function fill(screenTitle, help, ...nodes) {
   title = screenTitle;
   setHelp(help);
-  body.replaceChildren(...nodes.filter((node) => node != null && node !== false));
+  const windows = nodes.filter((node) => node != null && node !== false);
+  if (unfoldNext) windows.forEach((node) => node.classList.add('unfolding'));
+  unfoldNext = false;
+  body.replaceChildren(...windows);
 }
 
 export function initPages(options) {
@@ -80,10 +83,12 @@ function closePages() {
   onNavigate();
 }
 
-// Windows unfold when you arrive at a screen, not on every redraw.
+// Windows unfold when you arrive at a screen, not on every redraw: only the windows the screen
+// arrives with get the animation. (Marking the whole screen for a moment instead replayed it when
+// something redrew the screen just after, like the exchange rate arriving on first launch.)
+let unfoldNext = false;
 function unfold() {
-  body.classList.add('unfold');
-  setTimeout(() => body.classList.remove('unfold'), 250);
+  unfoldNext = true;
 }
 
 export function renderPage() {

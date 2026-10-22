@@ -32,7 +32,8 @@ exports.openMenu = async (page, item) => {
   await page.waitForSelector('#menu-backdrop.open');
   await page.locator('#menu button', { hasText: item }).tap();
   await page.waitForFunction((title) => document.getElementById('title').textContent === title
-    && !document.getElementById('page').hidden && !document.getElementById('page-body').classList.contains('unfold'), item);
+    && !document.getElementById('page').hidden
+    && !document.getAnimations().some((a) => a.animationName === 'unfold' && a.playState === 'running'), item);
 };
 exports.openSummary = (page) => exports.openMenu(page, 'Current Period');
 

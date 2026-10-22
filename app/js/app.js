@@ -91,8 +91,8 @@ window.addEventListener('budget:save-failed', () => {
   alert("Couldn't save: this phone's storage for the app is full. Export a backup now (Menu → Backup).");
 });
 
-await moveOldSnapshots(); // from older versions, which kept them in localStorage
 if (needsRecovery) {
+  await moveOldSnapshots(); // recovery may need snapshots an older version kept in localStorage
   const recoveredFrom = await recoverFromSnapshot();
   if (recoveredFrom) alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
 }
@@ -115,6 +115,10 @@ if (!currentPeriod()) showPage('budget', { mode: 'first' });
 // loaded so text doesn't swap fonts in front of you; waiting a second at most.
 await Promise.race([document.fonts.load('600 1em Nunito'), new Promise((resolve) => setTimeout(resolve, 1000))]).catch(() => {});
 document.body.classList.remove('starting');
+
+// Housekeeping that needn't hold up starting: snapshots from older versions, which kept them in
+// localStorage, move to IndexedDB.
+moveOldSnapshots();
 
 // Ask the browser not to clear this app's data when the phone is low on space.
 // The browser decides silently; the Backup screen shows the answer.

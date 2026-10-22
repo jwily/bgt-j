@@ -380,6 +380,21 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   }
   check('some HELP lines scroll and some sit still (the check above covers both)', results.some((r) => r.moving) && results.some((r) => !r.moving), true);
 
+  // A screen's windows unfold once when it opens: a redraw just after (like the exchange rate
+  // arriving on first launch) doesn't unfold them again.
+  await page.locator('#nav-btn').tap();
+  await page.waitForSelector('#menu-backdrop.open');
+  await page.locator('#menu button', { hasText: 'Past Periods' }).tap();
+  const replayed = await page.evaluate(() => new Promise((resolve) => {
+    setTimeout(() => {
+      window.dispatchEvent(new Event('budget:change')); // redraw 50ms in
+      resolve(document.getAnimations().filter((a) => a.animationName === 'unfold' && a.effect.target.isConnected && a.effect.target.closest('#page-body')).length);
+    }, 50);
+  }));
+  check('a redraw just after a screen opens doesn\'t replay its unfold', replayed, 0);
+  await page.locator('#nav-btn').tap();
+  await page.waitForTimeout(300);
+
   // Typing on New Period updates the amount without rebuilding the screen: the Start button (and
   // its bobbing hand) and the scrolling HELP text carry on rather than restarting.
   await openMenuItem('New Period');

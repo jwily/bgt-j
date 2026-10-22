@@ -76,12 +76,8 @@ body {
   .turn-upright .window { padding: 18px 22px 12px; font-size: 1.1rem; }
 }
 
-/* Starting up: nothing shows until app.js has built every screen (and the font has loaded), then it
-   all fades in at once, instead of the bars appearing before everything else. If something stopped
-   the app from starting, it shows anyway after 2.5s rather than staying black. */
-body { transition: opacity 0.15s ease-out; }
-body.starting { opacity: 0; animation: show-anyway 0s 2.5s forwards; }
-@keyframes show-anyway { to { opacity: 1; } }
+/* Starting up: the page stays hidden until app.js has built every screen. Those rules are inline in
+   index.html, so they apply before this stylesheet has loaded. */
 
 button {
   font: inherit;
@@ -528,7 +524,7 @@ body.page-open #view-input { visibility: hidden; }
 /* minmax(0, 1fr): never wider than the screen, so long one-line text (notes) ends in "…" instead. */
 /* A screen shorter than the phone sits at the bottom, near the thumb, rather than at the top. */
 .page-body { display: grid; grid-template-columns: minmax(0, 1fr); align-content: end; gap: var(--gap); min-height: 100%; max-width: 560px; margin: 0 auto; padding: 0 10px; }
-.page-body.unfold > * { animation: unfold var(--unfold); }
+.page-body > .unfolding { animation: unfold var(--unfold); }
 .panel { padding: 18px 14px 12px; }
 .empty-note { margin: 4px 0; color: var(--off); font-size: 0.85rem; text-align: center; }
 .link { margin-left: 10px; color: var(--yellow); font-size: 0.85rem; font-weight: 800; }
