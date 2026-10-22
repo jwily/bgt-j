@@ -257,7 +257,15 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   padding: var(--hud-h) 10px var(--dock-h);
 }
 
+/* The amount area: text floating on the black background, no window, under a plain heading (like
+   the groups on FF8's GF screen, "Compatibility", "Learning": same white text as everything else,
+   at the group's top left). */
+.floating-heading { align-self: flex-start; font-size: 1.05rem; }
+.currency-zone > * { flex-shrink: 0; } /* never squeeze a part to nothing */
+/* Short screens (an SE, a mini) haven't room for the heading too; the currency row heads it there. */
+@media (max-height: 760px) { .floating-heading { display: none; } }
 .currency-zone {
+  position: relative;
   flex: 1;
   min-height: 118px;
   display: flex;
@@ -266,8 +274,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   justify-content: center;
   gap: 6px;
   padding: 16px 10px 10px;
-  container-type: inline-size; /* lets the amount size itself to this window's width */
-  cursor: pointer; /* the whole window is the currency switch */
+  container-type: inline-size; /* lets the amount size itself to this area's width */
+  cursor: pointer; /* the whole area is the currency switch */
 }
 /* The currencies in a row, like the category strip: the chosen one centered (input.js,
    centerCurrency), the row gliding over when it changes, fading out at the window's edges. */
