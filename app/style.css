@@ -216,7 +216,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 #help.status::before { display: none; }
 .help.status { padding: 8px 12px; }
 .status-row { display: flex; align-items: baseline; gap: 24px; font-weight: 800; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.status-row small { margin-right: 10px; font-size: 0.8em; }
+.status-row small { margin-right: 10px; font-size: inherit; } /* as tall as the digits, as in FF8 */
+.status-row .level { display: inline-block; min-width: 3ch; text-align: right; } /* right-aligned in room for 100, as in FF8 */
 .status-row .hp { position: relative; padding-bottom: 5px; }
 .status-row .hp.low b { color: var(--yellow); }
 .status-row .hp.over b { color: var(--bad); }
