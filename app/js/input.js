@@ -1,4 +1,4 @@
-// The main screen: type an amount, swipe to pick currency and category, tap Add.
+// The main screen: type an amount, tap it for the currency, swipe the strip for the category, tap Add.
 
 import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
