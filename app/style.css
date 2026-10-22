@@ -2,10 +2,36 @@
    black screen, small label tabs on window edges, white text with a hard shadow, yellow for the
    selected thing, grey for unavailable or unchosen options, and a white pointing-hand cursor. */
 
+/* Barlow Semi Condensed: tall and narrow, the closest free match for FF8 Remastered's menu font that
+   still has the bold weights the app uses (SIL Open Font License, fonts/OFL.txt). */
 @font-face {
-  font-family: 'Nunito';
-  src: url('fonts/nunito-latin.woff2') format('woff2');
-  font-weight: 400 800;
+  font-family: 'Barlow Semi Condensed';
+  src: url('fonts/barlow-semi-condensed-400-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('fonts/barlow-semi-condensed-500-latin.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('fonts/barlow-semi-condensed-600-latin.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('fonts/barlow-semi-condensed-700-latin.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('fonts/barlow-semi-condensed-800-latin.woff2') format('woff2');
+  font-weight: 800;
   font-display: swap;
 }
 
@@ -17,7 +43,7 @@
   --fade-in: fade-in 0.18s ease-out;
   --swish-in: swish-in-right 0.22s cubic-bezier(0.1, 0.8, 0.25, 1);
   color-scheme: dark;
-  --font: 'Nunito', 'Avenir Next', system-ui, sans-serif;
+  --font: 'Barlow Semi Condensed', 'Avenir Next Condensed', system-ui, sans-serif;
   --text: #ededed;
   --off: #8f8f8f;          /* unchosen / unavailable, like FF8's greyed options */
   --yellow: #f2e34c;       /* selected / highlighted, like FF8's yellow names */

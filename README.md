@@ -86,5 +86,5 @@ Tools: `npm run palette` checks the category colors are distinct. `npm run icon`
 - `js/backup.js`: backup export/restore, CSV export, "last backed up" status
 - `js/ui.js`: shared helpers (elements, keypad, gestures, the HELP window, sheets)
 - `style.css`: the FF8 look. The hand cursor is cut out of a capture of FF8's menus (`npm run hand`); everything else is drawn with CSS.
-- `fonts/`: Nunito (SIL Open Font License, see `fonts/OFL.txt`), bundled so it works offline
+- `fonts/`: Barlow Semi Condensed (SIL Open Font License, see `fonts/OFL.txt`), bundled so it works offline
 - `sw.js`, `manifest.json`, `icons/`: offline support and the home-screen icon
