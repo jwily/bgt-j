@@ -34,7 +34,7 @@ const ok = (label, actual, expected) => { if (!check(label, actual, expected)) f
   await page.locator('#page .primary').tap();
   await page.waitForSelector('#page', { state: 'hidden' });
   await messageGone();
-  ok('main screen shows the budget left', await help(), '$1,500.00 left this period');
+  ok('main screen shows the budget left', await page.locator('#help').getAttribute('aria-label'), 'Level 1, $1,500.00 left this period');
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('budget-tracker')).rates.date, null, { timeout: 15000 });
   const rate = (await stored()).rates.perUsd.MXN;
   ok('real MXN rate downloaded', rate > 5 && rate < 50, true);

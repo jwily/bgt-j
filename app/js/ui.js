@@ -217,16 +217,35 @@ export function keepFieldsAboveKeyboard() {
 
 // ---------- help window ----------
 // The HELP window at the top shows the current screen's help line. toast() borrows it for a few
-// seconds to show a message, then the help line comes back.
+// seconds to show a message, then the help line comes back. On the main screen the help line is a
+// status row instead (see statusRow).
 
-let helpLine = { text: '', tone: '', onTap: null };
+let helpLine = { text: '', tone: '', onTap: null, status: null };
 let toastTimer = null;
 
 function showHelpLine() {
   const node = $('help');
-  node.className = `window help${helpLine.tone ? ` ${helpLine.tone}` : ''}${helpLine.onTap ? ' tappable' : ''}`;
-  node.onclick = helpLine.onTap;
-  showHelpText(helpLine.text);
+  const { text, tone, onTap, status } = helpLine;
+  node.className = `window help${tone ? ` ${tone}` : ''}${onTap ? ' tappable' : ''}${status ? ' status' : ''}`;
+  node.onclick = onTap;
+  if (status) {
+    node.setAttribute('aria-label', text);
+    node.replaceChildren(statusRow(status));
+  } else {
+    node.removeAttribute('aria-label');
+    showHelpText(text);
+  }
+}
+
+// After FF8's party status rows ("Lv 45  HP 1801", a thin red bar under the HP filled to the share
+// left), without a label: level, hp (text), share (0–1, of the bar), hpTone ('', 'low' or 'over').
+function statusRow({ level, hp, share, hpTone }) {
+  const fill = el('span');
+  fill.style.width = `${Math.max(0, Math.min(1, share)) * 100}%`;
+  return el('span', { className: 'status-row', 'aria-hidden': 'true' },
+    el('span', { className: 'stat' }, el('small', { textContent: 'Lv' }), el('b', { textContent: String(level) })),
+    el('span', { className: `stat hp${hpTone ? ` ${hpTone}` : ''}` }, el('small', { textContent: 'HP' }), el('b', { textContent: hp }),
+      el('span', { className: 'hp-bar' }, fill)));
 }
 
 // The HELP window shows one line. Text too long for it rests at the start, glides left until its
@@ -270,12 +289,14 @@ new ResizeObserver(([entry]) => {
 }).observe($('help'));
 document.fonts?.ready.then(scrollHelpText);
 
-// tone: '' or 'bad'. onTap: optional action when the help window is tapped.
-export function setHelp(text, { tone = '', onTap = null } = {}) {
+// tone: '' or 'bad'. onTap: optional action when the help window is tapped. status: show this
+// status row (see statusRow) instead, with text as what it says aloud.
+export function setHelp(text, { tone = '', onTap = null, status = null } = {}) {
   // Screens set their help line on every redraw; only redraw HELP when it changed, so a scrolling
   // line doesn't restart.
-  const unchanged = text === helpLine.text && tone === helpLine.tone && onTap === helpLine.onTap;
-  helpLine = { text, tone, onTap };
+  const unchanged = text === helpLine.text && tone === helpLine.tone && onTap === helpLine.onTap
+    && JSON.stringify(status) === JSON.stringify(helpLine.status);
+  helpLine = { text, tone, onTap, status };
   if (!toastTimer && !unchanged) showHelpLine();
 }
 
@@ -298,6 +319,7 @@ export function toast(message, undo) {
   } : null;
   node.className = 'window help message';
   node.onclick = null;
+  node.removeAttribute('aria-label');
   const pass = showHelpText(message);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(end, Math.max(4000, pass + 500)); // long enough to read a long message once

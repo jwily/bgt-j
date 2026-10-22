@@ -343,6 +343,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.locator('#view-input .key').filter({ hasText: /^4$/ }).first().tap();
   await page.locator('.add-btn').tap();
   check('the HELP window doesn\'t animate when a message (like Added) shows', await animationOf('#help'), 'none 0s ease');
+  check('a message brings back the HELP label', await page.evaluate(() => getComputedStyle(document.getElementById('help'), '::before').content), '"Help"');
   await page.locator('#undo-btn').tap(); // take that expense back
   await page.waitForSelector('#help:not(.message)');
   await press('#view-input .key', '7', [['pointerup', -150]]); // lift well above the key
@@ -412,6 +413,29 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   }))));
   check(`launch screens: ${launch.length}, all present at the right size`, launch.length >= 10 && launch.every(Boolean), true);
 
+  // On the main screen, HELP is a status row instead, after FF8's party windows: no label, the
+  // period's number as Lv, what's left as HP, and a thin bar under it filled to the share left.
+  await page.waitForSelector('#help:not(.message)');
+  const status = await page.evaluate(() => {
+    const help = document.getElementById('help');
+    const data = JSON.parse(localStorage.getItem('budget-tracker'));
+    const period = data.periods.find((p) => !p.end);
+    const spent = data.expenses.filter((e) => e.periodId === period.id).reduce((sum, e) => sum + e.usdCents, 0);
+    const bar = help.querySelector('.hp-bar');
+    return {
+      label: getComputedStyle(help, '::before').display,
+      level: help.querySelector('.stat b').textContent,
+      periods: data.periods.length,
+      said: help.getAttribute('aria-label'),
+      share: Math.abs(bar.firstChild.getBoundingClientRect().width / bar.getBoundingClientRect().width - (period.budgetCents - spent) / period.budgetCents) < 0.01,
+      oneLine: help.querySelector('.status-row').getBoundingClientRect().height < 40,
+    };
+  });
+  check('main screen: a status row, no HELP label', status.label, 'none');
+  check('status row: Lv is the period\'s number', status.level, String(status.periods));
+  check('status row: says the level and what\'s left', /^Level \d+, \$[\d,.]+ (left|over) this period$/.test(status.said), true);
+  check('status row: the bar shows the share left, on one line', status.share && status.oneLine, true);
+
   // HELP is one line: on every screen, text scrolls sideways exactly when it doesn't fit (measured
   // after the title window appears beside it), and at rest its first letter is clear of the fade.
   const helpState = () => page.evaluate(() => {
@@ -426,8 +450,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   });
   await page.waitForSelector('#help:not(.message)');
   const results = [];
-  for (const screen of ['main', 'Current Period', 'Past Periods', 'Categories', 'New Period', 'Backup']) {
-    if (screen !== 'main') await openMenuItem(screen);
+  for (const screen of ['Current Period', 'Past Periods', 'Categories', 'New Period', 'Backup']) {
+    await openMenuItem(screen);
     // HELP re-measures itself once the title window appears beside it; give that time on a slow run.
     await page.waitForFunction(() => {
       const text = document.querySelector('#help .text'), clip = text.parentElement, style = getComputedStyle(clip);
@@ -438,7 +462,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     results.push(h);
     const fine = h.moving === h.overflows && h.oneLine && h.clearOfFade;
     check(`HELP on ${screen}: scrolls exactly when it doesn't fit, one line, first letter clear${fine ? '' : ` ${JSON.stringify(h)}`}`, fine, true);
-    if (screen !== 'main') { await page.locator('#nav-btn').tap(); await page.waitForTimeout(300); }
+    await page.locator('#nav-btn').tap();
+    await page.waitForTimeout(300);
   }
   check('some HELP lines scroll and some sit still (the check above covers both)', results.some((r) => r.moving) && results.some((r) => !r.moving), true);
 

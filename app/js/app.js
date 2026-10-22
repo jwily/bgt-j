@@ -1,6 +1,6 @@
 // Entry point: wires the top bar, menu, screens and data together.
 
-import { currentPeriod, spentIn, refreshRate, needsRecovery } from './store.js';
+import { currentPeriod, periodNumber, spentIn, refreshRate, needsRecovery } from './store.js';
 import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
 import { $, setHelp, keepFieldsAboveKeyboard, trackPresses } from './ui.js';
@@ -74,7 +74,18 @@ function renderChrome() {
   if (!pageOpen && inSafariTab) {
     setHelp('Install: Share → Add to Home Screen', { onTap: explainInstall });
   } else if (!pageOpen) {
-    setHelp(`${formatUsd(Math.abs(left))} ${over ? 'over' : 'left'} this period`, { tone: over ? 'bad' : '', onTap: openCurrentSummary });
+    // The status row: the period's number as the level, what's left as HP (yellow under a quarter
+    // left, like FF8's critical HP; red when over).
+    const share = left / period.budgetCents;
+    setHelp(`Level ${periodNumber(period)}, ${formatUsd(Math.abs(left))} ${over ? 'over' : 'left'} this period`, {
+      onTap: openCurrentSummary,
+      status: {
+        level: periodNumber(period),
+        hp: `${over ? '−' : ''}${formatUsd(Math.abs(left))}`,
+        share,
+        hpTone: over ? 'over' : share < 0.25 ? 'low' : '',
+      },
+    });
   }
 }
 

@@ -122,6 +122,10 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   check('over budget shown', await page.locator('.stat.diff .value').textContent(), '−$325.50');
   await page.locator('#nav-btn').tap();
   check('main shows over', await leftText(page), '$325.50 over');
+  await page.waitForSelector('#help:not(.message)', { timeout: 8000 });
+  check('status row: HP in red and the bar empty when over', await page.evaluate(() => [
+    document.querySelector('#help .hp').className, document.querySelector('#help .hp-bar span').style.width, document.querySelector('#help .hp b').textContent].join(' | ')),
+    'stat hp over | 0% | −$325.50');
 
   // New Period
   await page.locator('#nav-btn').tap();

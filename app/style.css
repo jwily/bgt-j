@@ -210,6 +210,18 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 }
 .help.tappable { cursor: pointer; }
 .help.bad span { color: var(--bad); }
+/* The main screen's status row (ui.js, statusRow), after FF8's party windows: no label, so the
+   row sits centered in the window. The HP's bar is a thin line under it, measured from
+   FFVIII_Menu: muted red brightening at its tip, on a dark track. */
+#help.status::before { display: none; }
+.help.status { padding: 8px 12px; }
+.status-row { display: flex; align-items: baseline; gap: 24px; font-weight: 800; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.status-row small { margin-right: 10px; font-size: 0.8em; }
+.status-row .hp { position: relative; padding-bottom: 5px; }
+.status-row .hp.low b { color: var(--yellow); }
+.status-row .hp.over b { color: var(--bad); }
+.hp-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #2e2e2e; }
+.hp-bar span { display: block; height: 100%; background: linear-gradient(to right, #8a3a42, #b04050); }
 
 /* The title window: the open screen's name, top right, as in FF8's sub-screens. */
 .title {
