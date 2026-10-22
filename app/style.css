@@ -518,12 +518,16 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
 
 .field input, .field select, .cat-row input {
   width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   background: #3a3a3a;
   border: 2px solid;
   border-color: var(--edge-dark) var(--edge-light) var(--edge-light) var(--edge-dark);
   border-radius: 0;
 }
+/* iOS gives a date field its own minimum width and look, which pushed it out past the sheet. */
+.field input[type=date] { -webkit-appearance: none; appearance: none; height: 46px; text-align: left; } /* as tall as the other fields */
+.field input[type=date]::-webkit-date-and-time-value { text-align: left; }
 
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(var(--rows, 1), auto); grid-auto-flow: column; gap: 6px 8px; margin-top: 4px; }
 .grid .chip { padding-left: 57px; }
