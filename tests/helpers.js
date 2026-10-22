@@ -25,7 +25,7 @@ exports.grabFile = async (page, engine, action) => {
 // FF8 layout helpers: "left" lives in the menu's stats box; the screen name is in the title window.
 exports.leftText = async (page) => `${await page.locator('#stat-left').textContent()} ${(await page.locator('#stat-left-label').textContent()).toLowerCase()}`;
 exports.titleText = (page) => page.locator('#title').textContent();
-// Opens a menu command and waits until its screen is showing and has finished unfolding (every
+// Opens a menu command and waits until its screen is showing and has finished fading in (every
 // screen's title is its menu command's name).
 exports.openMenu = async (page, item) => {
   await page.locator('#nav-btn').tap();
@@ -33,7 +33,7 @@ exports.openMenu = async (page, item) => {
   await page.locator('#menu button', { hasText: item }).tap();
   await page.waitForFunction((title) => document.getElementById('title').textContent === title
     && !document.getElementById('page').hidden
-    && !document.getAnimations().some((a) => a.animationName === 'unfold' && a.playState === 'running'), item);
+    && !document.getAnimations().some((a) => a.animationName === 'fade-in' && a.playState === 'running'), item);
 };
 exports.openSummary = (page) => exports.openMenu(page, 'Current Period');
 

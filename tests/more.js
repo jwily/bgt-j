@@ -77,7 +77,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await selectedChip.tap();
   await selectedChip.tap();
   await page.waitForSelector('#sheet-backdrop.open', { timeout: 5000 }).catch(() => {}); // wait for it, not a fixed time
-  await page.waitForTimeout(200); // let its unfold animation finish before measuring
+  await page.waitForTimeout(350); // let it finish fading in before measuring
   check('grid opened', await page.locator('#sheet').getAttribute('data-label'), 'Category');
   check('grid has no duplicate heading', await page.locator('#sheet h2').count(), 0);
   check('grid opens level with the strip', await page.evaluate(() =>
@@ -89,14 +89,12 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   }), true);
   check('grid alphabetical', (await page.locator('#sheet .grid .chip').allTextContents()).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');
   check('grid marks current', await page.locator('#sheet .grid .chip.selected').textContent(), 'Groceries');
-  // The grid opens like every other window: the same unfold, from its middle
-  const gridOpening = await page.locator('#sheet').evaluate((sheet) => {
-    const style = getComputedStyle(sheet);
-    const [, y] = style.transformOrigin.split(' ').map(parseFloat);
-    return `${style.animationName} ${style.animationDuration} ${Math.round(y / sheet.offsetHeight * 100)}%`;
-  });
-  const unfold = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--unfold').trim());
-  check('grid unfolds like other windows', gridOpening, `unfold ${unfold.split(' ')[0]} 50%`);
+  // How windows arrive, as measured from FF8: sheets (like this grid) fade in, 0.3s, linear.
+  const animationOf = (selector) => page.evaluate((sel) => {
+    const style = getComputedStyle(document.querySelector(sel));
+    return `${style.animationName} ${style.animationDuration} ${style.animationTimingFunction}`;
+  }, selector);
+  check('the grid fades in like FF8\'s screens', await animationOf('#sheet'), 'fade-in 0.3s linear');
   await page.screenshot({ path: `${OUT}/${ENGINE}-x1-grid.png` });
   await page.locator('#sheet .grid .chip', { hasText: 'Health' }).tap();
   await page.waitForTimeout(700);
@@ -304,6 +302,11 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   }, [selector, text, path]);
   await page.waitForSelector('#help:not(.message)');
   const amountBefore = await page.locator('.amount').textContent();
+  await page.locator('#view-input .key').filter({ hasText: /^4$/ }).first().tap();
+  await page.locator('.add-btn').tap();
+  check('the HELP window doesn\'t animate when a message (like Added) shows', await animationOf('#help'), 'none 0s ease');
+  await page.locator('#undo-btn').tap(); // take that expense back
+  await page.waitForSelector('#help:not(.message)');
   await press('#view-input .key', '7', [['pointerup', -150]]); // lift well above the key
   check('a press that slides off a key before lifting doesn\'t type', await page.locator('.amount').textContent(), amountBefore);
   await page.locator('#view-input .key').filter({ hasText: /^7$/ }).first().tap();
@@ -311,6 +314,10 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.locator('#view-input .key').filter({ hasText: /^⌫$/ }).first().tap();
   await page.locator('#nav-btn').tap();
   await page.waitForSelector('#menu-backdrop.open');
+  check('the menu\'s windows swish in from the right', await animationOf('#menu .menu-list') + ' | ' + await animationOf('#menu .menu-stats'),
+    'swish-in-right 0.22s cubic-bezier(0.1, 0.8, 0.25, 1) | swish-in-right 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)');
+  const menuSettled = () => page.waitForFunction(() => !document.getAnimations().some((a) => a.animationName === 'swish-in-right' && a.playState === 'running'));
+  await menuSettled();
   const hovered = await press('.menu-list button', 'Current Period', [['pointermove', 'Past Periods'], ['pointermove', 'Categories'], ['pointerup', 'Categories']]);
   check('menu: the hand follows the thumb between commands', hovered.join(' > '), 'Past Periods > Categories');
   await page.waitForFunction(() => document.getElementById('title').textContent === 'Categories' && !document.getElementById('page').hidden, null, { timeout: 2000 }).catch(() => {});
@@ -319,6 +326,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.waitForTimeout(300);
   await page.locator('#nav-btn').tap();
   await page.waitForSelector('#menu-backdrop.open');
+  await menuSettled();
   await press('.menu-list button', 'Current Period', [['pointermove', -400], ['pointerup', -400]]); // off the menu
   await page.waitForTimeout(300);
   check('menu: lifting off the commands opens nothing', await page.locator('#page').isHidden(), true);
@@ -380,18 +388,21 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   }
   check('some HELP lines scroll and some sit still (the check above covers both)', results.some((r) => r.moving) && results.some((r) => !r.moving), true);
 
-  // A screen's windows unfold once when it opens: a redraw just after (like the exchange rate
-  // arriving on first launch) doesn't unfold them again.
+  // A screen's windows fade in once when it opens: a redraw just after (like the exchange rate
+  // arriving on first launch) doesn't fade them in again.
   await page.locator('#nav-btn').tap();
   await page.waitForSelector('#menu-backdrop.open');
   await page.locator('#menu button', { hasText: 'Past Periods' }).tap();
-  const replayed = await page.evaluate(() => new Promise((resolve) => {
+  const arrival = await page.evaluate(() => new Promise((resolve) => {
+    const style = getComputedStyle(document.querySelector('#page-body > .arriving'));
+    const fading = `${style.animationName} ${style.animationDuration} ${style.animationTimingFunction}`;
     setTimeout(() => {
       window.dispatchEvent(new Event('budget:change')); // redraw 50ms in
-      resolve(document.getAnimations().filter((a) => a.animationName === 'unfold' && a.effect.target.isConnected && a.effect.target.closest('#page-body')).length);
+      resolve({ fading, replayed: document.getAnimations().filter((a) => a.animationName === 'fade-in' && a.effect.target.isConnected && a.effect.target.closest('#page-body')).length });
     }, 50);
   }));
-  check('a redraw just after a screen opens doesn\'t replay its unfold', replayed, 0);
+  check('a screen\'s windows fade in when it opens', arrival.fading, 'fade-in 0.3s linear');
+  check('a redraw just after a screen opens doesn\'t replay its fade-in', arrival.replayed, 0);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
 
