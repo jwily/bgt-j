@@ -146,6 +146,19 @@ const check = (label, ok, detail) => {
     await page.locator('#page .primary').tap();
     await page.waitForTimeout(400);
     check('14 Pro installed: the main screen fits without scrolling', await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1));
+    // Categories: each remove button's ✕ has the same space on both sides (to the name field, to
+    // the window's inner edge).
+    await page.locator('#nav-btn').tap();
+    await page.waitForSelector('#menu-backdrop.open');
+    await page.locator('#menu button', { hasText: 'Categories' }).tap();
+    await page.waitForTimeout(400);
+    const x = await page.evaluate(() => {
+      const row = document.querySelector('.cat-row'), input = row.querySelector('input').getBoundingClientRect();
+      const range = document.createRange(); range.selectNodeContents(row.querySelector('.mini')); const glyph = range.getBoundingClientRect();
+      const win = row.closest('.window'), inner = win.getBoundingClientRect().right - parseFloat(getComputedStyle(win).borderRightWidth) - 2;
+      return { left: Math.round(glyph.left - input.right), right: Math.round(inner - glyph.right) };
+    });
+    check('14 Pro installed: the remove ✕ has equal space on both sides', Math.abs(x.left - x.right) <= 1, x);
     await page.screenshot({ path: require('path').join(__dirname, 'output', ENGINE, 'installed-14pro-main.png') });
     await context.close();
   }

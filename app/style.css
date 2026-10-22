@@ -660,6 +660,9 @@ body.page-open #view-input { visibility: hidden; }
 .cat-row { display: flex; align-items: center; gap: 16px; padding: 5px 0 5px 4px; } /* ~15pt either side of the diamond (its tips stick out ~2px past its box) */
 .cat-row input { flex: 1; min-width: 0; padding: 7px 10px; }
 .cat-row .grow { flex: 1; }
+/* The ✕'s glyph sits mid-button: pull the button 4px in so the field grows and the glyph has equal
+   space on both sides (the row's gap plus its own padding was 4px more than the window edge left). */
+.cat-row .mini { margin-left: -4px; }
 .mini { flex: none; width: 32px; height: 32px; color: #cfcfcf; }
 
 .wide-btn { display: block; width: 100%; padding: 13px; text-align: center; font-weight: 700; cursor: pointer; }
