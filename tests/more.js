@@ -57,6 +57,39 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.waitForTimeout(100);
   check('hold backspace clears', await page.locator('.amount').textContent(), '$0.00');
 
+  // Fast typing: a press that drifts off its key as it lifts (iOS then sends no click for it)
+  // mustn't swallow the next key's tap.
+  await page.evaluate(() => {
+    const key = [...document.querySelectorAll('#view-input .key')].find((k) => k.textContent === '2');
+    const box = key.getBoundingClientRect();
+    const send = (type, y) => key.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 9, pointerType: 'touch', isPrimary: true, clientX: box.left + box.width / 2, clientY: y }));
+    send('pointerdown', box.top + box.height / 2);
+    send('pointerup', box.bottom + 40); // lifted just off the key: no click follows
+  });
+  await mainKey('3');
+  check('a quick tap right after a press that drifted off its key still counts', await page.locator('.amount').textContent(), '$0.03');
+  await mainKey('⌫');
+
+  // Overlapping taps (the next finger lands before the last lifts), with the clicks Safari sends
+  // when each lifts: both count.
+  await page.evaluate(() => {
+    const keyFor = (label) => [...document.querySelectorAll('#view-input .key')].find((k) => k.textContent === label);
+    const send = (type, label, id) => {
+      const key = keyFor(label), box = key.getBoundingClientRect();
+      key.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: id, pointerType: 'touch', isPrimary: id === 1, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 }));
+    };
+    send('pointerdown', '4', 1);
+    send('pointerdown', '5', 2);
+    send('pointerup', '4', 1);
+    keyFor('4').click();
+    send('pointerup', '5', 2);
+    keyFor('5').click();
+  });
+  check('overlapping taps both count', await page.locator('.amount').textContent(), '$0.45');
+  await page.locator('#view-input .key').filter({ hasText: /^⌫$/ }).hover();
+  await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
+  await page.waitForTimeout(100);
+
   // MXN capped at 7 digits, switching trims
   await page.locator('.currency-opts').tap();
   for (let i = 0; i < 9; i++) await mainKey('9');
