@@ -23,10 +23,8 @@ export function initInput() {
   const options = el('div', { className: 'currency-opts' }, parts.currencyTrack);
   parts.amount = el('div', { className: 'amount' });
   parts.sub = el('div', { className: 'amount-sub' });
-  // No window around it: the amount floats on the black under a plain heading, like the groups on
-  // FF8's GF screen ("Compatibility", "Learning").
-  const zone = el('div', { className: 'currency-zone', role: 'button', tabIndex: 0, 'aria-label': 'Switch currency' },
-    el('div', { className: 'floating-heading', textContent: 'Amount' }), options, parts.amount, parts.sub);
+  // No window around it: the amount floats on the black, like the groups on FF8's GF screen.
+  const zone = el('div', { className: 'currency-zone', role: 'button', tabIndex: 0, 'aria-label': 'Switch currency' }, options, parts.amount, parts.sub);
   zone.addEventListener('click', cycleCurrency);
   // Re-center when the row's width or the font changes (it measures the choices' widths).
   new ResizeObserver(() => centerCurrency(false)).observe(options);
