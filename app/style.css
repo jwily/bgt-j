@@ -633,7 +633,7 @@ body.page-open #view-input { visibility: hidden; }
 .gauge .bar span {
   display: block;
   height: 100%;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 70%, transparent), color-mix(in srgb, var(--c) 55%, transparent) 45%, color-mix(in srgb, var(--c) 35%, transparent));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 85%, transparent), color-mix(in srgb, var(--c) 72%, transparent) 45%, color-mix(in srgb, var(--c) 55%, transparent));
   -webkit-mask-image: linear-gradient(to left, transparent, #000 6px);
   mask-image: linear-gradient(to left, transparent, #000 6px);
 }
