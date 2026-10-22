@@ -429,12 +429,17 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
       said: help.getAttribute('aria-label'),
       share: Math.abs(bar.firstChild.getBoundingClientRect().width / bar.getBoundingClientRect().width - (period.budgetCents - spent) / period.budgetCents) < 0.01,
       oneLine: help.querySelector('.status-row').getBoundingClientRect().height < 40,
+      centered: (() => {
+        const row = help.querySelector('.status-row').getBoundingClientRect(), box = help.getBoundingClientRect();
+        return Math.abs((row.left + row.right) / 2 - (box.left + box.right) / 2) <= 1;
+      })(),
     };
   });
   check('main screen: a status row, no HELP label', status.label, 'none');
   check('status row: Lv is the period\'s number', status.level, String(status.periods));
   check('status row: says the level and what\'s left', /^Level \d+, \$[\d,.]+ (left|over) this period$/.test(status.said), true);
   check('status row: the bar shows the share left, on one line', status.share && status.oneLine, true);
+  check('status row: centered in the window', status.centered, true);
 
   // HELP is one line: on every screen, text scrolls sideways exactly when it doesn't fit (measured
   // after the title window appears beside it), and at rest its first letter is clear of the fade.
