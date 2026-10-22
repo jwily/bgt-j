@@ -143,7 +143,7 @@ const sample = (overrides = {}) => ({
     await menu(page, 'Backup');
     await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'newer-backup.json'));
     await page.waitForTimeout(300);
-    check('newer backup: says so', await page.locator('#help span').first().textContent(), 'That backup is from a newer version of the app. Reopen the app to update it, then try again.');
+    check('newer backup: says so', await page.locator('#help .text').first().textContent(), 'That backup is from a newer version of the app. Reopen the app to update it, then try again.');
 
     const broken = sample({
       expenses: [
@@ -154,7 +154,7 @@ const sample = (overrides = {}) => ({
     fs.writeFileSync(path.join(OUT, 'broken-backup.json'), JSON.stringify(broken));
     await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'broken-backup.json'));
     await page.waitForTimeout(400);
-    check('broken references: backup restores', await page.locator('#help span').first().textContent(), 'Backup restored');
+    check('broken references: backup restores', await page.locator('#help .text').first().textContent(), 'Backup restored');
     const csv = await grabFile(page, ENGINE, () => page.locator('.wide-btn', { hasText: 'CSV' }).tap());
     check('broken references: CSV still exports both rows', csv.text.split('\n').length, 3);
     await page.locator('#nav-btn').tap();

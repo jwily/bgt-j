@@ -34,7 +34,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   check('USD 5-1-0-5-0', await page.locator('.amount').textContent(), '$510.50');
   await page.locator('.add-btn').tap();
   check('left after $510.50', await leftText(page), '$1,489.50 left');
-  check('toast', await page.locator('#help span').first().textContent(), 'Added $510.50 · Groceries');
+  check('toast', await page.locator('#help .text').first().textContent(), 'Added $510.50 · Groceries');
 
   // Currency switch by tap, then by swipe (mouse drag fires pointer events)
   await page.locator('.currency-opts').tap();
@@ -184,11 +184,11 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   check('unsaved: colors still in GF order down the list', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
   const transportRow = (await categoryRows(page)).indexOf('Transport');
   await page.locator('.cat-row').nth(transportRow).locator('.mini', { hasText: '✕' }).tap();
-  check('Transport archived', await page.locator('#help span').first().textContent(), 'Transport archived');
+  check('Transport archived', await page.locator('#help .text').first().textContent(), 'Transport archived');
   check('colors in GF order after removing one', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
   await saveButton.tap();
   await page.waitForTimeout(300);
-  check('saved message', await page.locator('#help span').first().textContent(), 'Categories saved');
+  check('saved message', await page.locator('#help .text').first().textContent(), 'Categories saved');
   check('Save sorts them right away', (await categoryRows(page)).join(','), 'Bills,Coffee,Dining,Fun,Groceries,Health,Housing,Other,Shopping');
   check('colors in GF order after saving', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
   await page.screenshot({ path: `${OUT}/${ENGINE}-4-categories.png`, fullPage: true });
@@ -208,7 +208,7 @@ const check = (label, actual, expected) => console.log(`${actual === expected ? 
   page.once('dialog', (d) => d.accept());
   await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/backup.json`);
   await page.waitForTimeout(400);
-  check('restore toast', await page.locator('#help span').first().textContent(), 'Backup restored');
+  check('restore toast', await page.locator('#help .text').first().textContent(), 'Backup restored');
   check('restored: back to one period with Transport active', await page.locator('.strip .chip', { hasText: 'Transport' }).count(), 1);
   check('restored left amount', await leftText(page), '$325.50 over');
   await page.locator('#nav-btn').tap();
