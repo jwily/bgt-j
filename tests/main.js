@@ -48,6 +48,10 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   await page.locator('.currency-zone').tap({ position: { x: 16, y: zoneBox.height - 16 } }); // an empty corner
   check('tap an empty corner -> MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
   check('digits kept after switching', await page.locator('.amount').textContent(), 'MX$250');
+  check('the amount floats on black with FF8\'s dark grey shadow', await page.evaluate(() => {
+    const zone = getComputedStyle(document.querySelector('.currency-zone'));
+    return `${zone.backgroundColor} | ${getComputedStyle(document.querySelector('.amount')).textShadow.split(' ').slice(0, 3).join(' ')}`;
+  }), 'rgba(0, 0, 0, 0) | rgb(42, 42, 42)');
 
   // Category: tap the third chip, wait for the snap
   check('strip is alphabetical', (await page.locator('.strip .chip').allTextContents()).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');
