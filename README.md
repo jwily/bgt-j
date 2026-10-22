@@ -71,6 +71,8 @@ npm test           # all passes on WebKit (Safari's engine) and Chromium
 - `layout.js` also covers your iPhone 14 Pro.
 - `failures.js`: when things go wrong: storage full or corrupted, the rate server failing, newer or broken backups, opening offline, the app left open overnight, a period spanning New Year, and lots of data
 
+Before every push, `.githooks/pre-push` runs the whole suite and stops the push if anything fails (switch it on in a fresh clone with `git config core.hooksPath .githooks`).
+
 Tools: `npm run palette` checks the category colors are distinct. `npm run icon` redraws the app icon (the first four category colors as diamonds spiralling into the distance). `npm run hand` cuts the hand cursor out of the reference capture in `~/projects/ff8-references/cursor.png` (its exact pixels, background removed). `npm run screens` screenshots every screen on two iPhone sizes into `tests/output/screens/`.
 
 ## App files

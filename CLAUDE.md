@@ -20,7 +20,10 @@ Read README.md for what the app does; this file covers how to work on it.
   fixed `waitForTimeout` sleeps.
 - After deploying, `npm run smoke` runs an end-to-end check against the live site (fresh storage,
   real rates and service worker).
-- Run `npm test` before every commit. When behavior changes, update or add checks in the same
+- Run `npm test` before every commit. Pushing runs it too: `.githooks/pre-push` (switched on for this
+  repo only with `git config core.hooksPath .githooks`) stops a push if any check fails; pushes
+  that touch nothing in `app/` or `tests/` skip it. Never bypass it with `--no-verify` unless the
+  user says so. When behavior changes, update or add checks in the same
   commit; when you fix a bug, add a check that would have caught it.
 - FF8 reference screenshots are in `~/projects/ff8-references/`, outside the repo on purpose
   (they're the game's artwork). Never copy them into `app/`.
