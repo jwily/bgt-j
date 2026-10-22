@@ -23,6 +23,7 @@
   --font: 'Nunito', 'Avenir Next', system-ui, sans-serif;
   --text: #ededed;
   --off: #8f8f8f;          /* unchosen / unavailable, like FF8's greyed options */
+  --soft: #cfcfcf;         /* secondary text: sub-lines, dates, window labels, the gauges' numbers */
   --yellow: #f2e34c;       /* selected / highlighted, like FF8's yellow names */
   --good: #8fe089;
   --bad: #ff7a68;
@@ -128,7 +129,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   filter: brightness(1.18);
 }
 
-/* The small tab on a window's top-left edge: HELP, AMOUNT, CATEGORY, … */
+/* The small tab on a window's top-left edge: HELP, CATEGORY, BUDGET, … */
 .window[data-label]:not([data-label=''])::before {
   content: attr(data-label);
   position: absolute;
@@ -139,7 +140,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   line-height: 1;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--soft);
   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
   pointer-events: none;
 }
@@ -314,7 +315,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 }
 .amount.empty { color: var(--off); }
 /* Under the amount: "≈ $12.50" and, on its own line, "1 USD = 18.52 MXN" (pesos only). */
-.amount-sub { flex-shrink: 0; height: calc(1.35 * (1rem + 0.8rem)); /* both lines' room, always, so switching currency doesn't shift anything */ color: #cfcfcf; font-size: 0.8rem; line-height: 1.35; text-align: center; font-variant-numeric: tabular-nums; }
+.amount-sub { flex-shrink: 0; height: calc(1.35 * (1rem + 0.8rem)); /* both lines' room, always, so switching currency doesn't shift anything */ color: var(--soft); font-size: 0.8rem; line-height: 1.35; text-align: center; font-variant-numeric: tabular-nums; }
 .amount-sub span { display: block; }
 .amount-sub .converted { color: var(--text); font-size: 1rem; }
 
@@ -599,7 +600,7 @@ body.page-open #view-input { visibility: hidden; }
 .donut .ring { stroke: #2b2b2b; }
 .donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
 .donut-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
-.donut-center span { color: #cfcfcf; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.donut-center span { color: var(--soft); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 
 .stats { display: grid; gap: 8px; }
 .stat { display: flex; justify-content: space-between; align-items: baseline; }
@@ -618,7 +619,7 @@ body.page-open #view-input { visibility: hidden; }
 }
 .open > .cat-head .name { color: var(--yellow); }
 .cat-head .gauge { grid-column: 2 / 4; } /* ends under the amount, so the number lines up with it */
-.chev { color: #cfcfcf; transition: transform 0.12s; }
+.chev { color: var(--soft); transition: transform 0.12s; }
 .open .chev { transform: rotate(90deg); }
 
 /* A category's diamond: its color (--c), with its accent (--c2) as a small diamond at the core.
@@ -680,18 +681,18 @@ body.page-open #view-input { visibility: hidden; }
   font-variant-numeric: tabular-nums;
   /* Light grey in a solid black outline, as on FF8's Compatibility bars; a touch lighter than
      FF8's #bcbcbc, and greyer than the amount just above it, so the two read apart. */
-  color: #cfcfcf;
+  color: var(--soft);
   text-shadow: -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000, -1px 0 0 #000, 1px 0 0 #000,
     -1px 1px 0 #000, 0 1px 0 #000, 1px 1px 0 #000, 0 0 1px #000;
 }
 
 .items { margin: 0 0 8px 22px; }
 .item { display: flex; align-items: baseline; gap: 10px; width: 100%; padding: 7px 0; text-align: left; }
-.item .when { flex: none; width: 52px; color: #cfcfcf; font-size: 0.85rem; }
+.item .when { flex: none; width: 52px; color: var(--soft); font-size: 0.85rem; }
 .item .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item .what.muted { color: var(--off); }
 .item .much { text-align: right; font-variant-numeric: tabular-nums; }
-.item .orig { display: block; color: #cfcfcf; font-size: 0.75rem; }
+.item .orig { display: block; color: var(--soft); font-size: 0.75rem; }
 
 /* Periods */
 .period-row {
@@ -704,7 +705,7 @@ body.page-open #view-input { visibility: hidden; }
   text-align: left;
 }
 .period-row.current strong { color: var(--yellow); }
-.period-row small { display: block; margin-top: 2px; color: #cfcfcf; font-size: 0.85rem; }
+.period-row small { display: block; margin-top: 2px; color: var(--soft); font-size: 0.85rem; }
 .period-row small.good { color: var(--good); }
 .period-row small.bad { color: var(--bad); }
 .period-row .right { text-align: right; font-variant-numeric: tabular-nums; }
@@ -716,7 +717,7 @@ body.page-open #view-input { visibility: hidden; }
 /* The ✕'s glyph sits mid-button: pull the button 4px in so the field grows and the glyph has equal
    space on both sides (the row's gap plus its own padding was 4px more than the window edge left). */
 .cat-row .mini { margin-left: -4px; }
-.mini { flex: none; width: 32px; height: 32px; color: #cfcfcf; }
+.mini { flex: none; width: 32px; height: 32px; color: var(--soft); }
 
 .wide-btn { display: block; width: 100%; padding: 13px; text-align: center; font-weight: 700; cursor: pointer; }
 .backup-status { margin: 0 0 8px; font-weight: 800; }
@@ -725,5 +726,5 @@ body.page-open #view-input { visibility: hidden; }
 .reminder-row .options { gap: 40px; }
 .snapshot-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
 .snapshot-row .grow { flex: 1; min-width: 0; }
-.snapshot-row small { display: block; color: #cfcfcf; font-size: 0.85rem; }
+.snapshot-row small { display: block; color: var(--soft); font-size: 0.85rem; }
 .snapshot-row + .hint { margin: 10px 0 0; }
