@@ -23,7 +23,7 @@
   --font: 'Nunito', 'Avenir Next', system-ui, sans-serif;
   --text: #ededed;
   --off: #8f8f8f;          /* unchosen / unavailable, like FF8's greyed options */
-  --soft: #cfcfcf;         /* secondary text: sub-lines, dates, the gauges' numbers */
+  --soft: #cfcfcf;         /* secondary text: sub-lines, dates, window labels, the gauges' numbers */
   --yellow: #f2e34c;       /* selected / highlighted, like FF8's yellow names */
   --good: #8fe089;
   --bad: #ff7a68;
@@ -129,7 +129,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   filter: brightness(1.18);
 }
 
-/* The small tab on a window's top-left edge: HELP, AMOUNT, CATEGORY, … */
+/* The small tab on a window's top-left edge: HELP, CATEGORY, BUDGET, … */
 .window[data-label]:not([data-label=''])::before {
   content: attr(data-label);
   position: absolute;
@@ -140,7 +140,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   line-height: 1;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--soft);
   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
   pointer-events: none;
 }
