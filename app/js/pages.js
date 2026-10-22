@@ -200,7 +200,11 @@ function itemRow(expense) {
 }
 
 // Ring chart drawn as one SVG circle per category, each dashed to cover its share. A shading
-// overlay makes it a rounded tube, with a soft dark outline on both edges.
+// overlay makes it a rounded tube, with a soft dark outline on both edges, set into a channel cut
+// in the window: lit from the top-left like the windows' bevel, so the channel's outer wall is
+// dark at the top-left and light at the bottom-right, and the inner wall the other way round. The
+// walls cast a soft shadow onto the ring: the outer one at the top-left, the inner one at the
+// bottom-right.
 function donut(slices, total) {
   const r = 40, width = 14;
   const [inner, outer] = [r - width / 2, r + width / 2];
@@ -208,18 +212,42 @@ function donut(slices, total) {
   const sum = slices.reduce((s, slice) => s + slice.value, 0);
   const gap = slices.length > 1 ? 0.8 : 0;
   const chart = svg('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
+  // A circle around the center, drawn as a stroke (no stroke color: CSS gives it).
+  const circle = (radius, stroke, strokeWidth, more = {}) =>
+    svg('circle', { cx: 50, cy: 50, r: radius, fill: 'none', ...(stroke && { stroke }), 'stroke-width': strokeWidth, ...more });
   // Across the ring's width: shadow at the inner edge, highlight just past the middle, shadow outside.
   const shade = svg('radialGradient', { id: 'donut-shade', gradientUnits: 'userSpaceOnUse', cx: 50, cy: 50, r: outer });
   for (const [at, color, opacity] of [[inner, '#000', 0.4], [r - 2, '#fff', 0.05], [r + 2, '#fff', 0.32], [outer - 2, '#fff', 0.05], [outer, '#000', 0.35]]) {
     shade.append(svg('stop', { offset: (at / outer).toFixed(3), 'stop-color': color, 'stop-opacity': opacity }));
   }
-  chart.append(svg('defs'), svg('circle', { class: 'ring', cx: 50, cy: 50, r, fill: 'none', 'stroke-width': width }));
-  chart.firstChild.append(shade);
+  const wall = (id, [from, fromOpacity = 1], [to, toOpacity = 1]) => {
+    const gradient = svg('linearGradient', { id, x1: 0, y1: 0, x2: 1, y2: 1 });
+    gradient.append(svg('stop', { offset: 0, 'stop-color': from, 'stop-opacity': fromOpacity }),
+      svg('stop', { offset: 1, 'stop-color': to, 'stop-opacity': toOpacity }));
+    return gradient;
+  };
+  chart.append(svg('defs'), circle(r, null, width, { class: 'ring' }));
+  chart.firstChild.append(shade,
+    wall('donut-outer-wall', ['#1e1e1e'], ['#8a8a8a']), wall('donut-inner-wall', ['#8a8a8a'], ['#1e1e1e']),
+    wall('donut-outer-shadow', ['#000', 0.5], ['#000', 0]), wall('donut-inner-shadow', ['#000', 0], ['#000', 0.45]));
+  // The cast shadows are blurred, and kept to the ring.
+  const ringPath = (radius) => `M ${50 - radius} 50 a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${-radius * 2} 0`;
+  const clip = svg('clipPath', { id: 'donut-ring' });
+  clip.append(svg('path', { d: `${ringPath(outer)} ${ringPath(inner)}`, 'clip-rule': 'evenodd' }));
+  const blur = svg('filter', { id: 'donut-blur', x: '-10%', y: '-10%', width: '120%', height: '120%' });
+  blur.append(svg('feGaussianBlur', { stdDeviation: 0.9 }));
+  chart.firstChild.append(clip, blur);
+  const shadows = svg('g', { 'clip-path': 'url(#donut-ring)' });
+  const blurred = svg('g', { filter: 'url(#donut-blur)' });
+  blurred.append(
+    circle(outer, 'url(#donut-outer-shadow)', 4),
+    circle(inner, 'url(#donut-inner-shadow)', 4));
+  shadows.append(blurred);
   let offset = 0;
   for (const slice of slices) {
     const length = (slice.value / sum) * circumference;
-    chart.append(svg('circle', {
-      class: 'slice', cx: 50, cy: 50, r, fill: 'none', stroke: slice.color, 'stroke-width': width,
+    chart.append(circle(r, slice.color, width, {
+      class: 'slice',
       'stroke-dasharray': `${Math.max(length - gap, 0.01)} ${circumference}`,
       'stroke-dashoffset': -offset,
       transform: 'rotate(-90 50 50)',
@@ -227,9 +255,12 @@ function donut(slices, total) {
     offset += length;
   }
   chart.append(
-    svg('circle', { cx: 50, cy: 50, r, fill: 'none', stroke: 'url(#donut-shade)', 'stroke-width': width }),
-    svg('circle', { cx: 50, cy: 50, r: outer - 0.3, fill: 'none', stroke: '#000', 'stroke-opacity': 0.45, 'stroke-width': 0.6 }),
-    svg('circle', { cx: 50, cy: 50, r: inner + 0.3, fill: 'none', stroke: '#000', 'stroke-opacity': 0.45, 'stroke-width': 0.6 }),
+    circle(r, 'url(#donut-shade)', width),
+    circle(outer - 0.3, '#000', 0.6, { 'stroke-opacity': 0.45 }),
+    circle(inner + 0.3, '#000', 0.6, { 'stroke-opacity': 0.45 }),
+    shadows,
+    circle(outer + 0.7, 'url(#donut-outer-wall)', 1.4),
+    circle(inner - 0.7, 'url(#donut-inner-wall)', 1.4),
   );
   return el('div', { className: 'donut' }, chart,
     el('div', { className: 'donut-center' },
