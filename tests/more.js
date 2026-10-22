@@ -878,6 +878,41 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('v1 backup: upgraded on restore', [restored.version, restored.expenses[0].note, restored.expenses[0].original.perUsd].join('|'), '3|restored from an old backup|18.5');
   await old.close();
 
+  // Closing the keyboard on a long screen scrolled to its bottom: the room made for the keyboard
+  // isn't dropped at once (the screen would snap down by the keyboard's height as it slides away);
+  // the screen glides to where it will rest, then the room goes. A stand-in for iOS's
+  // visualViewport lets the test open and close a "keyboard".
+  const kb = await browser.newContext({ ...devices['iPhone 13'] });
+  await mockRates(kb, RATE);
+  await kb.addInitScript(() => {
+    const viewport = new EventTarget();
+    let keyboard = 0;
+    Object.defineProperty(viewport, 'height', { get: () => window.innerHeight - keyboard });
+    viewport.offsetTop = 0;
+    window.setKeyboard = (height) => { keyboard = height; viewport.dispatchEvent(new Event('resize')); };
+    Object.defineProperty(window, 'visualViewport', { get: () => viewport, configurable: true });
+  });
+  const p9 = await newPage(kb);
+  await p9.goto(URL);
+  await appReady(p9);
+  await startFirstPeriod(p9);
+  await openMenu(p9, 'Categories');
+  const opened = await p9.evaluate(async () => {
+    const screen = document.getElementById('page');
+    screen.querySelector('.cat-row:last-of-type input').focus();
+    window.setKeyboard(300);
+    screen.scrollTop = screen.scrollHeight;
+    const before = screen.scrollTop;
+    document.activeElement.blur();
+    window.setKeyboard(0);
+    const right = screen.scrollTop; // read at once: forces layout, as the next frame would
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    return { before, right, after: screen.scrollTop, rest: screen.scrollHeight - screen.clientHeight, room: getComputedStyle(document.documentElement).getPropertyValue('--keyboard') };
+  });
+  check('keyboard closing: the screen doesn\'t snap down at once', opened.before > 0 && opened.right === opened.before, true);
+  check('keyboard closing: then glides to rest and the room goes', `${opened.after === opened.rest && opened.after < opened.before} ${opened.room}`, 'true 0px');
+  await kb.close();
+
   const realErrors = errors.filter((e) => !/Failed to load resource|frankfurter|network/i.test(e));
   console.log(realErrors.length ? `ERRORS:\n${realErrors.join('\n')}` : 'No console errors');
   await browser.close();
