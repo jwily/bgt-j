@@ -39,7 +39,10 @@ Read README.md for what the app does; this file covers how to work on it.
   labelled window. Navigation is a stack (`showPage`, `goBack`). Sheets (`sheets.js`) are for small
   edits only (edit expense, category grid).
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
-  `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Check changes with `npm run palette`.
+  `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
+  the base is the category's color everywhere; the accent (a second color from the same portrait)
+  is only the core of its small diamond (`accentFor`). Gauges and donut slices stay solid for
+  readability. Check changes with `npm run palette` (distinct bases, accents that stand out).
 - **The Categories screen edits a draft** (`categoryDraft` in pages.js): renames, additions,
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
   undo) and sorts right then. Back with unsaved changes asks first (`confirmLeave`). Colors always

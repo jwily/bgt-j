@@ -315,10 +315,16 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   const results = [];
   for (const screen of ['main', 'Current Period', 'Past Periods', 'Categories', 'New Period', 'Backup']) {
     if (screen !== 'main') await openMenuItem(screen);
-    await page.waitForTimeout(300);
+    // HELP re-measures itself once the title window appears beside it; give that time on a slow run.
+    await page.waitForFunction(() => {
+      const text = document.querySelector('#help .text'), clip = text.parentElement, style = getComputedStyle(clip);
+      const room = clip.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      return (text.getAnimations().length > 0) === (text.scrollWidth > room + 1);
+    }, null, { timeout: 2000 }).catch(() => {}); // the check below reports it if it never settles
     const h = await helpState();
     results.push(h);
-    check(`HELP on ${screen}: scrolls exactly when it doesn't fit, one line, first letter clear`, h.moving === h.overflows && h.oneLine && h.clearOfFade, true);
+    const fine = h.moving === h.overflows && h.oneLine && h.clearOfFade;
+    check(`HELP on ${screen}: scrolls exactly when it doesn't fit, one line, first letter clear${fine ? '' : ` ${JSON.stringify(h)}`}`, fine, true);
     if (screen !== 'main') { await page.locator('#nav-btn').tap(); await page.waitForTimeout(300); }
   }
   check('some HELP lines scroll and some sit still (the check above covers both)', results.some((r) => r.moving) && results.some((r) => !r.moving), true);

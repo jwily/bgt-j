@@ -1,6 +1,7 @@
 // Checks the app's category palette (PALETTE in app/js/store.js) for colors that look too alike.
 // Categories take colors in order, so it reports the closest pair among the first n colors.
-// Distance is OKLab x100; under ~10 starts to look alike. Usage: node tools/check-palette.js
+// Distance is OKLab x100; under ~10 starts to look alike. Also checks each accent stands out from
+// its color (15 or more). Usage: npm run palette
 
 const palette = require('../helpers').readPalette();
 
@@ -25,4 +26,10 @@ for (let n = 2; n <= palette.length; n++) {
   console.log(`first ${String(n).padStart(2)} categories: closest pair ${min.toFixed(1)}  (${pair})`);
 }
 console.log(worst < 10 ? 'WARNING: some colors are close enough to look alike' : 'All colors distinct');
-process.exitCode = worst < 10 ? 1 : 0;
+
+// Each color's accent (the core of its diamond) must stand out from it on a 10px gem.
+const faint = palette.map((p) => ({ name: p.name, d: distance(p.hex, p.accent) })).sort((a, b) => a.d - b.d);
+console.log(`faintest accent: ${faint[0].name} at ${faint[0].d.toFixed(1)}`);
+const accentsOk = faint[0].d >= 15;
+console.log(accentsOk ? 'All accents stand out' : 'WARNING: an accent is too close to its color to see');
+process.exitCode = worst < 10 || !accentsOk ? 1 : 0;

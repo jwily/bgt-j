@@ -1,5 +1,7 @@
 // Small DOM helpers shared by every screen.
 
+import { accentFor } from './store.js';
+
 export const $ = (id) => document.getElementById(id);
 
 // Build an element: el('li', { className: 'row', 'aria-label': 'x' }, child, 'text', ...)
@@ -25,13 +27,15 @@ export function categoryChip(category, { selected = false } = {}) {
   const chip = el('button', { type: 'button', className: `chip${selected ? ' selected' : ''}` }, el('span', { textContent: category.name }));
   chip.dataset.id = category.id;
   chip.style.setProperty('--c', category.color);
+  chip.style.setProperty('--c2', accentFor(category.color));
   return chip;
 }
 
-// A small diamond in a category's color.
+// A small diamond in a category's color, with its accent at the core.
 export function colorDot(color) {
   const dot = el('span', { className: 'dot' });
   dot.style.setProperty('--c', color);
+  dot.style.setProperty('--c2', accentFor(color));
   return dot;
 }
 

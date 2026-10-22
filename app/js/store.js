@@ -23,25 +23,28 @@ export const VERSION = 3;
 const RATES_URL = `https://api.frankfurter.dev/v1/latest?base=${HOME}&symbols=${FOREIGN_CODES.join(',')}`;
 
 // 16 colors, each loosely after one of FF8's Guardian Force portraits, in the order the GFs appear
-// in the game's GF menu. Categories take them in turn. (Every pair is at least 10 apart in OKLab
+// in the game's GF menu: [base, accent]. Categories take them in turn. The base is the category's
+// color everywhere (gauges, the donut, ...); the accent, a second color from the same portrait, is
+// only the core of its small diamond. (Cerberus is steel grey: a true near-black would vanish in
+// the gauges.) (Every pair is at least 10 apart in OKLab
 // distance x100, where under ~10 starts to look alike; check with npm run palette.)
 const PALETTE = [
-  '#94cc3a', // Quezacotl: yellow-green
-  '#8fd0f5', // Shiva: ice blue
-  '#e2682b', // Ifrit: burnt orange
-  '#f2bd33', // Siren: gold
-  '#6250d0', // Brothers: indigo
-  '#b3173c', // Diablos: crimson
-  '#45d6a8', // Carbuncle: mint
-  '#1f8e9e', // Leviathan: deep teal
-  '#a64ee0', // Pandemona: violet
-  '#8a93a3', // Cerberus: steel grey (the gunmetal sheen on its heads; a true near-black would vanish in gauges)
-  '#e0a2d8', // Alexander: lavender-pink
-  '#7d4a28', // Doomtrain: dark bronze
-  '#253f84', // Bahamut: dark steel blue
-  '#3aa64a', // Cactuar: cactus green
-  '#6f7e1c', // Tonberry: olive
-  '#28b4ff', // Eden: electric blue
+  ['#94cc3a', '#3d7a1c'], // Quezacotl: yellow-green, dark green body
+  ['#8fd0f5', '#ecc75a'], // Shiva: ice blue, golden hair
+  ['#e2682b', '#5a2a14'], // Ifrit: burnt orange, dark brown fur
+  ['#f2bd33', '#e0705f'], // Siren: gold, rose lips
+  ['#6250d0', '#e2c26a'], // Brothers: indigo, horns
+  ['#b3173c', '#161216'], // Diablos: crimson, black wings
+  ['#45d6a8', '#c8193a'], // Carbuncle: mint, ruby
+  ['#1f8e9e', '#a6ead9'], // Leviathan: deep teal, pale fins
+  ['#a64ee0', '#f2d443'], // Pandemona: violet, yellow eyes
+  ['#8a93a3', '#b0202c'], // Cerberus: steel grey, red eyes
+  ['#e0a2d8', '#d4ad46'], // Alexander: lavender-pink, gold trim
+  ['#7d4a28', '#a77be8'], // Doomtrain: dark bronze, purple glow
+  ['#253f84', '#bfcbe8'], // Bahamut: dark steel blue, silver
+  ['#3aa64a', '#f06a2a'], // Cactuar: cactus green, spikes
+  ['#6f7e1c', '#ffd84a'], // Tonberry: olive, lantern
+  ['#28b4ff', '#7b4dff'], // Eden: electric blue, violet
 ];
 
 const DEFAULT_CATEGORIES = ['Groceries', 'Dining', 'Transport', 'Housing', 'Bills', 'Shopping', 'Health', 'Fun', 'Other'];
@@ -154,8 +157,11 @@ function keepInputCategoryActive(data) {
 // The color for the category in position i (alphabetical, active first), wrapping after 16.
 // (A function declaration: load() runs near the top of this file, before a const here would exist.)
 export function paletteColor(i) {
-  return PALETTE[i % PALETTE.length];
+  return PALETTE[i % PALETTE.length][0];
 }
+
+// The accent that goes with a palette color (the color itself for any other color).
+export const accentFor = (color) => PALETTE.find(([base]) => base === color)?.[1] ?? color;
 
 // Colors follow alphabetical order: the first active category gets color 1, the next color 2, and
 // so on. Archived categories come after the active ones, so past summaries still tell them apart.

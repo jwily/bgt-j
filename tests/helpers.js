@@ -74,12 +74,12 @@ exports.serveApp = ({ port = 8765, headers = {}, change = null } = {}) => new Pr
   server.listen(port, () => resolve(server));
 });
 
-// The category palette from app/js/store.js, in order: [{ hex, name }] (name = its GF).
+// The category palette from app/js/store.js, in order: [{ hex, accent, name }] (name = its GF).
 exports.readPalette = () => {
   const store = fs.readFileSync(require('path').join(__dirname, '..', 'app', 'js', 'store.js'), 'utf8');
   const start = store.indexOf('const PALETTE = [');
   const block = store.slice(start, store.indexOf('];', start));
-  const palette = [...block.matchAll(/'(#[0-9a-f]{6})', \/\/ ([^:]+):/gi)].map(([, hex, name]) => ({ hex, name }));
+  const palette = [...block.matchAll(/\['(#[0-9a-f]{6})', '(#[0-9a-f]{6})'\], \/\/ ([^:]+):/gi)].map(([, hex, accent, name]) => ({ hex, accent, name }));
   if (palette.length === 0) throw new Error('No colors found in PALETTE');
   return palette;
 };
