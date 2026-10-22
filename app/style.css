@@ -44,6 +44,9 @@
    (iOS rubber-bands the whole page when a drag reaches the end of something, which would drag
    the screens around and show what's behind them.) */
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+/* Nothing to select or copy except what you type: no accidental highlighting or callouts. */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea { -webkit-user-select: text; user-select: text; }
 body {
   margin: 0;
   background: #000;
@@ -109,7 +112,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .options > .on::after,
 .chip.selected::after,
 .add-btn::after,
-.primary:not(:disabled)::after,
+.primary::after,
 .menu-list button:active::after,
 .menu-list button:focus-visible::after {
   content: '';
@@ -228,9 +231,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   max-width: 560px;
   margin: 0 auto;
   padding: var(--hud-h) 10px var(--dock-h);
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
 }
 
 .currency-zone {
@@ -334,8 +334,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   border: none;
   background: transparent;
   text-shadow: 2px 2px 0 var(--ink);
-  user-select: text;
-  -webkit-user-select: text;
 }
 .note::placeholder { color: var(--off); }
 .date-btn {
@@ -454,6 +452,9 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
 .primary { padding: 0 34px; } /* room for the hand on the left, matched on the right so the label stays centered */
 .primary::after { left: 8px; }
 .primary:disabled { color: var(--off); }
+/* The hand is always there, just hidden while the button is off: in Safari, a hand that only
+   appears once the button turns on stays frozen instead of bobbing. */
+.primary:disabled::after { visibility: hidden; }
 .danger { color: var(--bad); }
 .wide-btn:disabled { color: var(--good); cursor: default; }
 .delete-btn { color: var(--bad); }

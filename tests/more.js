@@ -312,6 +312,13 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   for (const k of '12') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
   check('New Period: typing keeps the same Start button and HELP text', await page.evaluate(() => window.startButton.isConnected && window.helpText.isConnected), true);
   check('New Period: amount and button still update', await page.evaluate(() => [document.querySelector('.budget-amount').textContent, document.querySelector('#page .primary').disabled].join(' ')), '$0.12 false');
+  check('text can\'t be selected except in text fields', await page.evaluate(() => [document.querySelector('.budget-amount'), document.querySelector('#help .text'), document.querySelector('.note')]
+    .map((node) => getComputedStyle(node).webkitUserSelect ?? getComputedStyle(node).userSelect).join(' ')), 'none none text');
+  // Once the button turns on, its hand bobs (Safari froze a hand that only appeared then).
+  const handAt = () => page.evaluate(() => getComputedStyle(document.querySelector('#page .primary'), '::after').transform);
+  const handBefore = await handAt();
+  await page.waitForTimeout(230); // about half a bob
+  check('New Period: the Start button\'s hand bobs after typing', (await handAt()) !== handBefore, true);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
 
