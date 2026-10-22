@@ -12,9 +12,11 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="preload" href="fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Black from the very first frame, before the stylesheet arrives. -->
+  <style>html, body { background: #000; }</style>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="starting">
   <!-- Top of every screen, for reading: the HELP window (which also shows messages) and, on
        screens other than the main one, the title window with the screen's name. -->
   <header class="hud">
