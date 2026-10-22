@@ -180,8 +180,40 @@ function showHelpLine() {
   const node = $('help');
   node.className = `window help${helpLine.tone ? ` ${helpLine.tone}` : ''}${helpLine.onTap ? ' tappable' : ''}`;
   node.onclick = helpLine.onTap;
-  node.replaceChildren(el('span', { textContent: helpLine.text }));
+  showHelpText(helpLine.text);
 }
+
+// The HELP window shows one line. Text too long for it rests at the start, glides left until its
+// end is in view, rests, and starts over. Returns how long one pass takes (0 if it fits).
+const HELP_REST = 1200;  // ms at each end
+const HELP_SPEED = 40;   // px per second, an easy reading pace
+function showHelpText(text) {
+  const line = el('span', { className: 'text', textContent: text });
+  $('help').replaceChildren(el('span', { className: 'clip' }, line));
+  return scrollHelpText();
+}
+
+function scrollHelpText() {
+  const line = $('help').querySelector('.text');
+  if (!line) return 0;
+  line.getAnimations().forEach((animation) => animation.cancel());
+  const overflow = line.scrollWidth - line.parentElement.clientWidth;
+  line.parentElement.classList.toggle('scrolling', overflow > 1);
+  if (overflow <= 1) return 0;
+  const glide = (overflow / HELP_SPEED) * 1000;
+  const pass = HELP_REST + glide + HELP_REST;
+  const end = `translateX(${-overflow}px)`;
+  line.animate([
+    { transform: 'translateX(0)', offset: 0 },
+    { transform: 'translateX(0)', offset: HELP_REST / pass },
+    { transform: end, offset: (HELP_REST + glide) / pass },
+    { transform: end, offset: 1 },
+  ], { duration: pass, iterations: Infinity });
+  return pass;
+}
+// The space for the text changes with the screen's width and once the font has loaded.
+window.addEventListener('resize', scrollHelpText);
+document.fonts?.ready.then(scrollHelpText);
 
 // tone: '' or 'bad'. onTap: optional action when the help window is tapped.
 export function setHelp(text, { tone = '', onTap = null } = {}) {
@@ -206,11 +238,11 @@ export function toast(message, undo) {
     end();
     undo();
   } : null;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(end, 4000);
   node.className = 'window help message';
   node.onclick = null;
-  node.replaceChildren(el('span', { textContent: message }));
+  const pass = showHelpText(message);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(end, Math.max(4000, pass + 500)); // long enough to read a long message once
 }
 
 // ---------- sheets ----------

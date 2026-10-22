@@ -219,7 +219,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   fs.writeFileSync(`${OUT}/not-a-backup.json`, '{"hello":"world"}');
   await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/not-a-backup.json`);
   await page.waitForTimeout(300);
-  check('bad backup rejected', await page.locator('#help span').first().textContent(), "That file isn't a budget backup.");
+  check('bad backup rejected', await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
   // Cancelling the confirm leaves data alone
   if (ENGINE === 'webkit') {
     await page.evaluate(() => { window.__shareMode = 'cancel'; });
@@ -265,7 +265,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await openMenuItem('Backup');
   await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/null-input.json`);
   await page.waitForTimeout(300);
-  check('null input backup rejected', await page.locator('#help span').first().textContent(), "That file isn't a budget backup.");
+  check('null input backup rejected', await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(250);
 
@@ -276,7 +276,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await openMenuItem('Categories');
   const housingRow = await page.locator('.cat-row input').evaluateAll((ns) => ns.findIndex((n) => n.value === 'Housing'));
   await page.locator('.cat-row').nth(housingRow).locator('.mini').tap();
-  check('unused category removed (undo offered)', await page.locator('#help span').first().textContent(), 'Housing removed');
+  check('unused category removed (undo offered)', await page.locator('#help .text').first().textContent(), 'Housing removed');
   await page.locator('#page .actions .primary', { hasText: 'Save' }).tap();
   await page.waitForTimeout(300);
   await page.locator('#nav-btn').tap();
@@ -290,6 +290,22 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   const housingAgain = await page.locator('.cat-row input').evaluateAll((ns) => ns.findIndex((n) => n.value === 'Housing'));
   check('Housing still gone before undo', housingAgain, -1);
   await page.locator('#nav-btn').tap();
+
+  // HELP is one line: text that fits sits still; text too long for it scrolls sideways instead of
+  // being cut off.
+  const helpMotion = () => page.evaluate(() => {
+    const text = document.querySelector('#help .text');
+    return { moving: text.getAnimations().length > 0, overflows: text.scrollWidth > text.parentElement.clientWidth, lines: Math.round(text.getBoundingClientRect().height / parseFloat(getComputedStyle(text).lineHeight)) };
+  });
+  await page.waitForSelector('#help:not(.message)');
+  const shortHelp = await helpMotion();
+  check('short HELP text sits still on one line', !shortHelp.moving && !shortHelp.overflows && shortHelp.lines === 1, true);
+  await openMenuItem('New Period');
+  await page.waitForTimeout(300);
+  const longHelp = await helpMotion();
+  check('long HELP text scrolls on one line', longHelp.moving && longHelp.overflows && longHelp.lines === 1, true);
+  await page.locator('#nav-btn').tap();
+  await page.waitForTimeout(300);
 
   // Tapping the HELP window while the menu is open closes the menu
   await page.waitForSelector('#help:not(.message)'); // the HELP window can't be tapped while it shows a message
@@ -312,7 +328,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.locator('.delete-btn').tap();
   await page.waitForTimeout(300);
   check('past period deleted', await page.locator('.period-row').count(), 1);
-  check('delete message', await page.locator('#help span').first().textContent(), 'Period 1 deleted');
+  check('delete message', await page.locator('#help .text').first().textContent(), 'Period 1 deleted');
   check('its expenses deleted too', (await saved()).expenses.length, 0);
   await page.locator('#undo-btn').tap();
   await page.waitForTimeout(300);
@@ -430,7 +446,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await p8.goto(URL);
     await startFirstPeriod(p8, '100000');
     await p8.waitForSelector('#help:not(.message)', { timeout: 6000 });
-    check('Safari tab: HELP shows how to install', await p8.locator('#help span').textContent(), 'Install: Share → Add to Home Screen');
+    check('Safari tab: HELP shows how to install', await p8.locator('#help .text').textContent(), 'Install: Share → Add to Home Screen');
     let explained = '';
     p8.once('dialog', (d) => { explained = d.message(); d.accept(); });
     await p8.locator('#help').click({ position: { x: 20, y: 30 } });
@@ -491,12 +507,12 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await nameField(funIndex).fill('groceries');
   await save5.tap();
   await p5.waitForTimeout(200);
-  check('saving a clashing name is refused', await p5.locator('#help span').first().textContent(), "There's already a category called Groceries.");
+  check('saving a clashing name is refused', await p5.locator('#help .text').first().textContent(), "There's already a category called Groceries.");
   check('and nothing is saved', await savedNames(), before);
   await nameField(funIndex).fill('');
   await save5.tap();
   await p5.waitForTimeout(200);
-  check('saving an empty name is refused', await p5.locator('#help span').first().textContent(), "Category names can't be empty.");
+  check('saving an empty name is refused', await p5.locator('#help .text').first().textContent(), "Category names can't be empty.");
   await nameField(funIndex).fill('Fun');
   check('Save turns off again when the draft matches what\'s saved', await save5.isDisabled(), true);
   await messageCleared(p5);
@@ -506,7 +522,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('new ones get free names, at the bottom until saved', rows.slice(-2).join(','), 'New Category,New Category 2');
   check('colors follow the list in GF order', (await categoryDotColors(p5)).join(','), readPalette().map((c) => c.hex).slice(0, rows.length).join(','));
   await p5.locator('.cat-row').last().locator('.mini').tap();
-  check('removing an unsaved one', await p5.locator('#help span').first().textContent(), 'New Category 2 removed');
+  check('removing an unsaved one', await p5.locator('#help .text').first().textContent(), 'New Category 2 removed');
   await p5.locator('#undo-btn').tap();
   check('Undo brings it back', (await categoryRows(p5)).at(-1), 'New Category 2');
 
@@ -629,7 +645,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   p3.once('dialog', (d) => d.accept());
   await p3.locator('.page-body input[type=file]').setInputFiles(`${OUT}/v1-backup.json`);
   await p3.waitForTimeout(400);
-  check('v1 backup: restores', await p3.locator('#help span').first().textContent(), 'Backup restored');
+  check('v1 backup: restores', await p3.locator('#help .text').first().textContent(), 'Backup restored');
   const restored = await p3.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')));
   check('v1 backup: upgraded on restore', [restored.version, restored.expenses[0].note, restored.expenses[0].original.perUsd].join('|'), '3|restored from an old backup|18.5');
   await old.close();
