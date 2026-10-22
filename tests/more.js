@@ -186,6 +186,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('Health still open with 1 item', await page.locator('.items .item').count(), 1);
   await page.locator('.item').first().tap();
   await page.waitForTimeout(300);
+  check('Edit Expense swishes in from the left', await animationOf('#sheet'), 'swish-in-left 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)');
   await page.locator('#sheet .danger').tap();
   await page.waitForTimeout(300);
   check('deleted', await page.locator('.cat-head', { hasText: 'Health' }).count(), 0);

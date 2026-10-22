@@ -308,9 +308,11 @@ export function toast(message, undo) {
 // label: the small tab on the sheet's top edge, like FF8's "HELP" / "STATUS" tabs.
 // anchor: optional element. The sheet then opens with its top edge level with the anchor's top
 // (moving up only as far as it must to stay on screen) instead of at the bottom of the screen.
-export function openSheet(content, { dismissable = true, label = '', anchor = null } = {}) {
+// fromLeft: swish in from the left instead of fading in.
+export function openSheet(content, { dismissable = true, label = '', anchor = null, fromLeft = false } = {}) {
   const sheet = $('sheet');
   sheet.dataset.label = label;
+  sheet.classList.toggle('from-left', fromLeft);
   sheet.replaceChildren(content);
   sheet.scrollTop = 0;
   sheet.style.top = '';
