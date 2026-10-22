@@ -167,7 +167,7 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   check('Save is off until something changes', await saveButton.isDisabled(), true);
   await page.locator('.wide-btn', { hasText: 'Add category' }).tap();
   check('category added', await page.locator('.cat-row input').count(), 10);
-  check('new category name selected', await page.evaluate(() => document.activeElement.value), 'New Category');
+  check('a new category starts blank and ready to type', await page.evaluate(() => `${document.activeElement.value}|${document.activeElement.placeholder}`), '|New category');
   await page.keyboard.type('Coffee');
   await page.keyboard.press('Enter');
   check('unsaved: new one stays at the bottom', (await categoryRows(page)).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport,Coffee');

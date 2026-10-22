@@ -77,7 +77,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await selectedChip.tap();
   await selectedChip.tap();
   await page.waitForSelector('#sheet-backdrop.open', { timeout: 5000 }).catch(() => {}); // wait for it, not a fixed time
-  await page.waitForTimeout(350); // let it finish fading in before measuring
+  await page.waitForTimeout(250); // let it finish fading in before measuring
   check('grid opened', await page.locator('#sheet').getAttribute('data-label'), 'Category');
   check('grid has no duplicate heading', await page.locator('#sheet h2').count(), 0);
   check('grid opens level with the strip', await page.evaluate(() =>
@@ -89,12 +89,12 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   }), true);
   check('grid alphabetical', (await page.locator('#sheet .grid .chip').allTextContents()).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');
   check('grid marks current', await page.locator('#sheet .grid .chip.selected').textContent(), 'Groceries');
-  // How windows arrive, as measured from FF8: sheets (like this grid) fade in, 0.3s, linear.
+  // How windows arrive: sheets (like this grid) fade in, 0.18s, easing out.
   const animationOf = (selector) => page.evaluate((sel) => {
     const style = getComputedStyle(document.querySelector(sel));
     return `${style.animationName} ${style.animationDuration} ${style.animationTimingFunction}`;
   }, selector);
-  check('the grid fades in like FF8\'s screens', await animationOf('#sheet'), 'fade-in 0.3s linear');
+  check('the grid fades in like the other screens', await animationOf('#sheet'), 'fade-in 0.18s ease-out');
   await page.screenshot({ path: `${OUT}/${ENGINE}-x1-grid.png` });
   await page.locator('#sheet .grid .chip', { hasText: 'Health' }).tap();
   await page.waitForTimeout(700);
@@ -401,7 +401,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
       resolve({ fading, replayed: document.getAnimations().filter((a) => a.animationName === 'fade-in' && a.effect.target.isConnected && a.effect.target.closest('#page-body')).length });
     }, 50);
   }));
-  check('a screen\'s windows fade in when it opens', arrival.fading, 'fade-in 0.3s linear');
+  check('a screen\'s windows fade in when it opens', arrival.fading, 'fade-in 0.18s ease-out');
   check('a redraw just after a screen opens doesn\'t replay its fade-in', arrival.replayed, 0);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
@@ -621,22 +621,30 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p5.waitForTimeout(200);
   check('saving a clashing name is refused', await p5.locator('#help .text').first().textContent(), "There's already a category called Groceries.");
   check('and nothing is saved', await savedNames(), before);
-  await nameField(funIndex).fill('');
-  await save5.tap();
-  await p5.waitForTimeout(200);
-  check('saving an empty name is refused', await p5.locator('#help .text').first().textContent(), "Category names can't be empty.");
   await nameField(funIndex).fill('Fun');
   check('Save turns off again when the draft matches what\'s saved', await save5.isDisabled(), true);
   await messageCleared(p5);
+
+  // New categories start blank; one still blank when the keyboard closes is dropped.
+  const rowCount = (await categoryRows(p5)).length;
   await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
+  check('Add category: one more row, blank', `${(await categoryRows(p5)).length} "${(await categoryRows(p5)).at(-1)}"`, `${rowCount + 1} ""`);
+  await p5.evaluate(() => document.activeElement.blur()); // the keyboard closes
+  check('left blank when the keyboard closes: dropped', (await categoryRows(p5)).length, rowCount);
+  check('and Save is off again', await save5.isDisabled(), true);
   await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
+  await p5.keyboard.type('Snacks');
+  await p5.keyboard.press('Enter');
+  await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
+  await p5.keyboard.type('Pets');
+  await p5.keyboard.press('Enter');
   const rows = await categoryRows(p5);
-  check('new ones get free names, at the bottom until saved', rows.slice(-2).join(','), 'New Category,New Category 2');
+  check('typed new ones stay, at the bottom until saved', rows.slice(-2).join(','), 'Snacks,Pets');
   check('colors follow the list in GF order', (await categoryDotColors(p5)).join(','), readPalette().map((c) => c.hex).slice(0, rows.length).join(','));
   await p5.locator('.cat-row').last().locator('.mini').tap();
-  check('removing an unsaved one', await p5.locator('#help .text').first().textContent(), 'New Category 2 removed');
+  check('removing an unsaved one', await p5.locator('#help .text').first().textContent(), 'Pets removed');
   await p5.locator('#undo-btn').tap();
-  check('Undo brings it back', (await categoryRows(p5)).at(-1), 'New Category 2');
+  check('Undo brings it back', (await categoryRows(p5)).at(-1), 'Pets');
 
   // Back with unsaved changes: Cancel stays, OK leaves without saving.
   p5.once('dialog', (d) => d.dismiss());
@@ -648,6 +656,23 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p5.waitForTimeout(300);
   check('Back with unsaved changes: OK leaves', await p5.locator('#page').isHidden(), true);
   check('and the changes are discarded', await savedNames(), before);
+
+  // Save with blanks: a new category left blank is dropped, an existing name left blank keeps its
+  // name, and tapping Save while a blank new field still has the keyboard up still saves the rest.
+  await openCategories();
+  const names = await categoryRows(p5);
+  await nameField(names.indexOf('Shopping')).fill('Stuff');
+  await nameField(names.indexOf('Health')).fill('');
+  await p5.locator('.wide-btn', { hasText: 'Add category' }).tap(); // blank, focused
+  await save5.tap();
+  await p5.waitForTimeout(300);
+  const afterSave = (await savedNames()).split(',');
+  check('Save with blanks: the rename is saved', afterSave.includes('Stuff') && !afterSave.includes('Shopping'), true);
+  check('Save with blanks: a blanked name keeps its old one', afterSave.includes('Health'), true);
+  check('Save with blanks: the blank new one is dropped, nothing blank saved', `${afterSave.length} ${afterSave.some((n) => !n.trim())}`, `${names.length} false`);
+  await messageCleared(p5);
+  await p5.locator('#nav-btn').tap();
+  await p5.waitForTimeout(300);
 
   // Category names never keep spaces at either end: not from old saved data, not from typing.
   await p5.evaluate(() => {
@@ -680,7 +705,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p5.evaluate(() => visualViewport.dispatchEvent(new Event('resize')));
   await p5.waitForTimeout(200);
   const field = await p5.evaluate(() => ({ value: document.activeElement.value, bottom: document.activeElement.getBoundingClientRect().bottom, keyboardTop: innerHeight - 300 }));
-  check(`new category field is above the keyboard (bottom ${field.bottom}, keyboard at ${field.keyboardTop})`, field.value.startsWith('New Category') && field.bottom <= field.keyboardTop, true);
+  check(`new category field is above the keyboard (bottom ${field.bottom}, keyboard at ${field.keyboardTop})`, field.value === '' && field.bottom <= field.keyboardTop, true);
   await clash.close();
 
   // Rates: re-check every 3 hours until today's rate arrives, then stop for the day.
