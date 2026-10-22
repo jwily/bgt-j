@@ -2,13 +2,10 @@
    black screen, small label tabs on window edges, white text with a hard shadow, yellow for the
    selected thing, grey for unavailable or unchosen options, and a white pointing-hand cursor. */
 
-/* Abel: tall, narrow and soft, the closest free match for FF8 Remastered's menu font (SIL Open
-   Font License, fonts/OFL.txt). It has one weight, like FF8's text: emphasis comes from color
-   (yellow, grey), and no faked bold (font-synthesis on body), which would smear. */
 @font-face {
-  font-family: 'Abel';
-  src: url('fonts/abel-latin.woff2') format('woff2');
-  font-weight: 400;
+  font-family: 'Nunito';
+  src: url('fonts/nunito-latin.woff2') format('woff2');
+  font-weight: 400 800;
   font-display: swap;
 }
 
@@ -20,7 +17,7 @@
   --fade-in: fade-in 0.18s ease-out;
   --swish-in: swish-in-right 0.22s cubic-bezier(0.1, 0.8, 0.25, 1);
   color-scheme: dark;
-  --font: 'Abel', 'Avenir Next Condensed', system-ui, sans-serif;
+  --font: 'Nunito', 'Avenir Next', system-ui, sans-serif;
   --text: #ededed;
   --off: #8f8f8f;          /* unchosen / unavailable, like FF8's greyed options */
   --yellow: #f2e34c;       /* selected / highlighted, like FF8's yellow names */
@@ -59,7 +56,6 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 input, textarea { -webkit-user-select: text; user-select: text; }
 body {
   margin: 0;
-  font-synthesis: none; /* one weight only: never fake bold */
   background: #000;
   color: var(--text);
   font-family: var(--font);
