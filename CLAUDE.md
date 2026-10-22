@@ -89,7 +89,9 @@ Read README.md for what the app does; this file covers how to work on it.
   Current Period, Past Periods, Edit Budget, New Category); sentence case for everything else
   (buttons, labels, help lines, messages: Start new period, Under budget, New period started).
   ALL CAPS only as styling (window tabs, menu stat labels, ADD, UNDO).
-- Font: Nunito. A pixel FF8 font was tried (branch `ff8-font`) and rejected for readability.
+- Font: Barlow Semi Condensed (bundled, weights 400-800), chosen as the closest free match for FF8
+  Remastered's menu font that keeps bold weights; Nunito came before it. Abel was closer in feel but
+  has one weight. A pixel FF8 font was tried (branch `ff8-font`) and rejected for readability.
 - Before imitating any visual style, get references and measure them (pixel sampling, tracing).
   Styling from memory produced FF7's look the first time.
 
