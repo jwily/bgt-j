@@ -225,6 +225,22 @@ const sample = (overrides = {}) => ({
     pages.close();
   }
 
+  // --- Starting up: the app stays hidden until it's built, then shows all at once. If its code
+  // never runs, the page still shows after 2.5s instead of staying black.
+  {
+    const { context, page } = await open();
+    await page.waitForTimeout(250); // the 0.15s fade-in
+    check('start: revealed once built', await page.evaluate(() => !document.body.classList.contains('starting') && getComputedStyle(document.body).opacity), '1');
+    await context.close();
+    const noScript = await browser.newContext({ ...devices['iPhone 13'], javaScriptEnabled: false });
+    const bare = await noScript.newPage();
+    await bare.goto(APP_URL);
+    const hidden = await bare.evaluate(() => getComputedStyle(document.body).opacity);
+    await bare.waitForTimeout(2800);
+    check('start: if the app never starts, the page still shows after 2.5s', `${hidden} -> ${await bare.evaluate(() => getComputedStyle(document.body).opacity)}`, '0 -> 1');
+    await noScript.close();
+  }
+
   // --- A lot of data (about three years of paychecks): still quick.
   {
     const categories = Array.from({ length: 16 }, (_, i) => ({ id: `c${i}`, name: `Category ${String(i).padStart(2, '0')}`, color: null, archived: false }));

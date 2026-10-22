@@ -57,6 +57,13 @@ body {
   text-shadow: 2px 2px 0 var(--ink);
 }
 
+/* Starting up: nothing shows until app.js has built every screen (and the font has loaded), then it
+   all fades in at once, instead of the bars appearing before everything else. If something stopped
+   the app from starting, it shows anyway after 2.5s rather than staying black. */
+body { transition: opacity 0.15s ease-out; }
+body.starting { opacity: 0; animation: show-anyway 0s 2.5s forwards; }
+@keyframes show-anyway { to { opacity: 1; } }
+
 button {
   font: inherit;
   letter-spacing: inherit;

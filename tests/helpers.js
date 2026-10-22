@@ -36,8 +36,8 @@ exports.openMenu = async (page, item) => {
 };
 exports.openSummary = (page) => exports.openMenu(page, 'Current Period');
 
-// Waits until the app has finished starting (it shows a help line once it has).
-exports.appReady = (page) => page.waitForFunction(() => document.querySelector('#help .text')?.textContent);
+// Waits until the app has finished starting: built, with a help line, and revealed.
+exports.appReady = (page) => page.waitForFunction(() => document.querySelector('#help .text')?.textContent && !document.body.classList.contains('starting'));
 
 // One pass/fail line; the runner counts the FAIL lines.
 exports.check = (label, actual, expected) => {

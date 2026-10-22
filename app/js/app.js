@@ -110,6 +110,11 @@ window.addEventListener('budget:change', refresh);
 
 if (!currentPeriod()) showPage('budget', { mode: 'first' });
 
+// Everything is built: show it all at once (style.css hides the page until now), once the font has
+// loaded so text doesn't swap fonts in front of you; waiting half a second at most.
+await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 500))]);
+document.body.classList.remove('starting');
+
 // Ask the browser not to clear this app's data when the phone is low on space.
 // The browser decides silently; the Backup screen shows the answer.
 navigator.storage?.persist?.().catch(() => {});
