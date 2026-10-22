@@ -72,7 +72,7 @@ const sample = (overrides = {}) => ({
     await page.locator('.add-btn').tap();
     await page.waitForTimeout(300);
     check('storage full: warns', dialogs.some((m) => m.startsWith("Couldn't save: this phone's storage for the app is full")), true);
-    check('storage full: the screen still shows what you did', await page.locator('.amount').textContent(), '$0.00');
+    check('storage full: the screen still shows what you did', await page.locator('#help .text').textContent(), 'Added $5.00 · Food');
     await context.close();
   }
 
@@ -234,7 +234,7 @@ const sample = (overrides = {}) => ({
     const t0 = Date.now();
     const { context, page, type } = await open({ saved: JSON.stringify(data) });
     const opened = Date.now() - t0;
-    check('lots of data: about 4,000 expenses saved', expenses.length, 4000);
+    check('lots of data: all 4,000 expenses load', await page.evaluate(async () => (await import('./js/store.js')).state.expenses.length), 4000);
     check(`lots of data: opens in under 3s (${opened}ms)`, opened < 3000, true);
     let t = Date.now();
     await type('500');
@@ -243,7 +243,8 @@ const sample = (overrides = {}) => ({
     check(`lots of data: adding stays quick (${Date.now() - t}ms, under 1s)`, Date.now() - t < 1000, true);
     t = Date.now();
     await menu(page, 'Past Periods');
-    check(`lots of data: period list in under 1.5s (${Date.now() - t}ms after the message clears)`, (await page.locator('.period-row').count()) === 72, true);
+    const listed = await page.locator('.period-row').count();
+    check(`lots of data: all 72 periods listed in under 1.5s (${Date.now() - t}ms)`, listed === 72 && Date.now() - t < 1500, true);
     await context.close();
   }
 

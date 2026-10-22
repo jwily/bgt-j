@@ -8,6 +8,7 @@
     "palette": "node tools/check-palette.js",
     "hand": "node tools/cut-hand.js",
     "screens": "node tools/screens.js",
+    "smoke": "node tools/smoke.js",
     "icon": "node tools/make-icon.js"
   },
   "devDependencies": {

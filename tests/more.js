@@ -5,7 +5,7 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check, saved } = require('./helpers');
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check } = require('./helpers');
 const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
 
 (async () => {
@@ -209,7 +209,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/not-a-backup.json`);
   await page.waitForTimeout(300);
   check('bad backup rejected', await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
-  // Cancelling the confirm leaves data alone
+  // Cancelling the share sheet isn't a backup
   if (ENGINE === 'webkit') {
     await page.evaluate(() => { window.__shareMode = 'cancel'; });
     await page.locator('.wide-btn', { hasText: 'Export backup' }).tap();
@@ -220,8 +220,13 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   const jsonFile = await grabFile(page, ENGINE, () => page.locator('.wide-btn', { hasText: 'Export backup' }).tap());
   check('export marks backed up', await page.locator('.backup-status').textContent(), 'Backed up today');
   fs.writeFileSync(`${OUT}/x-backup.json`, jsonFile.text);
+  // Dismissing the "Replace everything?" question leaves the data alone. (The file has a different
+  // budget, so a restore that went ahead anyway would show.)
+  const different = JSON.parse(jsonFile.text);
+  different.periods.at(-1).budgetCents = 999900;
+  fs.writeFileSync(`${OUT}/x-backup-different.json`, JSON.stringify(different));
   page.once('dialog', (d) => d.dismiss());
-  await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/x-backup.json`);
+  await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/x-backup-different.json`);
   await page.waitForTimeout(300);
   check('dismissed restore changes nothing', await leftText(page), '$1,442.50 left');
   await page.locator('#nav-btn').tap();
