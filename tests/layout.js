@@ -181,6 +181,15 @@ const check = (label, ok, detail) => {
       return { left: Math.round(glyph.left - input.right), right: Math.round(inner - glyph.right) };
     });
     check('14 Pro installed: the remove ✕ has equal space on both sides', Math.abs(x.left - x.right) <= 1, x);
+    // The screen's bottom buttons: the same size, side by side, one --gap above the bottom bar's
+    // (a wide button's own padding once made Add category taller and narrower than Save).
+    const row = await page.evaluate(() => {
+      const box = (n) => n.getBoundingClientRect();
+      const [add, save] = [...document.querySelectorAll('#page .actions > *')].map(box);
+      return { add: [add.width, add.height], save: [save.width, save.height], aboveBack: box(document.getElementById('nav-btn')).top - save.bottom };
+    });
+    check('14 Pro installed: Add category and Save the same size, 8px above Back',
+      Math.abs(row.add[0] - row.save[0]) <= 1 && row.add[1] === row.save[1] && Math.round(row.aboveBack) === 8, JSON.stringify(row));
     await page.screenshot({ path: require('path').join(__dirname, 'output', ENGINE, 'installed-14pro-main.png') });
     await context.close();
   }

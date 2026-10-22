@@ -58,7 +58,8 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 /* No double-tap zoom anywhere: Safari treats two quick taps as a possible double-tap zoom unless the
    tapped element or one containing it opts out, so a fast tap that landed between keys (or on a
    window's edge) could swallow the next one. Set on the root, it covers the whole app; pinch zoom
-   still works. */
+   still works. Every element inherits it in effect (touch-action combines with its ancestors'), so
+   nothing else needs it; the menu narrows it further. */
 html { touch-action: manipulation; }
 /* Nothing to select or copy except what you type: no accidental highlighting or callouts. */
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -104,7 +105,6 @@ button {
   border: none;
   padding: 0;
   cursor: pointer;
-  touch-action: manipulation; /* no double-tap zoom, no tap delay */
 }
 /* 16px inputs stop iOS from zooming in on focus. */
 input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow: none; }
@@ -209,7 +209,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   mask-image: linear-gradient(to right, transparent, #000 7px, #000 calc(100% - 7px), transparent);
 }
 .help.tappable { cursor: pointer; }
-.help.bad span { color: var(--bad); }
 /* The main screen's status row (ui.js, statusRow), after FF8's party windows: no label, so the
    row sits centered in the window, both ways. The HP's bar is a thin line under it, measured from
    menuanimations.mov and FFVIII_Menu: translucent red (about a fifth opaque at its core, fainter
@@ -356,7 +355,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   scrollbar-width: none;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
-  touch-action: manipulation; /* no double-tap zoom */
 }
 .strip::-webkit-scrollbar { display: none; }
 /* Spacers so the first and last chips can reach the center whatever their width (the snap
@@ -397,7 +395,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .chip.selected { color: var(--yellow); }
 /* A bit smaller than the other hands; its fingertip stops 12px short of the diamond. */
 .chip.selected::after { left: -35px; width: 27px; height: 19px; margin-top: -10px; }
-
 
 .details { display: flex; gap: var(--gap); }
 .note-window { flex: 1; min-width: 0; padding: 12px 10px 2px; }
@@ -499,12 +496,11 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
 }
 .backdrop.open .sheet { animation: var(--swish-in-left); }
 .sheet h2 { margin: 0 0 4px; font-size: 1.25rem; }
-.hint { margin: 0 0 12px; color: #d2d2d2; font-size: 0.92rem; font-weight: 500; line-height: 1.4; }
+.hint { margin: 0 0 12px; color: var(--soft); font-size: 0.92rem; font-weight: 500; line-height: 1.4; }
 .budget-amount { margin: 2px 0; text-align: center; font-size: 2.6rem; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 .budget-amount.empty { color: var(--off); }
 
-.actions { display: flex; gap: var(--gap); }
-.actions > * { flex: 1; }
+.actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--gap); } /* equal widths, whatever each button's padding */
 /* A screen's buttons that must stay in reach however long the screen is: fixed just above the
    bottom bar, like the bar itself, so the screen scrolls (and bounces) behind them without
    carrying them along. The screen leaves room for them at its bottom. */
@@ -524,7 +520,7 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
   scroll-padding-bottom: calc(50px + var(--gap) + var(--gap)); /* things scrolled into view stop above them */
 }
 .sheet .actions { margin-top: 12px; }
-.primary, .danger { flex: 1; height: 50px; font-weight: 800; }
+.primary, .danger { height: 50px; font-weight: 800; }
 .primary { padding: 0 34px; } /* room for the hand on the left, matched on the right so the label stays centered */
 .primary::after { left: 8px; }
 .primary:disabled { color: var(--off); }
@@ -589,7 +585,12 @@ body.page-open #view-input { visibility: hidden; }
 .value { font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Summary */
-.donut { position: relative; width: min(220px, 64vw); margin: 0 auto; }
+.donut {
+  position: relative;
+  width: min(220px, 64vw);
+  margin: 0 auto;
+  --turned-metal: conic-gradient(#a8a8a8, #6e6e6e 10%, #9c9c9c 22%, #666666 36%, #b4b4b4 52%, #707070 66%, #989898 80%, #6e6e6e 90%, #a8a8a8);
+}
 .donut svg { position: relative; z-index: 1; display: block; width: 100%; height: auto; }
 /* The window is metal where the donut's channel is cut into it: a fine chamfer on each edge of
    the channel (the chart's units: the ring runs 33 to 47 from the center, of 50), bright polished
@@ -618,7 +619,6 @@ body.page-open #view-input { visibility: hidden; }
   mask: var(--cut);
   --cut: radial-gradient(circle closest-side, transparent 64%, #000 64.4%, #000 66%, transparent 66.4%);
 }
-.donut { --turned-metal: conic-gradient(#a8a8a8, #6e6e6e 10%, #9c9c9c 22%, #666666 36%, #b4b4b4 52%, #707070 66%, #989898 80%, #6e6e6e 90%, #a8a8a8); }
 .donut .ring { stroke: #2b2b2b; }
 .donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
 .donut-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
@@ -741,7 +741,7 @@ body.page-open #view-input { visibility: hidden; }
 .cat-row .mini { margin-left: -4px; }
 .mini { flex: none; width: 32px; height: 32px; color: var(--soft); }
 
-.wide-btn { display: block; width: 100%; padding: 13px; text-align: center; font-weight: 700; cursor: pointer; }
+.wide-btn { display: grid; place-items: center; width: 100%; min-height: 50px; padding: 4px 13px; text-align: center; font-weight: 700; cursor: pointer; } /* as tall as .primary beside or below it */
 .backup-status { margin: 0 0 8px; font-weight: 800; }
 .reminder { display: grid; gap: 8px; margin: 4px 0 14px; }
 .reminder-row { display: flex; align-items: baseline; gap: 18px; padding-left: 36px; } /* room for the hand */

@@ -84,12 +84,6 @@ export function onLongPress(node, handler, ms = 450) {
   node.addEventListener('contextmenu', (event) => event.preventDefault());
 }
 
-// Presses, app-wide: a press that slides off its button before lifting doesn't count (iOS would
-// otherwise still tap it). In the menu, a press can slide between commands: the hand follows the
-// thumb, and lifting opens the command under it. Each finger is tracked on its own, so overlapping
-// taps (the next finger landing before the last lifts, as in fast typing) don't cancel each other.
-const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
-
 // Watches the clicks that follow a press for `ms`, until `onClick(event)` returns true; then, if it
 // never did, calls `onTimeout`.
 function watchClicks(ms, onClick, onTimeout = () => {}) {
@@ -136,6 +130,12 @@ function openOnRelease(menu, command) {
   }, () => command?.click());
 }
 
+// Presses, app-wide: a press that slides off its button before lifting doesn't count (iOS would
+// otherwise still tap it). In the menu, a press can slide between commands: the hand follows the
+// thumb, and lifting opens the command under it. Each finger is tracked on its own, so overlapping
+// taps (the next finger landing before the last lifts, as in fast typing) don't cancel each other.
+const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
+
 export function trackPresses() {
   const presses = new Map(); // pointerId -> { target, menu }
   const commandAt = (event) => document.elementFromPoint(event.clientX, event.clientY)?.closest('.menu-list button') ?? null;
@@ -169,6 +169,7 @@ export function trackPresses() {
     pointAt(null);
   }, { capture: true });
 }
+
 // ---------- keypad ----------
 
 // Digits-only keypad. Amounts are built from the digit string, so there is no "." key:
@@ -239,13 +240,13 @@ export function keepFieldsAboveKeyboard() {
 // seconds to show a message, then the help line comes back. On the main screen the help line is a
 // status row instead (see statusRow).
 
-let helpLine = { text: '', tone: '', onTap: null, status: null };
+let helpLine = { text: '', onTap: null, status: null };
 let toastTimer = null;
 
 function showHelpLine() {
   const node = $('help');
-  const { text, tone, onTap, status } = helpLine;
-  node.className = `window help${tone ? ` ${tone}` : ''}${onTap ? ' tappable' : ''}${status ? ' status' : ''}`;
+  const { text, onTap, status } = helpLine;
+  node.className = `window help${onTap ? ' tappable' : ''}${status ? ' status' : ''}`;
   node.onclick = onTap;
   if (status) {
     node.setAttribute('aria-label', text);
@@ -308,14 +309,13 @@ new ResizeObserver(([entry]) => {
 }).observe($('help'));
 document.fonts?.ready.then(scrollHelpText);
 
-// tone: '' or 'bad'. onTap: optional action when the help window is tapped. status: show this
-// status row (see statusRow) instead, with text as what it says aloud.
-export function setHelp(text, { tone = '', onTap = null, status = null } = {}) {
+// onTap: optional action when the help window is tapped. status: show this status row (see
+// statusRow) instead, with text as what it says aloud.
+export function setHelp(text, { onTap = null, status = null } = {}) {
   // Screens set their help line on every redraw; only redraw HELP when it changed, so a scrolling
   // line doesn't restart.
-  const unchanged = text === helpLine.text && tone === helpLine.tone && onTap === helpLine.onTap
-    && JSON.stringify(status) === JSON.stringify(helpLine.status);
-  helpLine = { text, tone, onTap, status };
+  const unchanged = text === helpLine.text && onTap === helpLine.onTap && JSON.stringify(status) === JSON.stringify(helpLine.status);
+  helpLine = { text, onTap, status };
   if (!toastTimer && !unchanged) showHelpLine();
 }
 
