@@ -625,7 +625,7 @@ body.page-open #view-input { visibility: hidden; }
 .period-row .right { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Categories */
-.cat-row { display: flex; align-items: center; gap: 16px; padding: 5px 0; } /* the diamond's tips stick out ~2px, so this reads as ~14pt: a little more than the window edge leaves on its left */
+.cat-row { display: flex; align-items: center; gap: 16px; padding: 5px 0 5px 4px; } /* ~15pt either side of the diamond (its tips stick out ~2px past its box) */
 .cat-row input { flex: 1; min-width: 0; padding: 7px 10px; }
 .cat-row .grow { flex: 1; }
 .mini { flex: none; width: 32px; height: 32px; color: #cfcfcf; }
