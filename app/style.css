@@ -11,10 +11,11 @@
 }
 
 :root {
-  /* How windows arrive, after FF8's menus: screens and sheets fade in (FF8 takes 0.3s, linear,
+  /* How windows arrive, after FF8's menus: screens fade in (FF8 takes 0.3s, linear,
      which felt slow on a phone; 0.18s easing out reads as nearly instant but still a fade); the
      menu's windows swish in from the right, settling in ~0.2s with a strong ease-out, as in FF8;
-     Edit Expense swishes in the same way from the left. Nothing animates on the way out. */
+     sheets (Edit Expense, the category grid) swish in the same way from the left. Nothing
+     animates on the way out. */
   --fade-in: fade-in 0.18s ease-out;
   --swish-in: swish-in-right 0.22s cubic-bezier(0.1, 0.8, 0.25, 1);
   --swish-in-left: swish-in-left 0.22s cubic-bezier(0.1, 0.8, 0.25, 1);
@@ -472,8 +473,7 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
   overflow-y: auto;
   padding: 18px 14px 14px;
 }
-.backdrop.open .sheet { animation: var(--fade-in); }
-.backdrop.open .sheet.from-left { animation: var(--swish-in-left); }
+.backdrop.open .sheet { animation: var(--swish-in-left); }
 .sheet h2 { margin: 0 0 4px; font-size: 1.25rem; }
 .hint { margin: 0 0 12px; color: #d2d2d2; font-size: 0.92rem; font-weight: 500; line-height: 1.4; }
 .budget-amount { margin: 2px 0; text-align: center; font-size: 2.6rem; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }

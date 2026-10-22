@@ -127,7 +127,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const style = getComputedStyle(document.querySelector(sel));
     return `${style.animationName} ${style.animationDuration} ${style.animationTimingFunction}`;
   }, selector);
-  check('the grid fades in like the other screens', await animationOf('#sheet'), 'fade-in 0.18s ease-out');
+  check('the grid swishes in from the left like Edit Expense', await animationOf('#sheet'), 'swish-in-left 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)');
   await page.screenshot({ path: `${OUT}/${ENGINE}-x1-grid.png` });
   await page.locator('#sheet .grid .chip', { hasText: 'Health' }).tap();
   await page.waitForTimeout(700);
