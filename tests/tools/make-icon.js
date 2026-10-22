@@ -52,6 +52,7 @@ function layout() {
   }));
 }
 
+// color: { hex, accent } from the palette. Like the app's gems, the accent is a diamond at the core.
 function diamondHtml(d, color, px) {
   const side = (d.size * px) / Math.SQRT2; // the rotated square's side, so point to point is d.size
   const lift = 1 - d.depth * 0.22;         // nearer = higher off the backdrop = longer shadow
@@ -61,7 +62,8 @@ function diamondHtml(d, color, px) {
   // top-left falls on the box's top and left edges: shadow offsets (x, y) become (diagonal, 0).
   const shade = (x) => `${x}px ${x}px`;
   return `<div style="position:absolute;left:${d.x * px - side / 2}px;top:${d.y * px - side / 2}px;
-    width:${side}px;height:${side}px;transform:rotate(45deg);background:${color};
+    width:${side}px;height:${side}px;transform:rotate(45deg);
+    background:linear-gradient(${color.accent},${color.accent}) center / 42% 42% no-repeat, ${color.hex};
     filter:contrast(${contrast}) blur(${blur}px);
     box-shadow:0 0 0 ${Math.max(1.5, side * 0.035)}px #0d0d0d,
       inset ${side * 0.1}px 0 0 rgba(255,255,255,.34),
@@ -78,7 +80,7 @@ function iconHtml(px, colors) {
 }
 
 (async () => {
-  const colors = readPalette().slice(0, 4).map((c) => c.hex);
+  const colors = readPalette().slice(0, 4);
   const browser = await webkit.launch();
   for (const size of [512, 180]) {
     const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
