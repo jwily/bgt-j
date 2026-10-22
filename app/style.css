@@ -264,8 +264,19 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   gap: 6px;
   padding: 16px 10px 10px;
   container-type: inline-size; /* lets the amount size itself to this window's width */
-  touch-action: none; /* we handle horizontal swipes here ourselves */
+  cursor: pointer; /* the whole window is the currency switch */
 }
+.currency-zone:active { filter: brightness(1.18); }
+/* The currencies in a row, like the category strip: the chosen one centered (input.js,
+   centerCurrency), the row gliding over when it changes, fading out at the window's edges. */
+.currency-opts {
+  align-self: stretch;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+}
+.currency-track { width: max-content; padding-left: 32px; /* room for the hand by the first */ }
+.currency-track.gliding { transition: transform 0.2s ease-out; }
 /* FF8 Config-style choices (the currency picker, the backup reminder): the chosen one is bright
    with the hand beside it, the others grey. Only the choices count for centering; the hand hangs
    outside them. */
@@ -287,10 +298,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .amount-sub span { display: block; }
 .amount-sub .converted { color: var(--text); font-size: 1rem; }
 
-.slide-left { animation: slide-left 0.18s ease-out; }
-.slide-right { animation: slide-right 0.18s ease-out; }
-@keyframes slide-left { from { transform: translateX(28px); opacity: 0.3; } }
-@keyframes slide-right { from { transform: translateX(-28px); opacity: 0.3; } }
+.slide-in { animation: slide-in 0.18s ease-out; }
+@keyframes slide-in { from { transform: translateX(28px); opacity: 0.3; } }
 .nudge { animation: nudge 0.3s; }
 @keyframes nudge { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 

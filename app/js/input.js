@@ -3,7 +3,7 @@
 import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
-import { $, el, keypad, onSwipe, onDoubleTap, toast, nudge, categoryChip } from './ui.js';
+import { $, el, keypad, onDoubleTap, toast, nudge, categoryChip } from './ui.js';
 import { openCategoryGrid } from './sheets.js';
 
 let digits = '';
@@ -16,15 +16,18 @@ const SIDEWAYS = matchMedia('(orientation: landscape) and (max-height: 500px)');
 const parts = {};
 
 export function initInput() {
-  // Currency: tap the options, or swipe anywhere in the Amount window to move between them. Like
-  // FF8's Config options, the chosen one is bright with the hand beside it and the others are grey.
+  // Currency: tap anywhere in the Amount window for the next one. The choices sit in a row like the
+  // category strip: the chosen one centered, bright, with the hand beside it; the others grey.
   parts.currencies = CURRENCY_CODES.map((code) => el('span', { textContent: code }));
-  const options = el('button', { className: 'options currency-opts', 'aria-label': 'Switch currency' }, ...parts.currencies);
-  options.addEventListener('click', cycleCurrency);
+  parts.currencyTrack = el('div', { className: 'options currency-track' }, ...parts.currencies);
+  const options = el('div', { className: 'currency-opts' }, parts.currencyTrack);
   parts.amount = el('div', { className: 'amount' });
   parts.sub = el('div', { className: 'amount-sub' });
-  const zone = el('div', { className: 'window currency-zone', 'data-label': 'Amount' }, options, parts.amount, parts.sub);
-  onSwipe(zone, swipeCurrency);
+  const zone = el('div', { className: 'window currency-zone', 'data-label': 'Amount', role: 'button', tabIndex: 0, 'aria-label': 'Switch currency' }, options, parts.amount, parts.sub);
+  zone.addEventListener('click', cycleCurrency);
+  // Re-center when the row's width or the font changes (it measures the choices' widths).
+  new ResizeObserver(() => centerCurrency(false)).observe(options);
+  document.fonts?.ready.then(() => centerCurrency(false));
 
   // Category: a snapping strip; whichever chip is centered is selected. Double-tap for a grid.
   parts.strip = el('div', { className: 'strip' });
@@ -84,6 +87,7 @@ export function renderInput() {
   const amount = Number(digits || '0');
 
   parts.currencies.forEach((span, i) => span.classList.toggle('on', CURRENCY_CODES[i] === currency));
+  centerCurrency(true);
   parts.amount.textContent = formatMoney(amount, currency);
   parts.amount.classList.toggle('empty', !amount);
   parts.sub.replaceChildren(...(currency === HOME ? [] : [
@@ -106,29 +110,24 @@ function rateText(code) {
   return `1 ${HOME} = ${rate.toFixed(2)} ${code}${daysBetween(state.rates.date) > 4 ? ` (rate from ${formatDate(state.rates.date)})` : ''}`;
 }
 
-// Swipes move the choice the way the finger goes, like the options' order on screen: a swipe left
-// picks the option to the left, a swipe right the one to the right. The ends are walls: swiping
-// past the first or last option just nudges the amount.
-function swipeCurrency(direction) {
-  const index = CURRENCY_CODES.indexOf(state.input.currency) + (direction === 'left' ? -1 : 1);
-  if (index < 0 || index >= CURRENCY_CODES.length) {
-    nudge(parts.amount);
-    return;
-  }
-  switchCurrency(CURRENCY_CODES[index], direction);
+// The next currency, wrapping around; the new amount slides in from the right, like the row.
+function cycleCurrency() {
+  const next = CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + 1) % CURRENCY_CODES.length];
+  digits = digits.slice(0, CURRENCIES[next].maxDigits);
+  parts.amount.classList.remove('slide-in');
+  void parts.amount.offsetWidth; // restart the animation
+  parts.amount.classList.add('slide-in');
+  setInputPrefs({ currency: next });
 }
 
-// Tapping the options steps to the next currency, wrapping around.
-const cycleCurrency = () =>
-  switchCurrency(CURRENCY_CODES[(CURRENCY_CODES.indexOf(state.input.currency) + 1) % CURRENCY_CODES.length], 'left');
-
-// slide: which way the amount slides in, following the finger.
-function switchCurrency(next, slide) {
-  digits = digits.slice(0, CURRENCIES[next].maxDigits);
-  parts.amount.classList.remove('slide-left', 'slide-right');
-  void parts.amount.offsetWidth; // restart the animation
-  parts.amount.classList.add(slide === 'right' ? 'slide-right' : 'slide-left');
-  setInputPrefs({ currency: next });
+// Moves the row so the chosen currency's name is centered (the hand hangs outside it and doesn't
+// count). glide: animate, as after a tap; not when only the layout changed.
+function centerCurrency(glide) {
+  const on = parts.currencies.find((span) => span.classList.contains('on'));
+  const row = parts.currencyTrack.parentElement;
+  if (!on || !row.clientWidth) return;
+  parts.currencyTrack.classList.toggle('gliding', glide);
+  parts.currencyTrack.style.transform = `translateX(${row.clientWidth / 2 - (on.offsetLeft + on.offsetWidth / 2)}px)`;
 }
 
 // ---------- category strip ----------

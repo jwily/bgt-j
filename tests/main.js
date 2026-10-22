@@ -35,28 +35,19 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   check('left after $510.50', await leftText(page), '$1,489.50 left');
   check('toast', await page.locator('#help .text').first().textContent(), 'Added $510.50 · Groceries');
 
-  // Currency switch by tap, then by swipe (mouse drag fires pointer events)
+  // Currency switch: tap the choices
   await page.locator('.currency-opts').tap();
   for (const k of '250') await mainKey(k);
   check('MXN 2-5-0', await page.locator('.amount').textContent(), 'MX$250');
   check('conversion line', (await page.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $12.50 | 1 USD = 20.00 MXN');
-  const zone = await page.locator('.currency-zone').boundingBox();
-  const swipe = async (dx) => {
-    await page.mouse.move(zone.x + zone.width / 2, zone.y + zone.height / 2 + 30);
-    await page.mouse.down();
-    await page.mouse.move(zone.x + zone.width / 2 + dx, zone.y + zone.height / 2 + 30, { steps: 5 });
-    await page.mouse.up();
-  };
-  // Swipes move the choice the way the finger goes (USD is on the left), and stop at the ends.
-  await swipe(-120);
-  check('swipe left -> USD', await page.locator('.currency-opts .on').textContent(), 'USD');
-  await swipe(-120);
-  check('swipe left at the left end stays on USD', await page.locator('.currency-opts .on').textContent(), 'USD');
-  await swipe(120);
-  check('swipe right -> MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
-  await swipe(120);
-  check('swipe right at the right end stays on MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
-  check('digits kept after swipes', await page.locator('.amount').textContent(), 'MX$250');
+  // A tap anywhere in the Amount window (here, on the amount itself) picks the next currency,
+  // wrapping around.
+  await page.locator('.amount').tap();
+  check('tap the amount -> USD (wraps around)', await page.locator('.currency-opts .on').textContent(), 'USD');
+  const zoneBox = await page.locator('.currency-zone').boundingBox();
+  await page.locator('.currency-zone').tap({ position: { x: 16, y: zoneBox.height - 16 } }); // an empty corner
+  check('tap an empty corner -> MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
+  check('digits kept after switching', await page.locator('.amount').textContent(), 'MX$250');
 
   // Category: tap the third chip, wait for the snap
   check('strip is alphabetical', (await page.locator('.strip .chip').allTextContents()).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');
