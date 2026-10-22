@@ -98,6 +98,10 @@ if (needsRecovery) {
   if (recoveredFrom) alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
 }
 
+// iPhone Safari only shows a button's pressed look (:active) when something listens for touches,
+// so without this only ⌫ (which has a press-and-hold listener) lit up when pressed.
+document.addEventListener('touchstart', () => {}, { passive: true });
+
 takeDailySnapshot(); // before anything changes today
 keepFieldsAboveKeyboard();
 initInput();
