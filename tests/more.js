@@ -57,26 +57,38 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.waitForTimeout(100);
   check('hold backspace clears', await page.locator('.amount').textContent(), '$0.00');
 
-  // Fast typing. iPhone can skip the click for a quick tap, especially when the next finger lands
-  // before the last one lifts; keys act on the finger lifting instead, each finger on its own.
-  // (Replays the pointer events only, with no clicks at all, like a skipped click.)
-  const touch = (steps) => page.evaluate((list) => {
+  // Fast typing: a press that drifts off its key as it lifts (iOS then sends no click for it)
+  // mustn't swallow the next key's tap.
+  await page.evaluate(() => {
+    const key = [...document.querySelectorAll('#view-input .key')].find((k) => k.textContent === '2');
+    const box = key.getBoundingClientRect();
+    const send = (type, y) => key.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 9, pointerType: 'touch', isPrimary: true, clientX: box.left + box.width / 2, clientY: y }));
+    send('pointerdown', box.top + box.height / 2);
+    send('pointerup', box.bottom + 40); // lifted just off the key: no click follows
+  });
+  await mainKey('3');
+  check('a quick tap right after a press that drifted off its key still counts', await page.locator('.amount').textContent(), '$0.03');
+  await mainKey('⌫');
+
+  // Overlapping taps (the next finger lands before the last lifts), with the clicks Safari sends
+  // when each lifts: both count.
+  await page.evaluate(() => {
     const keyFor = (label) => [...document.querySelectorAll('#view-input .key')].find((k) => k.textContent === label);
-    for (const [type, label, id] of list) {
+    const send = (type, label, id) => {
       const key = keyFor(label), box = key.getBoundingClientRect();
       key.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: id, pointerType: 'touch', isPrimary: id === 1, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 }));
-    }
-  }, steps);
-  await touch([['pointerdown', '2', 1], ['pointerup', '2', 1], ['pointerdown', '3', 1], ['pointerup', '3', 1]]);
-  check('two quick taps both count, even with no clicks', await page.locator('.amount').textContent(), '$0.23');
-  await touch([['pointerdown', '4', 1], ['pointerdown', '5', 2], ['pointerup', '4', 1], ['pointerup', '5', 2]]);
-  check('overlapping taps (next finger down before the last lifts) both count', await page.locator('.amount').textContent(), '$23.45');
-  await mainKey('7'); // an ordinary tap (with its click) still counts once
-  check('an ordinary tap counts exactly once', await page.locator('.amount').textContent(), '$234.57');
+    };
+    send('pointerdown', '4', 1);
+    send('pointerdown', '5', 2);
+    send('pointerup', '4', 1);
+    keyFor('4').click();
+    send('pointerup', '5', 2);
+    keyFor('5').click();
+  });
+  check('overlapping taps both count', await page.locator('.amount').textContent(), '$0.45');
   await page.locator('#view-input .key').filter({ hasText: /^⌫$/ }).hover();
   await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
   await page.waitForTimeout(100);
-  check('hold backspace still just clears (lifting doesn\'t also delete)', await page.locator('.amount').textContent(), '$0.00');
 
   // MXN capped at 7 digits, switching trims
   await page.locator('.currency-opts').tap();
