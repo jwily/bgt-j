@@ -596,7 +596,7 @@ body.page-open #view-input { visibility: hidden; }
   mask: var(--cut);
   --cut: radial-gradient(circle closest-side, transparent 64%, #000 64.4%, #000 66%, transparent 66.4%);
 }
-.donut { --turned-metal: conic-gradient(#d8d8d8, #9a9a9a 10%, #cccccc 22%, #929292 36%, #e2e2e2 52%, #9c9c9c 66%, #c6c6c6 80%, #9a9a9a 90%, #d8d8d8); }
+.donut { --turned-metal: conic-gradient(#a8a8a8, #6e6e6e 10%, #9c9c9c 22%, #666666 36%, #b4b4b4 52%, #707070 66%, #989898 80%, #6e6e6e 90%, #a8a8a8); }
 .donut .ring { stroke: #2b2b2b; }
 .donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
 .donut-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
