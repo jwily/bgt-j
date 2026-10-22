@@ -521,6 +521,29 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('Back with unsaved changes: OK leaves', await p5.locator('#page').isHidden(), true);
   check('and the changes are discarded', await savedNames(), before);
 
+  // Category names never keep spaces at either end: not from old saved data, not from typing.
+  await p5.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('budget-tracker'));
+    data.categories.find((c) => c.name === 'Bills').name = '  Bills   ';
+    localStorage.setItem('budget-tracker', JSON.stringify(data));
+  });
+  await p5.reload();
+  await p5.waitForTimeout(400);
+  check('spaces around a saved name are dropped on load', await p5.locator('.strip .chip', { hasText: 'Bills' }).first().evaluate((c) => c.textContent), 'Bills');
+  await openCategories();
+  check('and on the Categories screen', (await categoryRows(p5))[0], 'Bills');
+  const otherIndex = (await categoryRows(p5)).indexOf('Other');
+  await nameField(otherIndex).fill('Misc   ');
+  await nameField(otherIndex).press('Enter');
+  check('typed trailing spaces go when you finish the name', await nameField(otherIndex).inputValue(), 'Misc');
+  await save5.tap();
+  await p5.waitForTimeout(300);
+  check('and are never saved', await p5.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).categories.some((c) => c.name !== c.name.trim())), false);
+  check('saved as Misc', (await savedNames()).split(',').includes('Misc'), true);
+  await messageCleared(p5);
+  await p5.locator('#nav-btn').tap();
+  await p5.waitForTimeout(300);
+
   // Add category with the keyboard open: the new name field ends up above the keyboard, not behind
   // it. (A 300px keyboard is faked by shrinking the visual viewport, as iOS does.)
   await openCategories();
