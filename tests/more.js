@@ -625,9 +625,16 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('Save turns off again when the draft matches what\'s saved', await save5.isDisabled(), true);
   await messageCleared(p5);
 
-  // New categories start blank; one still blank when the keyboard closes is dropped.
+  // New categories start blank, scrolled into view clear of the bars; one still blank when the
+  // keyboard closes is dropped.
   const rowCount = (await categoryRows(p5)).length;
+  await p5.evaluate(() => document.getElementById('page').scrollTo(0, 0)); // from the top of a long list
   await p5.locator('.wide-btn', { hasText: 'Add category' }).tap();
+  await p5.waitForTimeout(100);
+  check('Add category: the new field is in view, clear of the top and bottom bars', await p5.evaluate(() => {
+    const box = document.activeElement.getBoundingClientRect();
+    return box.top >= document.querySelector('.hud').getBoundingClientRect().bottom && box.bottom <= document.querySelector('#page .actions').getBoundingClientRect().top;
+  }), true);
   check('Add category: one more row, blank', `${(await categoryRows(p5)).length} "${(await categoryRows(p5)).at(-1)}"`, `${rowCount + 1} ""`);
   await p5.evaluate(() => document.activeElement.blur()); // the keyboard closes
   check('left blank when the keyboard closes: dropped', (await categoryRows(p5)).length, rowCount);
@@ -657,8 +664,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('Back with unsaved changes: OK leaves', await p5.locator('#page').isHidden(), true);
   check('and the changes are discarded', await savedNames(), before);
 
-  // Save with blanks: a new category left blank is dropped, an existing name left blank keeps its
-  // name, and tapping Save while a blank new field still has the keyboard up still saves the rest.
+  // Save with blanks: a new category left blank is dropped, an existing one cleared is removed, and
+  // tapping Save while a blank new field still has the keyboard up still saves the rest.
   await openCategories();
   const names = await categoryRows(p5);
   await nameField(names.indexOf('Shopping')).fill('Stuff');
@@ -668,8 +675,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await p5.waitForTimeout(300);
   const afterSave = (await savedNames()).split(',');
   check('Save with blanks: the rename is saved', afterSave.includes('Stuff') && !afterSave.includes('Shopping'), true);
-  check('Save with blanks: a blanked name keeps its old one', afterSave.includes('Health'), true);
-  check('Save with blanks: the blank new one is dropped, nothing blank saved', `${afterSave.length} ${afterSave.some((n) => !n.trim())}`, `${names.length} false`);
+  check('Save with blanks: a category whose name was cleared is removed', afterSave.includes('Health'), false);
+  check('Save with blanks: the blank new one is dropped, nothing blank saved', `${afterSave.length} ${afterSave.some((n) => !n.trim())}`, `${names.length - 1} false`);
   await messageCleared(p5);
   await p5.locator('#nav-btn').tap();
   await p5.waitForTimeout(300);
