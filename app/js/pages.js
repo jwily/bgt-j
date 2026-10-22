@@ -278,7 +278,6 @@ export function confirmLeave() {
 // Two categories can't share a name (ignoring capitalization), and names can't be empty. Returns
 // the problem to show, or null.
 function categoryDraftProblem() {
-  if (categoryDraft.some((c) => !c.name.trim())) return "Category names can't be empty.";
   const savedNames = new Map(categoriesFromState().map((c) => [c.id, c.name]));
   const unrenamed = (c) => c.id && savedNames.get(c.id) === c.name.trim();
   for (const [i, category] of categoryDraft.entries()) {
@@ -305,6 +304,14 @@ function renderCategories() {
 
   const saveButton = el('button', { className: 'primary', textContent: 'Save', disabled: !categoryDraftChanged() });
   saveButton.addEventListener('click', () => {
+    // Blank names don't count: a new category left blank is dropped, and an existing one keeps the
+    // name it had.
+    const savedNames = new Map(categoriesFromState().map((c) => [c.id, c.name]));
+    for (const category of [...draft]) {
+      if (category.name.trim()) continue;
+      if (category.id) category.name = savedNames.get(category.id);
+      else draft.splice(draft.indexOf(category), 1);
+    }
     const problem = categoryDraftProblem();
     if (problem) {
       toast(problem);
@@ -316,8 +323,11 @@ function renderCategories() {
     toast('Categories saved', undo);
   });
 
+  // Diamonds go by position down the screen; after a row is dropped in place, repaint them.
+  const repaintDots = () => body.querySelectorAll('.cat-row .dot').forEach((old, i) => old.replaceWith(colorDot(paletteColor(i))));
+
   const list = panel('Categories', ...active.map((category) => {
-    const name = el('input', { type: 'text', value: category.name, enterKeyHint: 'done', 'aria-label': 'Category name' });
+    const name = el('input', { type: 'text', value: category.name, placeholder: 'New category', enterKeyHint: 'done', 'aria-label': 'Category name' });
     name.dataset.key = category.key;
     name.addEventListener('keydown', (event) => { if (event.key === 'Enter') name.blur(); });
     name.addEventListener('input', () => {
@@ -329,10 +339,19 @@ function renderCategories() {
       name.value = name.value.trim();
       category.name = name.value;
     });
+    // A new category still blank when the keyboard closes is dropped. Just its row goes, not the
+    // whole screen redrawn, so a tap on Save that closed the keyboard still lands on Save.
+    name.addEventListener('blur', () => {
+      if (category.id || name.value.trim()) return;
+      draft.splice(draft.indexOf(category), 1);
+      name.closest('.cat-row').remove();
+      repaintDots();
+      saveButton.disabled = !categoryDraftChanged();
+    });
 
     const remove = el('button', { className: 'mini', textContent: '✕', 'aria-label': `Remove ${category.name}` });
     remove.addEventListener('click', () => {
-      if (active.length === 1) {
+      if (draft.filter((c) => !c.archived && (c.id || c.name.trim())).length === 1) {
         toast('You need at least one category.');
         return;
       }
@@ -352,14 +371,11 @@ function renderCategories() {
 
   const addButton = el('button', { className: 'wide-btn', textContent: 'Add category' });
   addButton.addEventListener('click', () => {
-    let name = 'New Category';
-    const taken = (candidate) => draft.some((c) => c.name.trim().toLowerCase() === candidate.toLowerCase());
-    for (let n = 2; taken(name); n++) name = `New Category ${n}`;
     const key = `new-${++newCategoryKeys}`;
-    // New ones go after the other active categories, until Save sorts them.
-    draft.splice(active.length, 0, { key, id: null, name, archived: false });
+    // New ones start blank and go after the other active categories, until Save sorts them.
+    draft.splice(draft.filter((c) => !c.archived).length, 0, { key, id: null, name: '', archived: false });
     renderPage();
-    body.querySelector(`.cat-row input[data-key="${key}"]`)?.select();
+    body.querySelector(`.cat-row input[data-key="${key}"]`)?.focus();
   });
 
   const archivedPanel = archived.length > 0 && panel('Archived',

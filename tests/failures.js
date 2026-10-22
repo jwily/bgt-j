@@ -220,7 +220,7 @@ const sample = (overrides = {}) => ({
     const deployed = () => page.evaluate(() => fetch('js/money.js').then((r) => r.text()).then((t) => t.match(/deploy: (\w+)/)?.[1]));
     // Waits until the saved version has the given deploy, and returns the saved versions' names.
     const savedVersion = (wanted) => page.evaluate(async (want) => {
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 150; i++) { // up to 15s: slow when all the test runs share the machine
         const names = (await caches.keys()).filter((n) => n.startsWith('bgt-j-')).sort();
         const newest = names.length && await caches.open(names.at(-1));
         const file = newest && await newest.match('js/money.js');

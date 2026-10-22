@@ -33,41 +33,53 @@ const sameBytes = (a, b) => {
 };
 
 // Downloads every file; if all arrived and any differs from the saved version, saves them as a new
-// complete version, keeping just the one it replaces. One at a time; a failure (e.g. offline)
-// changes nothing.
-let updating = null;
-function update() {
-  updating ??= (async () => {
-    try {
-      const downloads = await Promise.all(FILES.map(async (file) => {
-        const response = await fetch(new Request(file, { cache: 'no-cache' }));
-        if (!response.ok) throw new Error(`${file}: ${response.status}`);
-        return [file, response];
-      }));
-      const savedName = await currentVersion();
-      const saved = savedName && await caches.open(savedName);
-      if (saved) {
-        let changed = false;
-        for (const [file, response] of downloads) {
-          const old = await saved.match(file);
-          if (!old || !sameBytes(await old.arrayBuffer(), await response.clone().arrayBuffer())) {
-            changed = true;
-            break;
-          }
+// complete version, keeping just the one it replaces. A failure (e.g. offline) changes nothing.
+async function checkForUpdate() {
+  try {
+    const downloads = await Promise.all(FILES.map(async (file) => {
+      const response = await fetch(new Request(file, { cache: 'no-cache' }));
+      if (!response.ok) throw new Error(`${file}: ${response.status}`);
+      return [file, response];
+    }));
+    const savedName = await currentVersion();
+    const saved = savedName && await caches.open(savedName);
+    if (saved) {
+      let changed = false;
+      for (const [file, response] of downloads) {
+        const old = await saved.match(file);
+        if (!old || !sameBytes(await old.arrayBuffer(), await response.clone().arrayBuffer())) {
+          changed = true;
+          break;
         }
-        if (!changed) return;
       }
-      const name = `${PREFIX}${Date.now()}`;
-      const next = await caches.open(name);
-      await Promise.all(downloads.map(([file, response]) => next.put(file, response)));
-      await next.put(COMPLETE, new Response('ok'));
-      // Keep the version just replaced (an open launch may still be using it); drop older ones.
-      for (const other of await caches.keys()) if (other !== name && other !== savedName) await caches.delete(other);
-    } catch {
-      // Offline or a download failed: keep the saved version; try again next launch.
-    } finally {
-      updating = null;
+      if (!changed) return;
     }
+    const name = `${PREFIX}${Date.now()}`;
+    const next = await caches.open(name);
+    await Promise.all(downloads.map(([file, response]) => next.put(file, response)));
+    await next.put(COMPLETE, new Response('ok'));
+    // Keep the version just replaced (an open launch may still be using it); drop older ones.
+    for (const other of await caches.keys()) if (other !== name && other !== savedName) await caches.delete(other);
+  } catch {
+    // Offline or a download failed: keep the saved version; try again next launch.
+  }
+}
+
+// One check at a time. A launch while one is running asks for another right after it: the running
+// one may have started before the newest version was deployed.
+let updating = null;
+let checkAgain = false;
+function update() {
+  if (updating) {
+    checkAgain = true;
+    return updating;
+  }
+  updating = (async () => {
+    do {
+      checkAgain = false;
+      await checkForUpdate();
+    } while (checkAgain);
+    updating = null;
   })();
   return updating;
 }
