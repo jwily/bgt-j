@@ -212,8 +212,9 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .help.bad span { color: var(--bad); }
 /* The main screen's status row (ui.js, statusRow), after FF8's party windows: no label, so the
    row sits centered in the window, both ways. The HP's bar is a thin line under it, measured from
-   menuanimations.mov: translucent red (about a fifth opaque at its core, fainter at its top and
-   bottom edges) over the window, with no track where HP is missing. */
+   menuanimations.mov and FFVIII_Menu: translucent red (about a fifth opaque at its core, fainter
+   at its top and bottom edges) over the window, brightening at its tip; where HP is missing it
+   gives way to a translucent dark grey line, shaded the same way. */
 #help.status::before { display: none; }
 .help.status { justify-content: center; padding: 8px 12px; }
 .status-row { display: flex; align-items: baseline; gap: 24px; font-weight: 800; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -222,8 +223,14 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .status-row .hp { position: relative; padding-bottom: 5px; }
 .status-row .hp.low b { color: var(--yellow); }
 .status-row .hp.over b { color: var(--bad); }
-.hp-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
-.hp-bar span { display: block; height: 100%; background: linear-gradient(rgba(255, 0, 0, 0.14), rgba(255, 0, 0, 0.32), rgba(255, 0, 0, 0.14)); }
+.hp-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.12)); }
+.hp-bar span {
+  display: block;
+  height: 100%;
+  background:
+    linear-gradient(to left, rgba(255, 40, 90, 0.3) 3px, transparent 3px),
+    linear-gradient(rgba(255, 0, 0, 0.14), rgba(255, 0, 0, 0.32), rgba(255, 0, 0, 0.14));
+}
 
 /* The title window: the open screen's name, top right, as in FF8's sub-screens. */
 .title {
