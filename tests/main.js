@@ -3,9 +3,8 @@
 const { chromium, webkit, devices } = require('playwright');
 const ENGINE = process.env.ENGINE || 'chromium';
 const fs = require('fs');
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors } = require('./helpers');
+const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output'); // screenshots and exported files (not committed)
-const check = (label, actual, expected) => console.log(`${actual === expected ? 'PASS' : 'FAIL'}  ${label}: ${JSON.stringify(actual)}${actual === expected ? '' : ` (expected ${JSON.stringify(expected)})`}`);
 
 (async () => {
   const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
