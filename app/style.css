@@ -599,22 +599,28 @@ body.page-open #view-input { visibility: hidden; }
   box-shadow: 0 0 0 1px #000, inset 1px 1px 0 rgba(255, 255, 255, 0.45);
 }
 
-/* FF8's gauge (FFVIII_Status_Menu_5): a silver capsule, brightest at its rounded ends, around a dark
-   trough with a black liner; the fill is nearly flat and a little muted, with a slightly lighter
-   band along its top (measured: about a quarter of its height), and fades out where it ends. The
-   number sits under the bar's right end, overlapping its bottom rim (compatibility.png). */
+/* FF8's gauge (FFVIII_Status_Menu_5), measured: a silver tube around a dark trough. The rails along
+   the top and bottom are shaded like a tube (darker outside, lighter toward the trough); the end
+   caps are flat bright silver, about half the bar's height wide, with straight inner edges; a black
+   liner runs along the trough's top and ends, not its bottom. Layers, front to back: trough, liner,
+   caps, rails. The fill is nearly flat and a little muted, with a slightly lighter band along its
+   top, and fades out where it ends. The number sits under the bar's
+   right end, overlapping its bottom rim (compatibility.png). */
 .gauge { position: relative; display: block; padding-bottom: 10px; }
 .gauge .bar {
   display: block;
   height: 16px;
-  padding: 1px;
-  background: #323232;
-  border: solid;
-  border-width: 3px 5px;
-  border-color: #a0a0a0 #d3d3d3 #8a8a8a;
+  padding: 1px 1px 0;
+  border: solid transparent;
+  border-width: 3px 7px;
   border-radius: 8px;
-  box-shadow: inset 0 0 0 1px #121214, 1px 2px 2px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+  background:
+    linear-gradient(#323232, #323232) content-box,
+    linear-gradient(#121214, #121214) padding-box,
+    linear-gradient(to right, #9d9d9d, #d3d3d3 1px, #d3d3d3 6px, #c2c2c2 7px, transparent 7px,
+      transparent calc(100% - 7px), #c2c2c2 calc(100% - 7px), #d3d3d3 calc(100% - 6px), #d3d3d3 calc(100% - 1px), #909090) border-box,
+    linear-gradient(#7d7d7d, #a3a3a3 3px, #9e9e9e calc(100% - 3px), #767676) border-box;
+  box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.5);
 }
 .gauge .bar span {
   display: block;
