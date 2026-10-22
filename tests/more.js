@@ -86,6 +86,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     keyFor('5').click();
   });
   check('overlapping taps both count', await page.locator('.amount').textContent(), '$0.45');
+  check('no double-tap zoom anywhere (the whole page opts out, gaps between keys included)', await page.evaluate(() => getComputedStyle(document.documentElement).touchAction), 'manipulation');
   await page.locator('#view-input .key').filter({ hasText: /^⌫$/ }).hover();
   await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
   await page.waitForTimeout(100);
