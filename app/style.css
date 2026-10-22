@@ -648,8 +648,9 @@ body.page-open #view-input { visibility: hidden; }
   line-height: 1;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
-  /* In a solid black outline, as on FF8's Compatibility bars (whose digits are light grey; the
-     user preferred white). */
+  /* Light grey in a solid black outline, as on FF8's Compatibility bars; a touch lighter than
+     FF8's #bcbcbc, and greyer than the amount just above it, so the two read apart. */
+  color: #cfcfcf;
   text-shadow: -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000, -1px 0 0 #000, 1px 0 0 #000,
     -1px 1px 0 #000, 0 1px 0 #000, 1px 1px 0 #000, 0 0 1px #000;
 }
