@@ -344,7 +344,6 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   height: 9px;
   margin-top: -5px;
   transform: rotate(45deg);
-  background: var(--c);
   box-shadow: 0 0 0 1px #000, inset 1px 1px 0 rgba(255, 255, 255, 0.45);
 }
 .chip.selected { color: var(--yellow); }
@@ -563,12 +562,14 @@ body.page-open #view-input { visibility: hidden; }
 .open .chev { transform: rotate(90deg); }
 
 /* A category's color as a small diamond */
+/* A category's diamond: its color (--c), with its accent (--c2) as a small diamond at the core.
+   Written out here, not as a variable on :root, where --c and --c2 don't exist yet. */
+.dot, .chip::before { background: linear-gradient(var(--c2), var(--c2)) center / 42% 42% no-repeat, var(--c); }
 .dot {
   width: 10px;
   height: 10px;
   margin: 0 1px;
   transform: rotate(45deg);
-  background: var(--c);
   box-shadow: 0 0 0 1px #000, inset 1px 1px 0 rgba(255, 255, 255, 0.45);
 }
 
