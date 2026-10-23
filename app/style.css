@@ -300,6 +300,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .currency-zone :is(.options > *, .amount, .amount-sub span) { text-shadow: max(2px, 0.05em) max(2px, 0.05em) 2px #3a3a3a; }
 .currency-zone {
   position: relative;
+  z-index: 2; /* over the wandering party member, whose head can reach the rate line on short screens */
   flex: 1;
   min-height: 118px;
   display: flex;
@@ -404,7 +405,23 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 /* A bit smaller than the other hands; its fingertip stops 12px short of the gem. */
 .chip.selected::after { left: -33px; width: 27px; height: 19px; margin-top: -10px; }
 
-.details { display: flex; gap: var(--gap); }
+.details { position: relative; display: flex; gap: var(--gap); }
+/* The party member wandering along the top of Note and Date (party.js): a cell of
+   sprites/party.png (rows: characters, --row; columns: frames, --frame), each sprite pixel drawn as
+   --px (4 screen pixels on a 3x iPhone, so the pixel art stays crisp; keep in sync with party.js),
+   feet just on the windows' top edge. Taps go through it. */
+.party-member {
+  --px: calc(4px / 3);
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  bottom: calc(100% - 2px);
+  width: calc(20 * var(--px));
+  height: calc(26 * var(--px));
+  background: url(sprites/party.png) calc(var(--frame, 0) * -20 * var(--px)) calc(var(--row, 0) * -26 * var(--px)) / calc(120 * var(--px)) calc(156 * var(--px)) no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
 .note-window { flex: 1; min-width: 0; padding: 12px 10px 2px; }
 .note {
   width: 100%;

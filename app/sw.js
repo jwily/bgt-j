@@ -11,7 +11,7 @@ const COMPLETE = '__complete__'; // written last: a version without it is unfini
 const FILES = [
   './', 'index.html', 'style.css', 'manifest.json', 'icons/icon-180.png', 'icons/icon-512.png',
   'js/app.js', 'js/store.js', 'js/money.js', 'js/ui.js', 'js/input.js', 'js/sheets.js', 'js/pages.js', 'js/backup.js', 'js/snapshots.js', 'js/dates.js',
-  'fonts/nunito-latin.woff2',
+  'js/party.js', 'sprites/party.png', 'fonts/nunito-latin.woff2',
 ];
 
 // The newest complete saved version's name, or null if there isn't one yet.
