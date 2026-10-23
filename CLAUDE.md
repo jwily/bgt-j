@@ -95,8 +95,9 @@ Read README.md for what the app does; this file covers how to work on it.
   category a wave going clockwise, smallest first so the largest comes last, rising from black to its
   full color at a hard leading edge (W1's faithful fade, reversed so the color leads). Drawn against
   the budget, unspent left black; over budget, bevel and tick turn FF8's trigger yellow (#d0da00).
-  Opening the summary, the waves cascade from 12 o'clock, first wave first, each sliding out from under
-  the ones before (about 1.6s typical, 2s at most; not on redraws). Replaced the donut.
+  Opening the summary, the waves come in as on Renzokuken (measured frame by frame): constant speed (a
+  lap in ~0.9s), FF8's 15-a-second steps, one per beat (0.533s, quicker with many categories; ~2s at
+  most), first wave first; the 12 o'clock tick pulses on the beat like the trigger box. Not on redraws. Replaced the donut.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen

@@ -125,11 +125,13 @@ const ringWaves = (page) => page.evaluate(() => {
   check('ring: waves rise from black to their color', await page.evaluate(() => /conic-gradient\(rgb\(0, 0, 0\) 0deg, rgb\(\d+, \d+, \d+\) [\d.]+deg, rgba\(0, 0, 0, 0\)/.test(getComputedStyle(document.querySelector('.ring-chart .wave')).backgroundImage)), true);
   // Arriving, the waves cascade in from 12 o'clock, the first setting off first; a redraw (opening
   // a category's row) doesn't replay it.
+  // As on Renzokuken: waves step along at a constant speed (no easing), one per beat (0.533s),
+  // and the tick pulses once per wave.
   const cascade = () => page.evaluate(() => [...document.querySelectorAll('.ring-chart .wave')].map((w) => {
     const a = w.getAnimations()[0];
-    return a ? `${a.animationName}@${a.effect.getTiming().delay}` : 'still';
-  }).join(' '));
-  check('ring: waves cascade in, the first first', await cascade(), 'wave-in@0 wave-in@140');
+    return a ? `${a.animationName}@${a.effect.getTiming().delay} ${a.effect.getKeyframes()[0].easing.startsWith('steps(')}` : 'still';
+  }).join(' ') + ' | ' + (() => { const t = document.querySelector('.ring-chart .tick').getAnimations()[0]; return t ? `${t.animationName} x${t.effect.getTiming().iterations}` : 'still'; })());
+  check('ring: waves step in on FF8\'s beat, the first first; the tick pulses per wave', await cascade(), 'wave-in@0 true wave-in@533 true | tick-pulse x2');
   check('ring: FF8 tick at 12 o\'clock, plain bevel under budget', await page.evaluate(() => {
     const ring = document.querySelector('.ring-chart').getBoundingClientRect();
     const tick = document.querySelector('.ring-chart .tick').getBoundingClientRect();
