@@ -48,7 +48,7 @@ Read README.md for what the app does; this file covers how to work on it.
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
   the base is the category's color everywhere; the accent (a second color from the same portrait)
   is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges and donut slices use the base only, for
-  readability; both are translucent over the same dark trough (`#323232`), so their colors match. Check changes with `npm run palette` (distinct bases, accents that stand out, glints lighter than the stone).
+  readability. Check changes with `npm run palette` (distinct bases, accents that stand out, glints lighter than the stone).
 - **The Categories screen edits a draft** (`categoryDraft` in pages.js): renames, additions,
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
   undo) and sorts right then. Back with unsaved changes asks first (`confirmLeave`). Colors always
@@ -85,7 +85,9 @@ Read README.md for what the app does; this file covers how to work on it.
   after `FFVIII_Menu.webp`'s party windows): labelled STATUS, Lv = the period's number, HP = what's left
   with a thin red bar under it for the share left; HP digits yellow under a quarter, red when over.
 - Gauges (the summary's category bars) follow the Status menu's (`FFVIII_Status_Menu_5.webp`):
-  silver capsule, dark trough, translucent fill with a clean end (user's choice); the share sits under the
+  silver capsule, dark trough. The fill is FF8's measured one (muted, shaded top to bottom, no
+  sheen), plus the user's choice D from `npm run gauges`: dark fills lifted to a minimum lightness
+  and a light 3px tip, so every color's end shows. The donut's fill is being redone separately. The share sits under the
   bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
