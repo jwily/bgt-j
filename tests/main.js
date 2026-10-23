@@ -3,7 +3,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const ENGINE = process.env.ENGINE || 'chromium';
 const fs = require('fs');
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
+const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
 // The summary's spending ring: each wave's color and start and end angles (clockwise from 12
@@ -44,7 +44,7 @@ const ringWaves = (page) => page.evaluate(() => {
   for (const k of '51050') await mainKey(k);
   check('USD 5-1-0-5-0', await page.locator('.amount').textContent(), '$510.50');
   await page.locator('.add-btn').tap();
-  check('left after $510.50', await leftText(page), '$1,489.50 left');
+  check('spent after $510.50', await spentText(page), '$510.50');
   check('toast', await page.locator('#help .text').first().textContent(), 'Added $510.50 · Groceries');
 
   // Currency switch: tap the choices
@@ -87,7 +87,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.waitForTimeout(700);
   await page.locator('.note').fill('Uber');
   await page.locator('.add-btn').tap();
-  check('left after MX$250', await leftText(page), '$1,477.00 left');
+  check('spent after MX$250', await spentText(page), '$523.00');
   check('currency remembered', await page.locator('.currency-opts .on').textContent(), 'MXN');
   check('note cleared', await page.locator('.note').inputValue(), '');
   await page.screenshot({ path: `${OUT}/${ENGINE}-2-main-mxn.png` });
@@ -96,12 +96,12 @@ const ringWaves = (page) => page.evaluate(() => {
   for (const k of '100') await mainKey(k);
   await page.locator('.add-btn').tap();
   await page.locator('#undo-btn').tap();
-  check('left after undo', await leftText(page), '$1,477.00 left');
+  check('spent after undo', await spentText(page), '$523.00');
   check('undo stays on the main screen', await page.locator('#page').isHidden(), true);
 
   // Empty Add nudges, adds nothing
   await page.locator('.add-btn').tap();
-  check('empty add ignored', await leftText(page), '$1,477.00 left');
+  check('empty add ignored', await spentText(page), '$523.00');
 
   // Summary
   await openSummary(page);
@@ -186,7 +186,7 @@ const ringWaves = (page) => page.evaluate(() => {
   const overRing = await ringWaves(page);
   check('ring full when over budget, in trigger yellow', `${overRing.drawn} ${overRing.over}`, '1.00 true');
   await page.locator('#nav-btn').tap();
-  check('main shows over', await leftText(page), '$325.50 over');
+  check('menu shows what\'s spent, in red when over', `${await spentText(page)} ${await page.locator('#stat-spent').evaluate((e) => e.classList.contains('bad'))}`, '$525.50 true');
   await page.waitForSelector('#help:not(.message)', { timeout: 8000 });
   check('status row: HP in red and the bar empty when over', await page.evaluate(() => [
     document.querySelector('#help .hp').className, document.querySelector('#help .hp-bar span').style.width, document.querySelector('#help .hp b').textContent].join(' | ')),
@@ -212,7 +212,7 @@ const ringWaves = (page) => page.evaluate(() => {
   for (const k of '150000') await sheetKey(k);
   await page.locator('#page .primary').tap();
   await page.waitForTimeout(300);
-  check('left in new period', await leftText(page), '$1,500.00 left');
+  check('nothing spent in new period', await spentText(page), '$0.00');
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
   await page.locator('#menu button', { hasText: 'Past Periods' }).tap();
@@ -275,7 +275,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.waitForTimeout(400);
   check('restore toast', await page.locator('#help .text').first().textContent(), 'Backup restored');
   check('restored: back to one period with Transport active', await page.locator('.strip .chip', { hasText: 'Transport' }).count(), 1);
-  check('restored left amount', await leftText(page), '$325.50 over');
+  check('restored spent amount', await spentText(page), '$525.50');
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
 
@@ -287,7 +287,7 @@ const ringWaves = (page) => page.evaluate(() => {
   // Reload keeps data
   await page.reload();
   await page.waitForTimeout(300);
-  check('persists after reload', await leftText(page), '$325.50 over');
+  check('persists after reload', await spentText(page), '$525.50');
   check('no first-budget screen after reload', await page.locator('#page').isHidden(), true);
 
   console.log(errors.length ? `ERRORS:\n${errors.join('\n')}` : 'No console errors');
