@@ -105,10 +105,11 @@ Read README.md for what the app does; this file covers how to work on it.
   motion was tried and felt choppy), landing gently; the next fires at 85% of the previous one's
   travel; the tick flashes as each fires. The whole is rescaled, rhythm kept, to its natural length to the
   power 0.3, times 0.85 (a smooth squeeze: about 0.35-1.3s in practice, user's choice over a 0.7-1.3s clamp: noticeable, not a wait). Not on redraws. Replaced the donut.
-- A party member (one of FF8's six, random each launch; `party.js`, the user's idea) wanders along
+- A party member (one of FF8's six, random each launch and a different one each time you come back
+  to the main screen; `party.js`, the user's idea) wanders along
   the top of Note and Date: strolls, pauses, sometimes turns back, mirrored to walk right; taps go
   through it; the amount area stays in front of it. Its walk is FFRK's two frames (from `walk.mov`):
-  stride, then feet together, 0.3s each (the clip marches on the spot at 0.5s); it stands on feet
+  stride, then feet together, 0.24s each (the clip marches on the spot at 0.5s); it stands on feet
   together and sets off on the stride (standing mid-stride looked like sliding); ground speed is
   matched to the 6px stride so the feet don't skate. Each sprite pixel is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays
   crisp. A victory pose on adding an expense was built and removed until there's a reference clip
