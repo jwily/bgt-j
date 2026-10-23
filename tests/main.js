@@ -6,6 +6,14 @@ const fs = require('fs');
 const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
+// How much of the summary donut's ring is drawn (0–1): the slices' dashes, with the gaps between them.
+const donutDrawn = (page) => page.evaluate(() => {
+  const slices = [...document.querySelectorAll('.donut .slice')];
+  const r = Number(slices[0].getAttribute('r'));
+  const drawn = slices.reduce((sum, s) => sum + parseFloat(s.getAttribute('stroke-dasharray')) + 0.8, 0);
+  return (drawn / (2 * Math.PI * r)).toFixed(2);
+});
+
 (async () => {
   const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
   const context = await browser.newContext({ ...devices['iPhone 13'], colorScheme: 'light' });
@@ -99,6 +107,9 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   check('donut center', await page.locator('.donut-center strong').textContent(), '$523.00');
   check('donut slices', await page.locator('.donut circle.slice').count(), 2);
   // Shares out of 1000, like FF8's compatibility numbers: $510.50 and $12.50 of $523.
+  // The donut is drawn against the budget: $523 of $2,000 fills about a quarter of the ring, and
+  // the rest is left empty for what's unspent.
+  check('donut leaves the unspent share empty', await donutDrawn(page), '0.26');
   check('gauge numbers out of 1000', (await page.locator('.gauge .number').allTextContents()).join(','), '976,24');
   check('window labels and gauge numbers white', await page.evaluate(() => [
     getComputedStyle(document.querySelector('.window[data-label]'), '::before').color,
@@ -132,6 +143,7 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   await page.locator('#page .primary').tap();
   check('budget edited', await page.locator('.stat .value').first().textContent(), '$200.00');
   check('over budget shown', await page.locator('.stat.diff .value').textContent(), '−$325.50');
+  check('donut ring full when over budget', await donutDrawn(page), '1.00');
   await page.locator('#nav-btn').tap();
   check('main shows over', await leftText(page), '$325.50 over');
   await page.waitForSelector('#help:not(.message)', { timeout: 8000 });

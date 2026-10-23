@@ -164,7 +164,7 @@ function renderSummary({ periodId }) {
   }
 
   fill(periodName(period), periodDates(period),
-    panel('Spent', donut(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent)),
+    panel('Spent', donut(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent, period.budgetCents)),
     stats,
     panel('Categories', rows.length ? list : note('No expenses yet.')),
     el('div', { className: 'actions' }, remove, edit),
@@ -199,16 +199,17 @@ function itemRow(expense) {
   return el('li', {}, row);
 }
 
-// Ring chart drawn as one SVG circle per category, each dashed to cover its share. A shading
+// Ring chart drawn as one SVG circle per category, each dashed to cover its share of the budget
+// (of the spending, once that's over budget), so the empty channel left is what's unspent. A shading
 // overlay makes it a rounded tube, with a soft dark outline on both edges, set into a channel cut
 // in the window. The channel's metal edges are drawn in CSS (.donut::before, ::after), which can
 // do the turned-metal sheen; here, the walls cast a soft shadow onto the ring, lit from the
 // top-left like the windows' bevel: the outer wall's at the top-left, the inner's at the bottom-right.
-function donut(slices, total) {
+function donut(slices, total, budget) {
   const r = 40, width = 14;
   const [inner, outer] = [r - width / 2, r + width / 2];
   const circumference = 2 * Math.PI * r;
-  const sum = slices.reduce((s, slice) => s + slice.value, 0);
+  const whole = Math.max(budget, slices.reduce((s, slice) => s + slice.value, 0));
   const gap = slices.length > 1 ? 0.8 : 0;
   const chart = svg('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
   // A circle around the center, drawn as a stroke (no stroke color: CSS gives it).
@@ -243,7 +244,7 @@ function donut(slices, total) {
   shadows.append(blurred);
   let offset = 0;
   for (const slice of slices) {
-    const length = (slice.value / sum) * circumference;
+    const length = (slice.value / whole) * circumference;
     chart.append(circle(r, slice.color, width, {
       class: 'slice',
       'stroke-dasharray': `${Math.max(length - gap, 0.01)} ${circumference}`,
