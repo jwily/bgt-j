@@ -25,6 +25,7 @@ Read README.md for what the app does; this file covers how to work on it.
   that touch nothing in `app/` or `tests/` skip it. Never bypass it with `--no-verify` unless the
   user says so. When behavior changes, update or add checks in the same
   commit; when you fix a bug, add a check that would have caught it.
+- `npm run gauges` writes gauge fill samples (FF8-measured fills, all 16 colors at three levels) to `tests/output/gauge-samples.html`.
 - `npm run gems` writes the gem design samples (A–F; the app uses B2, Glint stronger) to `tests/output/gem-samples.html`.
 - FF8 reference screenshots are in `~/projects/ff8-references/`, outside the repo on purpose
   (they're the game's artwork). Never copy them into `app/`.
