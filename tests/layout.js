@@ -38,7 +38,7 @@ const check = (label, ok, detail) => {
     await page.locator('#page .primary').tap();
     await page.waitForTimeout(400);
 
-    // The chosen currency is centered in the Amount window (the hand beside it doesn't count),
+    // The chosen currency is centered in the Amount window (the junction icon beside it doesn't count),
     // whichever it is, and switching doesn't shift anything up or down.
     const opts = () => page.evaluate(() => {
       const on = document.querySelector('.currency-opts .on').getBoundingClientRect();

@@ -55,6 +55,12 @@ const donutDrawn = (page) => page.evaluate(() => {
   const zoneBox = await page.locator('.currency-zone').boundingBox();
   await page.locator('.currency-zone').tap({ position: { x: 16, y: zoneBox.height - 16 } }); // an empty corner
   check('tap an empty corner -> MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
+  // FF8's junction icon marks the chosen currency, in place of the hand, clear of its name.
+  check('chosen currency marked with the junction icon', await page.evaluate(() => {
+    const on = document.querySelector('.currency-opts .on');
+    const mark = getComputedStyle(on, '::after');
+    return [mark.backgroundImage.includes('svg'), parseFloat(mark.left) + parseFloat(mark.width) <= -4].join(' ');
+  }), 'true true');
   check('digits kept after switching', await page.locator('.amount').textContent(), 'MX$250');
   check('the amount floats on black with FF8\'s dark grey shadow', await page.evaluate(() => {
     const zone = getComputedStyle(document.querySelector('.currency-zone'));
