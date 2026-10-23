@@ -423,7 +423,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const spent = data.expenses.filter((e) => e.periodId === period.id).reduce((sum, e) => sum + e.usdCents, 0);
     const bar = help.querySelector('.hp-bar');
     return {
-      label: getComputedStyle(help, '::before').display,
+      label: getComputedStyle(help, '::before').content,
       level: help.querySelector('.stat b').textContent,
       periods: data.periods.length,
       said: help.getAttribute('aria-label'),
@@ -435,7 +435,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
       })(),
     };
   });
-  check('main screen: a status row, no HELP label', status.label, 'none');
+  check('main screen: a status row, labelled STATUS', status.label, '"Status"');
   check('status row: Lv is the period\'s number', status.level, String(status.periods));
   check('status row: says the level and what\'s left', /^Level \d+, \$[\d,.]+ (left|over) this period$/.test(status.said), true);
   check('status row: the bar shows the share left, on one line', status.share && status.oneLine, true);
