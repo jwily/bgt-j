@@ -116,18 +116,18 @@ const ringWaves = (page) => page.evaluate(() => {
   check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
   check('ring center', await page.locator('.ring-center strong').textContent(), '$523.00');
   // The ring is drawn against the budget: $523 of $2,000 fills about a quarter of it, the rest
-  // left black for what's unspent. Smallest wave first, so the largest comes last; each rises
+  // left black for what's unspent. Largest wave first, so the smallest comes last; each rises
   // from black to its color at its clockwise end.
   const ring = await ringWaves(page);
   check('ring: one wave per category', ring.waves.length, 2);
   check('ring leaves the unspent share black', ring.drawn, '0.26');
-  check('ring: smallest wave first, largest last', ring.waves[0].to - ring.waves[0].from < ring.waves[1].to - ring.waves[1].from, true);
+  check('ring: largest wave first, smallest last', ring.waves[0].to - ring.waves[0].from > ring.waves[1].to - ring.waves[1].from, true);
   check('ring: waves rise from black to their color', await page.evaluate(() => /conic-gradient\(rgb\(0, 0, 0\) 0deg, rgb\(\d+, \d+, \d+\) [\d.]+deg, rgba\(0, 0, 0, 0\)/.test(getComputedStyle(document.querySelector('.ring-chart .wave')).backgroundImage)), true);
   // Arriving, the waves cascade in from 12 o'clock, the first setting off first; a redraw (opening
   // a category's row) doesn't replay it.
   // The furthest wave fires first; the next fires when it's 85% of the way to its place (here
-  // Groceries travels 94deg at 400deg/s, so Transport fires at 0.2s). Smooth, not stepped; the tick
-  // flashes as each fires.
+  // Transport travels 94deg at 400deg/s, so Groceries fires at 0.2s). Smooth, not stepped; the
+  // tick flashes as each fires.
   const cascade = () => page.evaluate(() => {
     const at = (el) => { const a = el.getAnimations()[0]; return a ? `${a.animationName}@${Math.round(a.effect.getTiming().delay)}` : 'still'; };
     const waves = [...document.querySelectorAll('.ring-chart .wave')];
