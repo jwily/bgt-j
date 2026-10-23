@@ -53,14 +53,14 @@ function ring([title, chunks]) {
 }
 const rings = SCENARIOS.map(ring).join('');
 const ringSection = `
-<section class="v-ring"><h2>R. Ring (W2 waves)</h2><p>The same partial-fade waves around a ring in FF8's bevel, clockwise from 12 o'clock, the total in the middle; it sweeps in instead of sliding.</p>
+<section class="v-ring" id="ring"><h2>R. Ring (W2 waves)</h2><p>The same partial-fade waves around a ring in FF8's bevel, clockwise from 12 o'clock, the total in the middle; it sweeps in instead of sliding.</p>
   <div class="cols">
     <div class="col"><div class="label">In a grey window</div><div class="window" data-label="Spent"><div class="ring-grid">${rings}</div></div></div>
     <div class="col"><div class="label">On the black</div><div class="bare"><div class="ring-grid">${rings}</div></div></div>
   </div>
 </section>`;
 const sections = STYLES.map(([id, title, text]) => `
-<section class="v-${id}"><h2>${title}</h2><p>${text}</p>
+<section class="v-${id}" id="${id}"><h2>${title}</h2><p>${text}</p>
   <div class="cols">
     <div class="col"><div class="label">In a grey window</div><div class="window" data-label="Spent">${cases}</div></div>
     <div class="col"><div class="label">On the black</div><div class="bare">${cases}</div></div>
@@ -73,6 +73,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>Renzokuken ba
 html, body { height: auto; overflow: auto; }
 body { padding: 24px; -webkit-user-select: text; user-select: text; }
 h1 { font-size: 22px; margin: 0 0 6px; } h2 { margin: 0 0 4px; font-size: 18px; } p { margin: 0 0 12px; color: var(--soft); font-size: 14px; }
+.jump { margin: 0 0 12px; font-size: 15px; } .jump a { color: var(--yellow); }
 button.replay { margin: 0 0 18px; padding: 8px 14px; font: inherit; color: #000; background: #d0da00; border: 0; cursor: pointer; text-shadow: none; }
 section { margin: 0 0 30px; }
 .cols { display: flex; flex-wrap: wrap; gap: 24px; }
@@ -135,6 +136,7 @@ body.play .wave { animation: wave-in 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both; a
 </style>
 <h1>Renzokuken bar samples (current palette)</h1>
 <p>In place of the donut: spending as waves in the main lane (right of the trigger box; the two boxes at the left are FF8's, as decoration), unspent left black. Over budget, the frame and ticks turn trigger yellow and the trigger box lights up, as on a trigger. Each style in a grey window and on the black.</p>
+<nav class="jump">Jump to: <a href="#ring">Ring</a> · <a href="#w1">W1 bar</a> · <a href="#w2">W2 bar</a> · <a href="#w3">W3 bar</a></nav>
 <button class="replay" onclick="document.body.classList.remove('play'); void document.body.offsetWidth; document.body.classList.add('play');">Replay the slide-in</button>
 ${sections}${ringSection}
 <script>document.body.classList.add('play');</script>`);
