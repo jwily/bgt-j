@@ -1,7 +1,7 @@
 // The main screen: type an amount, tap it for the currency, swipe the strip for the category, tap Add.
 
 import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFor, rateIsEstimate } from './store.js';
-import { initParty, celebrate } from './party.js';
+import { initParty } from './party.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
 import { $, el, keypad, onLongPress, toast, nudge, categoryChip } from './ui.js';
@@ -219,5 +219,4 @@ function add() {
     original: currency === HOME ? null : { currency, amount, perUsd: rate },
   });
   toast(`Added ${formatUsd(usdCents)} · ${getCategory(categoryId).name}`, undo);
-  celebrate();
 }

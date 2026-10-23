@@ -418,7 +418,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   bottom: calc(100% - 2px);
   width: calc(20 * var(--px));
   height: calc(26 * var(--px));
-  background: url(sprites/party.png) calc(var(--frame, 0) * -20 * var(--px)) calc(var(--row, 0) * -26 * var(--px)) / calc(120 * var(--px)) calc(156 * var(--px)) no-repeat;
+  background: url(sprites/party.png) calc(var(--frame, 0) * -20 * var(--px)) calc(var(--row, 0) * -26 * var(--px)) / calc(40 * var(--px)) calc(156 * var(--px)) no-repeat;
   image-rendering: pixelated;
   pointer-events: none;
 }

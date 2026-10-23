@@ -50,15 +50,18 @@ const ringWaves = (page) => page.evaluate(() => {
     ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'].includes(member.name) && member.sheet && member.through === 'none' && member.standsOnTop, true);
   const startedAt = await page.locator('.party-member').evaluate((m) => m.style.transform);
   check('party member wanders', await page.waitForFunction((t) => document.querySelector('.party-member').style.transform.split(')')[0] !== t.split(')')[0], startedAt, { timeout: 9000 }).then(() => true, () => false), true);
+  // Its walk is FFRK's two frames (from walk.mov), so walking it shows both, and only those.
+  check('party member walks on its two frames', await page.evaluate(() => new Promise((resolve) => {
+    const m = document.querySelector('.party-member'), seen = new Set();
+    const watch = setInterval(() => { if (m.dataset.state === 'walk') seen.add(m.style.getPropertyValue('--frame')); }, 50);
+    setTimeout(() => { clearInterval(watch); resolve([...seen].sort().join(',')); }, 9000);
+  })), '0,1');
 
   // USD entry with implied cents
   for (const k of '51050') await mainKey(k);
   check('USD 5-1-0-5-0', await page.locator('.amount').textContent(), '$510.50');
   await page.locator('.add-btn').tap();
   check('spent after $510.50', await spentText(page), '$510.50');
-  // Adding an expense: the party member does its victory pose, facing you, then wanders on.
-  check('party member celebrates the expense', await page.locator('.party-member').evaluate((m) => `${m.dataset.state} ${m.style.transform.includes('scaleX(1)')}`), 'victory true');
-  check('...then wanders on', await page.waitForFunction(() => document.querySelector('.party-member').dataset.state !== 'victory', null, { timeout: 4000 }).then(() => true, () => false), true);
   check('toast', await page.locator('#help .text').first().textContent(), 'Added $510.50 · Groceries');
 
   // Currency switch: tap the choices
