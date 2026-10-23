@@ -107,6 +107,10 @@ Read README.md for what the app does; this file covers how to work on it.
 - Their phone is an iPhone 14 Pro (in the layout tests).
 
 - Likes DRY code and periodic refactor passes; asks for them by name.
+- Whenever a change touches how category colors are used or shown (gems, gauges, the donut, ...),
+  also do a judgement pass on the palette as part of it: do the 16 GF colors and their accents
+  still read well, stay distinct and stay evocative in every place they now appear? Report what
+  you checked and propose any changes (the user's standing request).
 - Wants honest reasons when something went wrong, and wants things verified (tests, measurements,
   screenshots) before you report them done.
 - Often sends several small requests while you're working; handle them in order and report each.
