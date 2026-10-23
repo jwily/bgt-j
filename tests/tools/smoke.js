@@ -62,7 +62,7 @@ const ok = (label, actual, expected) => { if (!check(label, actual, expected)) f
 
   // Summary, edit an expense.
   await openMenu(page, 'Current Period');
-  ok('summary total', await page.locator('.donut-center strong').textContent(), `$${((1250 + expenses[1].usdCents) / 100).toFixed(2)}`);
+  ok('summary total', await page.locator('.ring-center strong').textContent(), `$${((1250 + expenses[1].usdCents) / 100).toFixed(2)}`);
   await page.locator('.cat-head', { hasText: 'Groceries' }).first().tap();
   await page.locator('.item').first().tap();
   await page.waitForSelector('#sheet-backdrop.open');
@@ -138,5 +138,5 @@ const ok = (label, actual, expected) => { if (!check(label, actual, expected)) f
   process.exitCode = failed ? 1 : 0;
 })().catch((e) => {
   console.log(`CRASHED: ${e.message.split('\n')[0]}`);
-  process.exitCode = 1;
+  process.exit(1); // the browsers are still open and would keep the run alive forever
 });
