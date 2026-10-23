@@ -37,6 +37,28 @@ function bar([title, chunks]) {
     <div class="lane${spent > 100 ? ' over' : ''}"><span class="box1"></span><span class="box2"></span><span class="track">${waves}</span><span class="tick" style="left:9.5%"></span><span class="tick" style="left:24.3%"></span></div></div>`;
 }
 const cases = SCENARIOS.map(bar).join('');
+// The same waves as a ring: clockwise from 12 o'clock, each wave's hard leading edge first, fading
+// to 40% (W2); unspent left black; the total in the middle, as on the donut.
+function ring([title, chunks]) {
+  const spent = chunks.reduce((s, [, v]) => s + v, 0);
+  const whole = Math.max(100, spent);
+  let at = 0;
+  const stops = chunks.map(([color, v]) => {
+    const a = (at / whole) * 360, b = ((at + v) / whole) * 360; at += v;
+    return `${color} ${a}deg, color-mix(in oklab, ${color} 40%, black) ${b}deg`;
+  }).join(', ');
+  const amount = '$' + (spent * 20).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  return `<div class="case"><div class="case-title">${title}</div>
+    <div class="ring${spent > 100 ? ' over' : ''}" style="--waves: conic-gradient(${stops}, #000 ${(at / whole) * 360}deg 360deg)"><div class="ring-center"><strong>${amount}</strong><span>spent</span></div></div></div>`;
+}
+const rings = SCENARIOS.map(ring).join('');
+const ringSection = `
+<section class="v-ring"><h2>R. Ring (W2 waves)</h2><p>The same partial-fade waves around a ring in FF8's bevel, clockwise from 12 o'clock, the total in the middle; it sweeps in instead of sliding.</p>
+  <div class="cols">
+    <div class="col"><div class="label">In a grey window</div><div class="window" data-label="Spent"><div class="ring-grid">${rings}</div></div></div>
+    <div class="col"><div class="label">On the black</div><div class="bare"><div class="ring-grid">${rings}</div></div></div>
+  </div>
+</section>`;
 const sections = STYLES.map(([id, title, text]) => `
 <section class="v-${id}"><h2>${title}</h2><p>${text}</p>
   <div class="cols">
@@ -86,6 +108,27 @@ section { margin: 0 0 30px; }
 .v-w1 .wave { background: linear-gradient(to right, var(--c), black); }
 .v-w2 .wave { background: linear-gradient(to right, var(--c), color-mix(in oklab, var(--c) 40%, black)); }
 .v-w3 .wave { background: repeating-linear-gradient(to right, var(--c) 0, color-mix(in oklab, var(--c) 30%, black) 34px); }
+/* The ring: the waves in a channel (r 66%-94% of the radius, like the donut's), inside FF8's light
+   grey bevel with a dark line along each edge. */
+.ring-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+.ring { --bevel: #8f8f8f; position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle closest-side, transparent 62%, #1f1f1f 62.5%, var(--bevel) 63.5% 66%, #1f1f1f 66.5%, transparent 67%, transparent 93%, #1f1f1f 93.5%, var(--bevel) 94% 97%, #4a4a4a 97.5%, transparent 98%),
+    radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%); }
+.ring.over { --bevel: #d0da00; }
+.ring::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--waves);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%);
+  mask: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%); }
+.ring-center { position: absolute; z-index: 1; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-center strong { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.ring-center span { color: var(--soft); font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+/* Sweeping in: a black cover over the part of the channel not yet reached, shrinking clockwise. */
+@property --sweep { syntax: '<angle>'; inherits: false; initial-value: 360deg; }
+.ring::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(transparent var(--sweep), #000 var(--sweep));
+  -webkit-mask: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%);
+  mask: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%); }
+body.play .ring::after { animation: ring-in 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+@keyframes ring-in { from { --sweep: 0deg; } }
 /* Sliding in from the right, one after another, as the waves come in on Renzokuken. */
 body.play .wave { animation: wave-in 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both; animation-delay: calc(var(--i) * 0.09s); }
 @keyframes wave-in { from { left: 100%; } }
@@ -93,6 +136,6 @@ body.play .wave { animation: wave-in 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both; a
 <h1>Renzokuken bar samples (current palette)</h1>
 <p>In place of the donut: spending as waves in the main lane (right of the trigger box; the two boxes at the left are FF8's, as decoration), unspent left black. Over budget, the frame and ticks turn trigger yellow and the trigger box lights up, as on a trigger. Each style in a grey window and on the black.</p>
 <button class="replay" onclick="document.body.classList.remove('play'); void document.body.offsetWidth; document.body.classList.add('play');">Replay the slide-in</button>
-${sections}
+${sections}${ringSection}
 <script>document.body.classList.add('play');</script>`);
 console.log(`Wrote ${OUT}`);
