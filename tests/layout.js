@@ -73,7 +73,7 @@ const check = (label, ok, detail) => {
         const strip = document.querySelector('.strip').getBoundingClientRect();
         const chip = document.querySelector('.strip .chip.selected');
         const box = chip.getBoundingClientRect();
-        const gemLeft = box.left + parseFloat(getComputedStyle(chip, '::before').left) - 2; // the rotated diamond pokes out ~2px
+        const gemLeft = box.left + parseFloat(getComputedStyle(chip, '::before').left);
         const textRight = chip.querySelector('span').getBoundingClientRect().right;
         const hand = getComputedStyle(chip, '::after');
         const handRight = box.left + parseFloat(hand.left) + parseFloat(hand.width);
@@ -83,7 +83,7 @@ const check = (label, ok, detail) => {
       smallestGap = Math.min(smallestGap, m.gap);
     }
     check(`${name}: every category centered when selected`, Math.abs(worstOffset) <= 2, `worst ${worstOffset}px`);
-    check(`${name}: hand stays clear of the diamond`, smallestGap >= 8, `${smallestGap}px`);
+    check(`${name}: hand stays clear of the gem`, smallestGap >= 8, `${smallestGap}px`);
 
     // Top to bottom: amount, note + date, category strip (changed more often, so nearer the thumb), keypad.
     const order = await page.evaluate(() => ['.currency-zone', '.details', '.strip-window', '#view-input .keypad']

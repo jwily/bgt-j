@@ -364,7 +364,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .strip .chip { flex: 0 0 auto; width: auto; max-width: 230px; padding-right: 4px; } /* 4px each side of [gem] Name */
 
 /* A category: [gem] Name. Chosen: yellow, with the hand outside the chip to its left, so only the
-   diamond and name count when the strip centers it. Others: white in the strip, grey in the grid
+   gem and name count when the strip centers it. Others: white in the strip, grey in the grid
    (the user's choice). */
 .chip {
   position: relative;
@@ -385,15 +385,11 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   position: absolute;
   top: 50%;
   left: 4px;
-  width: 9px;
-  height: 9px;
-  margin-top: -5px;
-  transform: rotate(45deg);
-  box-shadow: 0 0 0 1px #000, inset 1px 1px 0 rgba(255, 255, 255, 0.45);
+  margin-top: -6.5px;
 }
 .chip.selected { color: var(--yellow); }
-/* A bit smaller than the other hands; its fingertip stops 12px short of the diamond. */
-.chip.selected::after { left: -35px; width: 27px; height: 19px; margin-top: -10px; }
+/* A bit smaller than the other hands; its fingertip stops 12px short of the gem. */
+.chip.selected::after { left: -33px; width: 27px; height: 19px; margin-top: -10px; }
 
 .details { display: flex; gap: var(--gap); }
 .note-window { flex: 1; min-width: 0; padding: 12px 10px 2px; }
@@ -644,16 +640,36 @@ body.page-open #view-input { visibility: hidden; }
 .chev { color: var(--soft); transition: transform 0.12s; }
 .open .chev { transform: rotate(90deg); }
 
-/* A category's diamond: its color (--c), with its accent (--c2) as a small diamond at the core.
-   Written out here, not as a variable on :root, where --c and --c2 don't exist yet. */
-.dot, .chip::before { background: linear-gradient(var(--c2), var(--c2)) center / 42% 42% no-repeat, var(--c); }
-.dot {
-  width: 10px;
-  height: 10px;
-  margin: 0 1px;
-  transform: rotate(45deg);
-  box-shadow: 0 0 0 1px #000, inset 1px 1px 0 rgba(255, 255, 255, 0.45);
+/* A category's gem, after FF8's item gem (gem-ref.png, measured): 11x13 with rounded corners, a
+   thin dark rim, and a 3x3 grid of flat facets lit from the top-left, each its color (--c) mixed
+   with white or black. The accent (--c2) tints the highlight where the light hits, the top-left
+   facet, as a glint. Each facet runs to the gem's bottom-right corner under the ones after it, so
+   no seams show between them. Written out here, not as variables on :root, where --c and --c2
+   don't exist yet. */
+.dot, .chip::before {
+  flex: none;
+  width: 11px;
+  height: 13px;
+  border-radius: 3px;
+  --tl: color-mix(in srgb, var(--c2) 55%, white);
+  --tc: color-mix(in srgb, color-mix(in srgb, var(--c2) 35%, var(--c)) 58%, white);
+  --tr: color-mix(in srgb, var(--c) 88%, black);
+  --ml: color-mix(in srgb, var(--c) 58%, white);
+  --mr: color-mix(in srgb, var(--c) 73%, black);
+  --br: color-mix(in srgb, var(--c) 53%, black);
+  background:
+    linear-gradient(var(--br), var(--br)) 7.5px 8.5px / 100% 100% no-repeat,
+    linear-gradient(var(--mr), var(--mr)) 3.5px 8.5px / 100% 100% no-repeat, /* bottom center */
+    linear-gradient(var(--mr), var(--mr)) 7.5px 4px / 100% 100% no-repeat,
+    linear-gradient(var(--tr), var(--tr)) 0 8.5px / 100% 100% no-repeat, /* bottom left */
+    linear-gradient(var(--c), var(--c)) 3.5px 4px / 100% 100% no-repeat,
+    linear-gradient(var(--tr), var(--tr)) 7.5px 0 / 100% 100% no-repeat,
+    linear-gradient(var(--ml), var(--ml)) 0 4px / 100% 100% no-repeat,
+    linear-gradient(var(--tc), var(--tc)) 3.5px 0 / 100% 100% no-repeat,
+    var(--tl);
+  box-shadow: inset 0 0 0 0.75px color-mix(in srgb, var(--c) 35%, black), 2px 2px 2px rgba(0, 0, 0, 0.38);
 }
+.dot { margin: 0 0.5px; }
 
 /* FF8's gauge (FFVIII_Status_Menu_5), measured at its 18px height: a silver tube wrapped around a
    dark trough, shaded top to bottom (darker at the top and bottom edges, brightest across the
@@ -731,7 +747,7 @@ body.page-open #view-input { visibility: hidden; }
 .period-row .right { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Categories */
-.cat-row { display: flex; align-items: center; gap: 16px; padding: 5px 0 5px 4px; } /* ~15pt either side of the diamond (its tips stick out ~2px past its box) */
+.cat-row { display: flex; align-items: center; gap: 16px; padding: 5px 0 5px 4px; } /* ~15pt either side of the gem */
 .cat-row input { flex: 1; min-width: 0; padding: 7px 10px; }
 .cat-row .grow { flex: 1; }
 /* The ✕'s glyph sits mid-button: pull the button 4px in so the field grows and the glyph has equal

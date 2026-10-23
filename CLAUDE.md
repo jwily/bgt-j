@@ -25,7 +25,7 @@ Read README.md for what the app does; this file covers how to work on it.
   that touch nothing in `app/` or `tests/` skip it. Never bypass it with `--no-verify` unless the
   user says so. When behavior changes, update or add checks in the same
   commit; when you fix a bug, add a check that would have caught it.
-- `npm run gems` writes the gem design samples (A–F; the user chose B2) to `tests/output/gem-samples.html`.
+- `npm run gems` writes the gem design samples (A–F; the app uses B, Glint) to `tests/output/gem-samples.html`.
 - FF8 reference screenshots are in `~/projects/ff8-references/`, outside the repo on purpose
   (they're the game's artwork). Never copy them into `app/`.
 
@@ -46,7 +46,7 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
   the base is the category's color everywhere; the accent (a second color from the same portrait)
-  is only the core of its small diamond (`accentFor`). Gauges and donut slices use the base only, for
+  is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges and donut slices use the base only, for
   readability; both are translucent over the same dark trough (`#323232`), so their colors match. Check changes with `npm run palette` (distinct bases, accents that stand out).
 - **The Categories screen edits a draft** (`categoryDraft` in pages.js): renames, additions,
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
