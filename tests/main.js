@@ -98,6 +98,8 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
   check('donut center', await page.locator('.donut-center strong').textContent(), '$523.00');
   check('donut slices', await page.locator('.donut circle.slice').count(), 2);
+  // Shares out of 1000, like FF8's compatibility numbers: $510.50 and $12.50 of $523.
+  check('gauge numbers out of 1000', (await page.locator('.gauge .number').allTextContents()).join(','), '976,24');
   check('window labels and gauge numbers white', await page.evaluate(() => [
     getComputedStyle(document.querySelector('.window[data-label]'), '::before').color,
     getComputedStyle(document.querySelector('.gauge .number')).color,
