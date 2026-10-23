@@ -275,8 +275,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.waitForTimeout(300);
   await openSummary(page);
   check('empty period note', await page.locator('.empty-note').textContent(), 'No expenses yet.');
-  check('empty donut has no slices', await page.locator('.donut circle.slice').count(), 0);
-  check('empty donut center', await page.locator('.donut-center strong').textContent(), '$0.00');
+  check('empty ring has no waves', await page.evaluate(() => document.querySelector('.ring-chart').style.getPropertyValue('--waves').includes('#000 0deg, #000 360deg')), true);
+  check('empty ring center', await page.locator('.ring-center strong').textContent(), '$0.00');
   await page.locator('#nav-btn').tap();
 
   // No stray "false"/"null"/"undefined" text on any screen (2 periods exist, nothing archived)

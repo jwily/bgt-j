@@ -26,7 +26,7 @@ Read README.md for what the app does; this file covers how to work on it.
   user says so. When behavior changes, update or add checks in the same
   commit; when you fix a bug, add a check that would have caught it.
 - `npm run gauges` writes gauge fill samples (FF8-measured fills, all 16 colors at three levels) to `tests/output/gauge-samples.html`.
-- `npm run waves` writes samples for a Renzokuken-style spending bar (from renzo.mov) to replace the donut, to `tests/output/wave-samples.html`.
+- `npm run waves` writes the Renzokuken wave samples (bar and ring, from renzo.mov) to `tests/output/wave-samples.html`; the app uses the ring.
 - `npm run gems` writes the gem design samples (A–F; the app uses B2, Glint stronger) to `tests/output/gem-samples.html`.
 - FF8 reference screenshots are in `~/projects/ff8-references/`, outside the repo on purpose
   (they're the game's artwork). Never copy them into `app/`.
@@ -48,7 +48,7 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
   the base is the category's color everywhere; the accent (a second color from the same portrait)
-  is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges and donut slices use the base only, for
+  is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges and the spending ring's waves use the base only, for
   readability. Check changes with `npm run palette` (distinct bases, accents that stand out, glints lighter than the stone).
 - **The Categories screen edits a draft** (`categoryDraft` in pages.js): renames, additions,
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
@@ -88,8 +88,14 @@ Read README.md for what the app does; this file covers how to work on it.
 - Gauges (the summary's category bars) follow the Status menu's (`FFVIII_Status_Menu_5.webp`):
   silver capsule, dark trough. The fill is FF8's measured one (muted, shaded top to bottom, no
   sheen), plus the user's choice D from `npm run gauges`: dark fills lifted to a minimum lightness
-  and a light 3px tip, so every color's end shows. The donut's fill is being redone separately. The share sits under the
+  and a light 3px tip, so every color's end shows. The share sits under the
   bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
+- The summary's spending ring (user's design, after Squall's Renzokuken bar in `renzo.mov`): in the
+  SPENT window, a black channel in FF8's light grey bevel with an I-beam tick at 12 o'clock; each
+  category a wave going clockwise, smallest first so the largest comes last, rising from black to its
+  full color at a hard leading edge (W1's faithful fade, reversed so the color leads). Drawn against
+  the budget, unspent left black; over budget, bevel and tick turn FF8's trigger yellow (#d0da00).
+  It sweeps in clockwise when the summary opens (not on redraws). Replaced the donut.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
@@ -113,7 +119,7 @@ Read README.md for what the app does; this file covers how to work on it.
 - Their phone is an iPhone 14 Pro (in the layout tests).
 
 - Likes DRY code and periodic refactor passes; asks for them by name.
-- Whenever a change touches how category colors are used or shown (gems, gauges, the donut, ...),
+- Whenever a change touches how category colors are used or shown (gems, gauges, the spending ring, ...),
   also do a judgement pass on the palette as part of it: do the 16 GF colors and their accents
   still read well, stay distinct and stay evocative in every place they now appear? Report what
   you checked and propose any changes (the user's standing request).

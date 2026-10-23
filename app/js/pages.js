@@ -8,7 +8,7 @@ import {
   saveCategories, categoryIsUsed, paletteColor, startPeriod, setBudget, deletePeriod, setBackupReminder,
 } from './store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from './money.js';
-import { $, el, svg, toast, setHelp, colorDot, gauge, keypad } from './ui.js';
+import { $, el, toast, setHelp, colorDot, gauge, keypad } from './ui.js';
 import { formatDate, formatMoment } from './dates.js';
 import { openExpenseSheet } from './sheets.js';
 import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, REMINDER_CHOICES } from './backup.js';
@@ -164,7 +164,7 @@ function renderSummary({ periodId }) {
   }
 
   fill(periodName(period), periodDates(period),
-    panel('Spent', donut(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent, period.budgetCents)),
+    panel('Spent', waveRing(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent, period.budgetCents)),
     stats,
     panel('Categories', rows.length ? list : note('No expenses yet.')),
     el('div', { className: 'actions' }, remove, edit),
@@ -199,70 +199,25 @@ function itemRow(expense) {
   return el('li', {}, row);
 }
 
-// Ring chart drawn as one SVG circle per category, each dashed to cover its share of the budget
-// (of the spending, once that's over budget), so the empty channel left is what's unspent. A shading
-// overlay makes it a rounded tube, with a soft dark outline on both edges, set into a channel cut
-// in the window. The channel's metal edges are drawn in CSS (.donut::before, ::after), which can
-// do the turned-metal sheen; here, the walls cast a soft shadow onto the ring, lit from the
-// top-left like the windows' bevel: the outer wall's at the top-left, the inner's at the bottom-right.
-function donut(slices, total, budget) {
-  const r = 40, width = 14;
-  const [inner, outer] = [r - width / 2, r + width / 2];
-  const circumference = 2 * Math.PI * r;
-  const whole = Math.max(budget, slices.reduce((s, slice) => s + slice.value, 0));
-  const gap = slices.length > 1 ? 0.8 : 0;
-  const chart = svg('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
-  // A circle around the center, drawn as a stroke (no stroke color: CSS gives it).
-  const circle = (radius, stroke, strokeWidth, more = {}) =>
-    svg('circle', { cx: 50, cy: 50, r: radius, fill: 'none', ...(stroke && { stroke }), 'stroke-width': strokeWidth, ...more });
-  // Across the ring's width: shadow at the inner edge, highlight just past the middle, shadow outside.
-  const shade = svg('radialGradient', { id: 'donut-shade', gradientUnits: 'userSpaceOnUse', cx: 50, cy: 50, r: outer });
-  for (const [at, color, opacity] of [[inner, '#000', 0.4], [r - 2, '#fff', 0.05], [r + 2, '#fff', 0.32], [outer - 2, '#fff', 0.05], [outer, '#000', 0.35]]) {
-    shade.append(svg('stop', { offset: (at / outer).toFixed(3), 'stop-color': color, 'stop-opacity': opacity }));
-  }
-  // A gradient from the top-left to the bottom-right.
-  const diagonal = (id, [from, fromOpacity = 1], [to, toOpacity = 1]) => {
-    const gradient = svg('linearGradient', { id, x1: 0, y1: 0, x2: 1, y2: 1 });
-    gradient.append(svg('stop', { offset: 0, 'stop-color': from, 'stop-opacity': fromOpacity }),
-      svg('stop', { offset: 1, 'stop-color': to, 'stop-opacity': toOpacity }));
-    return gradient;
-  };
-  chart.append(svg('defs'), circle(r, null, width, { class: 'ring' }));
-  chart.firstChild.append(shade, diagonal('donut-outer-shadow', ['#000', 0.3], ['#000', 0]), diagonal('donut-inner-shadow', ['#000', 0], ['#000', 0.28]));
-  // The cast shadows are blurred, and kept to the ring.
-  const ringPath = (radius) => `M ${50 - radius} 50 a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${-radius * 2} 0`;
-  const clip = svg('clipPath', { id: 'donut-ring' });
-  clip.append(svg('path', { d: `${ringPath(outer)} ${ringPath(inner)}`, 'clip-rule': 'evenodd' }));
-  const blur = svg('filter', { id: 'donut-blur', x: '-10%', y: '-10%', width: '120%', height: '120%' });
-  blur.append(svg('feGaussianBlur', { stdDeviation: 0.9 }));
-  chart.firstChild.append(clip, blur);
-  const shadows = svg('g', { 'clip-path': 'url(#donut-ring)' });
-  const blurred = svg('g', { filter: 'url(#donut-blur)' });
-  blurred.append(
-    circle(outer, 'url(#donut-outer-shadow)', 3),
-    circle(inner, 'url(#donut-inner-shadow)', 3));
-  shadows.append(blurred);
-  let offset = 0;
-  for (const slice of slices) {
-    const length = (slice.value / whole) * circumference;
-    chart.append(circle(r, slice.color, width, {
-      class: 'slice',
-      'stroke-dasharray': `${Math.max(length - gap, 0.01)} ${circumference}`,
-      'stroke-dashoffset': -offset,
-      transform: 'rotate(-90 50 50)',
-    }));
-    offset += length;
-  }
-  chart.append(
-    circle(r, 'url(#donut-shade)', width),
-    circle(outer - 0.3, '#000', 0.6, { 'stroke-opacity': 0.45 }),
-    circle(inner + 0.3, '#000', 0.6, { 'stroke-opacity': 0.45 }),
-    shadows,
-  );
-  return el('div', { className: 'donut' }, chart,
-    el('div', { className: 'donut-center' },
+// The spending ring, after the bar of Squall's Renzokuken: each category a wave going clockwise
+// from 12 o'clock, smallest first so the largest comes last, rising from black to its color at a
+// hard leading edge (its clockwise end, so the last edge marks where spending stops). Drawn against
+// the budget, so what's unspent stays black; over budget, against the spending, all of it waves.
+function waveRing(slices, total, budget) {
+  const whole = Math.max(budget, total);
+  let at = 0;
+  const stops = [...slices].sort((a, b) => a.value - b.value).map(({ value, color }) => {
+    const from = (at / whole) * 360;
+    at += value;
+    return `#000 ${from}deg, ${color} ${(at / whole) * 360}deg`;
+  });
+  const ring = el('div', { className: `ring-chart${total > budget ? ' over' : ''}` },
+    el('span', { className: 'tick' }),
+    el('div', { className: 'ring-center' },
       el('strong', { textContent: formatUsd(total) }),
       el('span', { textContent: 'spent' })));
+  ring.style.setProperty('--waves', `conic-gradient(${[...stops, `#000 ${(at / whole) * 360}deg`, '#000 360deg'].join(', ')})`);
+  return ring;
 }
 
 // ---------- list of periods ----------
