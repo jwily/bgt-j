@@ -642,8 +642,8 @@ body.page-open #view-input { visibility: hidden; }
 
 /* A category's gem, after FF8's item gem (gem-ref.png, measured): 11x13 with rounded corners, a
    thin dark rim, and a 3x3 grid of flat facets lit from the top-left, each its color (--c) mixed
-   with white or black. The accent (--c2) tints the highlight where the light hits, the top-left
-   facet, as a glint. Each facet runs to the gem's bottom-right corner under the ones after it, so
+   with white or black. The accent (--c2) is the glint where the light hits: the top-left facet,
+   spilling into the two facets beside it. Each facet runs to the gem's bottom-right corner under the ones after it, so
    no seams show between them. Written out here, not as variables on :root, where --c and --c2
    don't exist yet. */
 .dot, .chip::before {
@@ -651,10 +651,10 @@ body.page-open #view-input { visibility: hidden; }
   width: 11px;
   height: 13px;
   border-radius: 3px;
-  --tl: color-mix(in srgb, var(--c2) 55%, white);
-  --tc: color-mix(in srgb, color-mix(in srgb, var(--c2) 35%, var(--c)) 58%, white);
+  --tl: color-mix(in srgb, var(--c2) 80%, white);
+  --tc: color-mix(in srgb, color-mix(in srgb, var(--c2) 50%, var(--c)) 62%, white);
   --tr: color-mix(in srgb, var(--c) 88%, black);
-  --ml: color-mix(in srgb, var(--c) 58%, white);
+  --ml: var(--tc);
   --mr: color-mix(in srgb, var(--c) 73%, black);
   --br: color-mix(in srgb, var(--c) 53%, black);
   background:

@@ -1,6 +1,6 @@
 // Gem design samples over the current palette, beside FF8's item gem (gem-ref.png, linked from
 // ~/projects/ff8-references, never copied), into tests/output/gem-samples.html. Kept as a reference
-// for the gem designs considered: the app uses B (Glint); B2 and B3 were tried alongside it.
+// for the gem designs considered: the app uses B2 (Glint, stronger), after B; B3 was tried alongside them.
 // Usage: npm run gems [-- accents.json], where accents.json ({ "GF name": "#accent", ... }) proposes
 // new accents: B, B2 and F are then shown again with them, changed gems marked *.
 const fs = require('fs');
