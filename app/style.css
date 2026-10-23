@@ -595,34 +595,42 @@ body.page-open #view-input { visibility: hidden; }
 /* Summary */
 /* The spending ring (pages.js, waveRing), after the bar of Squall's Renzokuken (renzo.mov,
    measured; samples in npm run waves): a black channel in a light grey bevel with a dark line along
-   each edge, FF8's I-beam tick at 12 o'clock, and the waves (--waves) inside. Over budget, the
-   bevel and tick turn FF8's trigger yellow. Arriving, the waves sweep in clockwise: a black cover
-   (::after) draws back. */
+   each edge, FF8's I-beam tick at 12 o'clock, and the waves inside. Over budget, the bevel and tick
+   turn FF8's trigger yellow. */
 .ring-chart {
   --bevel: #8f8f8f;
   --tick: #c0c0c0;
-  --channel: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%);
   position: relative;
   width: min(220px, 64vw);
   aspect-ratio: 1;
   margin: 0 auto;
   border-radius: 50%;
-  background: radial-gradient(circle closest-side, transparent 62%, #1f1f1f 62.5%, var(--bevel) 63.5% 66%, #1f1f1f 66.5%, transparent 67%, transparent 93%, #1f1f1f 93.5%, var(--bevel) 94% 97%, #4a4a4a 97.5%, transparent 98%);
+  background:
+    radial-gradient(circle closest-side, transparent 62%, #1f1f1f 62.5%, var(--bevel) 63.5% 66%, #1f1f1f 66.5%, #000 66.5% 93.5%, #1f1f1f 93.5%, var(--bevel) 94% 97%, #4a4a4a 97.5%, transparent 98%);
 }
 .ring-chart.over { --bevel: #d0da00; --tick: #d0da00; }
-.ring-chart::before, .ring-chart::after {
-  content: '';
+/* The channel the waves show in. Each wave sits in its place (.wave-place, showing only 12 o'clock
+   to the wave's end, --to), drawn as a conic gradient from 12 o'clock (black, rising to its color
+   at --len) turned to its start (--from). Arriving, it turns from just before 12 o'clock, hidden,
+   to its start: it travels clockwise into place. */
+.ring-chart .waves {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  -webkit-mask: var(--channel);
-  mask: var(--channel);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%);
+  mask: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%);
 }
-.ring-chart::before { background: var(--waves); }
-@property --sweep { syntax: '<angle>'; inherits: false; initial-value: 360deg; }
-.ring-chart::after { background: conic-gradient(transparent var(--sweep), #000 var(--sweep)); }
-.arriving .ring-chart::after { animation: ring-sweep 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
-@keyframes ring-sweep { from { --sweep: 0deg; } }
+.ring-chart .wave-place, .ring-chart .wave { position: absolute; inset: 0; border-radius: 50%; }
+.ring-chart .wave-place {
+  -webkit-mask: conic-gradient(#000 var(--to), transparent var(--to));
+  mask: conic-gradient(#000 var(--to), transparent var(--to));
+}
+.ring-chart .wave {
+  background: conic-gradient(#000 0deg, var(--c) var(--len), transparent var(--len));
+  transform: rotate(var(--from));
+}
+.arriving .ring-chart .wave { animation: wave-in var(--dur) cubic-bezier(0.3, 0.55, 0.45, 1) var(--delay) both; }
+@keyframes wave-in { from { transform: rotate(calc(-1 * var(--len))); } }
 /* The tick across the channel at 12 o'clock: a line with flared ends, like the bar's. */
 .ring-chart .tick {
   position: absolute;

@@ -203,21 +203,31 @@ function itemRow(expense) {
 // from 12 o'clock, smallest first so the largest comes last, rising from black to its color at a
 // hard leading edge (its clockwise end, so the last edge marks where spending stops). Drawn against
 // the budget, so what's unspent stays black; over budget, against the spending, all of it waves.
+// Arriving, the waves cascade: each travels clockwise from 12 o'clock to its place at much the same
+// speed, the first setting off first and each next a moment later, sliding out from under the
+// waves before it: about 1.6s for a typical period, never more than about 2s.
 function waveRing(slices, total, budget) {
   const whole = Math.max(budget, total);
+  const ordered = [...slices].sort((a, b) => a.value - b.value);
+  const stagger = Math.min(0.14, 0.6 / Math.max(1, ordered.length - 1));
   let at = 0;
-  const stops = [...slices].sort((a, b) => a.value - b.value).map(({ value, color }) => {
+  const waves = ordered.map(({ value, color }, i) => {
     const from = (at / whole) * 360;
     at += value;
-    return `#000 ${from}deg, ${color} ${(at / whole) * 360}deg`;
+    const to = (at / whole) * 360;
+    const wave = el('span', { className: 'wave' });
+    const place = el('span', { className: 'wave-place' }, wave);
+    place.style.cssText = `--to: ${to}deg; z-index: ${ordered.length - i}`;
+    wave.style.cssText = `--c: ${color}; --from: ${from}deg; --len: ${to - from}deg; `
+      + `--delay: ${(i * stagger).toFixed(3)}s; --dur: ${(0.5 + 0.9 * (to / 360)).toFixed(3)}s`;
+    return place;
   });
-  const ring = el('div', { className: `ring-chart${total > budget ? ' over' : ''}` },
+  return el('div', { className: `ring-chart${total > budget ? ' over' : ''}` },
+    el('div', { className: 'waves' }, ...waves),
     el('span', { className: 'tick' }),
     el('div', { className: 'ring-center' },
       el('strong', { textContent: formatUsd(total) }),
       el('span', { textContent: 'spent' })));
-  ring.style.setProperty('--waves', `conic-gradient(${[...stops, `#000 ${(at / whole) * 360}deg`, '#000 360deg'].join(', ')})`);
-  return ring;
 }
 
 // ---------- list of periods ----------
