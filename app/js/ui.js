@@ -16,12 +16,6 @@ export function el(tag, props = {}, ...children) {
   return node;
 }
 
-export function svg(tag, attrs = {}) {
-  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
-  return node;
-}
-
 // A category name with its color gem. Used by the main screen's strip and the category grid.
 export function categoryChip(category, { selected = false } = {}) {
   const chip = el('button', { type: 'button', className: `chip${selected ? ' selected' : ''}` }, el('span', { textContent: category.name }));

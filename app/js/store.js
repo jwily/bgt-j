@@ -24,7 +24,7 @@ const RATES_URL = `https://api.frankfurter.dev/v1/latest?base=${HOME}&symbols=${
 
 // 16 colors, each loosely after one of FF8's Guardian Force portraits, in the order the GFs appear
 // in the game's GF menu: [base, accent]. Categories take them in turn. The base is the category's
-// color everywhere (gauges, the donut, ...); the accent, a second color from the same portrait, is
+// color everywhere (gauges, the spending ring, ...); the accent, a second color from the same portrait, is
 // only the glint on its gem, so it's always a light one: where the portrait's color is dark (a red
 // eye, a ruby), it's that color lit. (Cerberus is steel grey: a true near-black would vanish in
 // the gauges.) (Every pair is at least 10 apart in OKLab

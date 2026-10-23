@@ -6,12 +6,14 @@ const fs = require('fs');
 const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
-// How much of the summary donut's ring is drawn (0–1): the slices' dashes, with the gaps between them.
-const donutDrawn = (page) => page.evaluate(() => {
-  const slices = [...document.querySelectorAll('.donut .slice')];
-  const r = Number(slices[0].getAttribute('r'));
-  const drawn = slices.reduce((sum, s) => sum + parseFloat(s.getAttribute('stroke-dasharray')) + 0.8, 0);
-  return (drawn / (2 * Math.PI * r)).toFixed(2);
+// The summary's spending ring, read from its conic gradient: each wave as [color at its clockwise
+// end, start and end angle], and how much of the ring the waves cover (0–1).
+const ringWaves = (page) => page.evaluate(() => {
+  const ring = document.querySelector('.ring-chart');
+  const stops = [...ring.style.getPropertyValue('--waves').matchAll(/(#[0-9a-f]{6}|#000) ([\d.]+)deg/g)].map(([, c, a]) => [c, parseFloat(a)]);
+  const waves = [];
+  for (let i = 0; i + 1 < stops.length - 2; i += 2) waves.push({ color: stops[i + 1][0], from: stops[i][1], to: stops[i + 1][1] });
+  return { waves, drawn: ((waves.at(-1)?.to ?? 0) / 360).toFixed(2), over: ring.classList.contains('over') };
 });
 
 (async () => {
@@ -110,11 +112,20 @@ const donutDrawn = (page) => page.evaluate(() => {
     getComputedStyle(document.getElementById('page')).overscrollBehaviorY,
   ].join(' '));
   check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
-  check('donut center', await page.locator('.donut-center strong').textContent(), '$523.00');
-  check('donut slices', await page.locator('.donut circle.slice').count(), 2);
-  // The donut is drawn against the budget: $523 of $2,000 fills about a quarter of the ring, and
-  // the rest is left empty for what's unspent.
-  check('donut leaves the unspent share empty', await donutDrawn(page), '0.26');
+  check('ring center', await page.locator('.ring-center strong').textContent(), '$523.00');
+  // The ring is drawn against the budget: $523 of $2,000 fills about a quarter of it, the rest
+  // left black for what's unspent. Smallest wave first, so the largest comes last; each rises
+  // from black to its color at its clockwise end.
+  const ring = await ringWaves(page);
+  check('ring: one wave per category', ring.waves.length, 2);
+  check('ring leaves the unspent share black', ring.drawn, '0.26');
+  check('ring: smallest wave first, largest last', ring.waves[0].to - ring.waves[0].from < ring.waves[1].to - ring.waves[1].from, true);
+  check('ring: waves rise from black to their color', await page.evaluate(() => /#000 0deg, #[0-9a-f]{6} [\d.]+deg, #000/.test(document.querySelector('.ring-chart').style.getPropertyValue('--waves'))), true);
+  check('ring: FF8 tick at 12 o\'clock, plain bevel under budget', await page.evaluate(() => {
+    const ring = document.querySelector('.ring-chart').getBoundingClientRect();
+    const tick = document.querySelector('.ring-chart .tick').getBoundingClientRect();
+    return Math.abs(tick.left + tick.width / 2 - (ring.left + ring.width / 2)) < 1 && tick.top - ring.top < ring.height * 0.1;
+  }) && !ring.over, true);
   // The gauges' shares are out of 100: $510.50 and $12.50 of $523.
   check('gauge numbers out of 100', (await page.locator('.gauge .number').allTextContents()).join(','), '98,2');
   check('window labels white, gauge numbers light grey', await page.evaluate(() => [
@@ -127,25 +138,19 @@ const donutDrawn = (page) => page.evaluate(() => {
     const tip = getComputedStyle(s).backgroundImage.match(/to left, (oklab|color)\(([^)]*)\)/);
     return tip && parseFloat(tip[2].replace(/^oklab /, '')) >= 0.7;
   })), true);
-  // The donut's colors match the gauges': translucent over the same dark trough.
-  check('donut colored like the gauges', await page.evaluate(() => [
-    getComputedStyle(document.querySelector('.donut .slice')).strokeOpacity,
-    getComputedStyle(document.querySelector('.donut .ring')).stroke,
-    getComputedStyle(document.querySelector('.gauge .bar')).backgroundImage.includes('rgb(50, 50, 50)'),
-  ].join(' ')), '0.72 rgb(50, 50, 50) true');
   check('diff', await page.locator('.stat.diff .value').textContent(), '+$1,477.00');
   await page.locator('.cat-head', { hasText: 'Transport' }).tap();
   check('itemized MXN line', await page.locator('.item .orig').textContent(), 'from MX$250');
   check('itemized note', await page.locator('.item .what').first().textContent(), 'Uber');
   await page.screenshot({ path: `${OUT}/${ENGINE}-3-summary.png`, fullPage: true });
-  await page.locator('.donut').screenshot({ path: `${OUT}/${ENGINE}-donut.png` });
+  await page.locator('.ring-chart').screenshot({ path: `${OUT}/${ENGINE}-ring.png` });
 
   // Edit the expense: 250 -> 300 pesos
   await page.locator('.item').first().tap();
   await page.waitForTimeout(300);
   await page.locator('#sheet input').first().fill('300');
   await page.locator('#sheet .primary').tap();
-  check('edited MXN converts at saved rate', await page.locator('.donut-center strong').textContent(), '$525.50');
+  check('edited MXN converts at saved rate', await page.locator('.ring-center strong').textContent(), '$525.50');
 
   // Edit budget
   await page.locator('.edit-budget').tap();
@@ -155,7 +160,8 @@ const donutDrawn = (page) => page.evaluate(() => {
   await page.locator('#page .primary').tap();
   check('budget edited', await page.locator('.stat .value').first().textContent(), '$200.00');
   check('over budget shown', await page.locator('.stat.diff .value').textContent(), '−$325.50');
-  check('donut ring full when over budget', await donutDrawn(page), '1.00');
+  const overRing = await ringWaves(page);
+  check('ring full when over budget, in trigger yellow', `${overRing.drawn} ${overRing.over}`, '1.00 true');
   await page.locator('#nav-btn').tap();
   check('main shows over', await leftText(page), '$325.50 over');
   await page.waitForSelector('#help:not(.message)', { timeout: 8000 });

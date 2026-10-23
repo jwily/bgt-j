@@ -593,45 +593,53 @@ body.page-open #view-input { visibility: hidden; }
 .value { font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Summary */
-.donut {
+/* The spending ring (pages.js, waveRing), after the bar of Squall's Renzokuken (renzo.mov,
+   measured; samples in npm run waves): a black channel in a light grey bevel with a dark line along
+   each edge, FF8's I-beam tick at 12 o'clock, and the waves (--waves) inside. Over budget, the
+   bevel and tick turn FF8's trigger yellow. Arriving, the waves sweep in clockwise: a black cover
+   (::after) draws back. */
+.ring-chart {
+  --bevel: #8f8f8f;
+  --tick: #c0c0c0;
+  --channel: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%);
   position: relative;
   width: min(220px, 64vw);
+  aspect-ratio: 1;
   margin: 0 auto;
-  --turned-metal: conic-gradient(#a8a8a8, #6e6e6e 10%, #9c9c9c 22%, #666666 36%, #b4b4b4 52%, #707070 66%, #989898 80%, #6e6e6e 90%, #a8a8a8);
+  border-radius: 50%;
+  background: radial-gradient(circle closest-side, transparent 62%, #1f1f1f 62.5%, var(--bevel) 63.5% 66%, #1f1f1f 66.5%, transparent 67%, transparent 93%, #1f1f1f 93.5%, var(--bevel) 94% 97%, #4a4a4a 97.5%, transparent 98%);
 }
-.donut svg { position: relative; z-index: 1; display: block; width: 100%; height: auto; }
-/* The window is metal where the donut's channel is cut into it: a fine chamfer on each edge of
-   the channel (the chart's units: the ring runs 33 to 47 from the center, of 50), bright polished
-   metal with a turned sheen sweeping around it, lit from the top-left: the outer chamfer faces
-   away from the light at the top-left, the inner one at the bottom-right. */
-.donut::before, .donut::after { /* --cut: where the chamfer shows */
+.ring-chart.over { --bevel: #d0da00; --tick: #d0da00; }
+.ring-chart::before, .ring-chart::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 50%;
+  -webkit-mask: var(--channel);
+  mask: var(--channel);
 }
-.donut::before {
-  background:
-    linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.05) 45%, rgba(255, 255, 255, 0.15)),
-    var(--turned-metal);
-  -webkit-mask: var(--cut);
-  mask: var(--cut);
-  --cut: radial-gradient(circle closest-side, transparent 93.6%, #000 94%, #000 95.6%, transparent 96%);
-}
-.donut::after {
+.ring-chart::before { background: var(--waves); }
+@property --sweep { syntax: '<angle>'; inherits: false; initial-value: 360deg; }
+.ring-chart::after { background: conic-gradient(transparent var(--sweep), #000 var(--sweep)); }
+.arriving .ring-chart::after { animation: ring-sweep 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+@keyframes ring-sweep { from { --sweep: 0deg; } }
+/* The tick across the channel at 12 o'clock: a line with flared ends, like the bar's. */
+.ring-chart .tick {
+  position: absolute;
   z-index: 1;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.05) 55%, rgba(0, 0, 0, 0.4)),
-    var(--turned-metal);
-  -webkit-mask: var(--cut);
-  mask: var(--cut);
-  --cut: radial-gradient(circle closest-side, transparent 64%, #000 64.4%, #000 66%, transparent 66.4%);
+  left: 50%;
+  top: 3.25%;
+  height: 13.5%;
+  width: 1.5px;
+  margin-left: -0.75px;
+  background: var(--tick);
 }
-.donut .ring { stroke: #323232; } /* the gauges' trough */
-.donut .slice { stroke-opacity: 0.72; } /* translucent like the gauges' fill, so the two colors match */
-.donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
-.donut-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
-.donut-center span { color: var(--soft); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.ring-chart .tick::before, .ring-chart .tick::after { content: ''; position: absolute; left: -1.6px; width: 4.7px; height: 2px; background: color-mix(in srgb, var(--tick), white 25%); }
+.ring-chart .tick::before { top: 0; }
+.ring-chart .tick::after { bottom: 0; }
+.ring-center { position: absolute; z-index: 1; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.ring-center span { color: var(--soft); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 
 .stats { display: grid; gap: 8px; }
 .stat { display: flex; justify-content: space-between; align-items: baseline; }
