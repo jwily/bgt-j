@@ -25,13 +25,12 @@ Read README.md for what the app does; this file covers how to work on it.
   that touch nothing in `app/` or `tests/` skip it. Never bypass it with `--no-verify` unless the
   user says so. When behavior changes, update or add checks in the same
   commit; when you fix a bug, add a check that would have caught it.
-- `npm run gauges` writes gauge fill samples (FF8-measured fills, all 16 colors at three levels) to `tests/output/gauge-samples.html`.
-- `npm run waves` writes the Renzokuken wave samples (bar and ring, from renzo.mov) to `tests/output/wave-samples.html`; the app uses the ring.
-- `npm run party` cuts the party members' walk frames from the FF Record Keeper sheets in
-  `~/projects/ff8-references/` into `app/sprites/party.png` (the sheets stay out). The frames were
-  found by matching every frame of `walk.mov` against every sprite on the sheets; picking by eye got
-  them wrong (e.g. Irvine's Blind-status frames).
-- `npm run gems` writes the gem design samples (A–F; the app uses B2, Glint stronger) to `tests/output/gem-samples.html`.
+- Design tools (each writes a page or image; the samples pages are kept for comparing options):
+  `npm run gems` (gem designs A–F; the app uses B2), `npm run gauges` (gauge fills; the app uses D),
+  `npm run waves` (Renzokuken bar and ring; the app uses the ring), `npm run party` (cuts the walk
+  frames from the FFRK sheets into `app/sprites/party.png`; the frames were found by matching every
+  frame of `walk.mov` against every sprite, as picking by eye got them wrong, e.g. Irvine's
+  Blind-status frames).
 - FF8 reference screenshots are in `~/projects/ff8-references/`, outside the repo on purpose
   (they're the game's artwork). Never copy them into `app/`.
 
@@ -52,8 +51,9 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
   the base is the category's color everywhere; the accent (a second color from the same portrait)
-  is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges and the spending ring's waves use the base only, for
-  readability. Check changes with `npm run palette` (distinct bases, accents that stand out, glints lighter than the stone).
+  is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges
+  and the ring's waves use the base only, for readability. Check changes with `npm run palette`
+  (distinct bases, accents that stand out, glints lighter than the stone).
 - **The Categories screen edits a draft** (`categoryDraft` in pages.js): renames, additions,
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
   undo) and sorts right then. Back with unsaved changes asks first (`confirmLeave`). Colors always
@@ -90,39 +90,32 @@ Read README.md for what the app does; this file covers how to work on it.
   after `FFVIII_Menu.webp`'s party windows): labelled STATUS, Lv = the period's number, HP = what's left
   with a thin red bar under it for the share left; HP digits yellow under a quarter, red when over.
 - Gauges (the summary's category bars) follow the Status menu's (`FFVIII_Status_Menu_5.webp`):
-  silver capsule, dark trough. The fill is FF8's measured one (muted, shaded top to bottom, no
-  sheen), plus the user's choice D from `npm run gauges`: dark fills lifted to a minimum lightness
-  and a light 3px tip, so every color's end shows. The share sits under the
-  bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
-- The summary's spending ring (user's design, after Squall's Renzokuken bar in `renzo.mov`): in the
-  SPENT window, a black channel in FF8's light grey bevel with an I-beam tick at 12 o'clock; each
-  category a wave going clockwise, largest first so the smallest comes last (user's choice over the
-  reverse), rising from black to its
-  full color at a hard leading edge (W1's faithful fade, reversed so the color leads). Drawn against
-  the budget, unspent left black; over budget, bevel and tick turn FF8's trigger yellow (#d0da00).
-  Opening the summary, the waves fire one at a time, the furthest first (user's design): each travels
-  clockwise from 12 o'clock at FF8's constant speed (measured from renzo.mov), smooth (FF8's stepped
-  motion was tried and felt choppy), landing gently; the next fires at 85% of the previous one's
-  travel; the tick flashes as each fires. The whole is rescaled, rhythm kept, to its natural length to the
-  power 0.3, times 0.85 (a smooth squeeze: about 0.35-1.3s in practice, user's choice over a 0.7-1.3s clamp: noticeable, not a wait). Not on redraws. Replaced the donut.
-- A party member (one of FF8's six, random each launch and a different one each time you come back
-  to the main screen; `party.js`, the user's idea) wanders along
-  the top of Note and Date: strolls, pauses, sometimes turns back, mirrored to walk right; taps go
-  through it; the amount area stays in front of it. Its walk is FFRK's two frames (from `walk.mov`):
-  stride, then feet together, 0.24s each (the clip marches on the spot at 0.5s); it stands on feet
-  together and sets off on the stride (standing mid-stride looked like sliding); ground speed is
-  matched to the 6px stride so the feet don't skate; walks are whole steps, so they always
-  settle onto feet together before stopping. Each sprite pixel is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays
-  crisp. A victory pose on adding an expense was built and removed until there's a reference clip
-  for it (it's in git history: commit d9f95be).
+  silver capsule, dark trough, FF8's measured fill (muted, shaded top to bottom, no sheen) with dark
+  fills lifted to a minimum lightness and a light 3px tip, so every color's end shows. The share sits
+  under the bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
+- The summary's spending ring (the user's design, after Squall's Renzokuken bar in `renzo.mov`), in
+  the SPENT window: a black channel in a light grey rim with an I-beam tick at 12 o'clock. Each
+  category is a wave going clockwise, largest first so the smallest comes last, rising from black to
+  its full color at a hard leading edge. Drawn against the budget, unspent left black; over budget,
+  the rim and tick turn FF8's trigger yellow (#d0da00). Opening the summary, the waves fire one at a
+  time, the furthest first, each gliding at FF8's measured speed and landing gently; the next fires
+  at 85% of the previous one's travel; the tick flashes as each fires; the whole is squeezed smoothly
+  toward 1s (about 0.35-1.3s). Not on redraws.
+- A party member (the user's idea; `party.js`): one of FF8's six, random at launch and a different
+  one each time you come back to the main screen, wanders along the top of Note and Date: strolls of
+  whole steps, pauses, sometimes turns back, mirrored to walk right. Its walk is FFRK's two frames
+  (stride, then feet together) at 0.24s each; it stands on feet together, sets off on the stride, and
+  always settles back onto feet together before stopping; ground speed matches its 6px stride so
+  the feet don't skate. Taps go through it; the amount area stays in front of it. Each sprite pixel
+  is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays crisp.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
   or unavailable options (except in the category strip, where other categories are white: the user's
   choice; the grid keeps grey).
-- The pointing-hand cursor sits outside whatever it points at: centering ignores it (category
-  chips). The chosen currency has FF8's junction icon instead (user's choice; the hand stays for
-  categories, an arrow was tried), centered together with the name. It bobs beside buttons you'd press and sits still beside selections.
+- The pointing-hand cursor sits outside whatever it points at, and centering ignores it (category
+  chips). It bobs beside buttons you'd press and sits still beside selections. The chosen currency
+  has FF8's junction icon instead, centered together with its name.
 - Capitalization: Title Case for names (screens, menu commands, period and category names:
   Current Period, Past Periods, Edit Budget, New Category); sentence case for everything else
   (buttons, labels, help lines, messages: Start new period, Under budget, New period started).
@@ -168,6 +161,12 @@ Read README.md for what the app does; this file covers how to work on it.
 - Launches are instant from a saved version (app/sw.js); a deploy downloads in the background and
   shows on the launch after (the user chose this over waiting on the network at every launch).
   Each launch stays on one version. Add any new app file to FILES in sw.js.
+- Tried and replaced on the summary: a donut (became the ring), Renzokuken's stepped motion (felt
+  choppy), the reverse wave order, a 0.7-1.3s clamp on the ring's length (now a smooth curve), gauge
+  numbers out of 1000, translucent gauge fills with a glass sheen.
+- Tried and replaced elsewhere: FF8's selection arrow beside categories (the hand stays), a party
+  member standing on its stride frame (looked like sliding), and a victory pose on adding an expense
+  (removed until there's a clear reference clip; it's in git history, d9f95be).
 - Animations ignore the phone's Reduce Motion setting: the user keeps it on elsewhere but wants the
   hand to bob and windows to fade in here.
 

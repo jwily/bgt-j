@@ -6,6 +6,9 @@ const fs = require('fs');
 const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
+// FF8's six party members, one of whom wanders the main screen.
+const PARTY = ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'];
+
 // The summary's spending ring: each wave's color and start and end angles (clockwise from 12
 // o'clock), how much of the ring the waves cover (0–1), and whether it's over budget.
 const ringWaves = (page) => page.evaluate(() => {
@@ -47,7 +50,7 @@ const ringWaves = (page) => page.evaluate(() => {
     return { name: m.dataset.member, sheet: getComputedStyle(m).backgroundImage.includes('sprites/party.png'), through: getComputedStyle(m).pointerEvents, standsOnTop: Math.abs(box.bottom - details.top) <= 3 };
   });
   check('party member: one of the six, from the sprite sheet, standing on Note and Date, taps go through',
-    ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'].includes(member.name) && member.sheet && member.through === 'none' && member.standsOnTop, true);
+    PARTY.includes(member.name) && member.sheet && member.through === 'none' && member.standsOnTop, true);
   const startedAt = await page.locator('.party-member').evaluate((m) => m.style.transform);
   check('party member wanders', await page.waitForFunction((t) => document.querySelector('.party-member').style.transform.split(')')[0] !== t.split(')')[0], startedAt, { timeout: 9000 }).then(() => true, () => false), true);
   // Its walk is FFRK's two frames (from walk.mov), so walking it shows both, and only those; standing,
@@ -75,7 +78,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
   const after = await page.locator('.party-member').getAttribute('data-member');
-  check('back on the main screen, a different party member', after !== before && ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'].includes(after), true);
+  check('back on the main screen, a different party member', after !== before && PARTY.includes(after), true);
 
   // USD entry with implied cents
   for (const k of '51050') await mainKey(k);
@@ -160,9 +163,7 @@ const ringWaves = (page) => page.evaluate(() => {
   check('ring leaves the unspent share black', ring.drawn, '0.26');
   check('ring: largest wave first, smallest last', ring.waves[0].to - ring.waves[0].from > ring.waves[1].to - ring.waves[1].from, true);
   check('ring: waves rise from black to their color', await page.evaluate(() => /conic-gradient\(rgb\(0, 0, 0\) 0deg, rgb\(\d+, \d+, \d+\) [\d.]+deg, rgba\(0, 0, 0, 0\)/.test(getComputedStyle(document.querySelector('.ring-chart .wave')).backgroundImage)), true);
-  // Arriving, the waves cascade in from 12 o'clock, the first setting off first; a redraw (opening
-  // a category's row) doesn't replay it.
-  // The furthest wave fires first (Transport, the smallest, ends furthest round); the next fires
+  // Arriving, the furthest wave fires first (Transport, the smallest, ends furthest round); the next fires
   // when it's 85% of the way to its place; the whole is its natural length (0.43s at FF8's speed
   // here) to the power 0.3, times 0.85, so about 0.66s. Smooth, not stepped; the tick flashes as each fires.
   const cascade = await page.evaluate(() => {
@@ -180,7 +181,7 @@ const ringWaves = (page) => page.evaluate(() => {
   });
   check('ring: furthest fires first, next at 85%, length squeezed toward 1s, smooth, tick flashes', JSON.stringify(cascade),
     JSON.stringify({ order: true, handOff: true, total: true, smooth: true, flashes: true }));
-  check('ring: FF8 tick at 12 o\'clock, plain bevel under budget', await page.evaluate(() => {
+  check('ring: FF8 tick at 12 o\'clock, plain rim under budget', await page.evaluate(() => {
     const ring = document.querySelector('.ring-chart').getBoundingClientRect();
     const tick = document.querySelector('.ring-chart .tick').getBoundingClientRect();
     return Math.abs(tick.left + tick.width / 2 - (ring.left + ring.width / 2)) < 1 && tick.top - ring.top < ring.height * 0.1;

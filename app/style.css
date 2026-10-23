@@ -611,31 +611,33 @@ body.page-open #view-input { visibility: hidden; }
 
 /* Summary */
 /* The spending ring (pages.js, waveRing), after the bar of Squall's Renzokuken (renzo.mov,
-   measured; samples in npm run waves): a black channel in a light grey bevel with a dark line along
-   each edge, FF8's I-beam tick at 12 o'clock, and the waves inside. Over budget, the bevel and tick
-   turn FF8's trigger yellow. */
+   measured; samples in npm run waves): a black channel (--inner to --outer of the radius) in a
+   light grey rim with a dark line along each edge, FF8's I-beam tick at 12 o'clock, and the waves
+   inside. Over budget, the rim and tick turn FF8's trigger yellow. */
 .ring-chart {
-  --bevel: #8f8f8f;
+  --rim: #8f8f8f;
   --tick: #c0c0c0;
+  --inner: 66.5%;
+  --outer: 93.5%;
   position: relative;
   width: min(220px, 64vw);
   aspect-ratio: 1;
   margin: 0 auto;
   border-radius: 50%;
-  background:
-    radial-gradient(circle closest-side, transparent 62%, #1f1f1f 62.5%, var(--bevel) 63.5% 66%, #1f1f1f 66.5%, #000 66.5% 93.5%, #1f1f1f 93.5%, var(--bevel) 94% 97%, #4a4a4a 97.5%, transparent 98%);
+  background: radial-gradient(circle closest-side, transparent 62%, #1f1f1f 62.5%, var(--rim) 63.5% 66%,
+    #1f1f1f var(--inner), #000 var(--inner) var(--outer), #1f1f1f var(--outer), var(--rim) 94% 97%, #4a4a4a 97.5%, transparent 98%);
 }
-.ring-chart.over { --bevel: #d0da00; --tick: #d0da00; }
-/* The channel the waves show in. Each wave sits in its place (.wave-place, showing only 12 o'clock
-   to the wave's end, --to), drawn as a conic gradient from 12 o'clock (black, rising to its color
-   at --len) turned to its start (--from). Arriving, it turns from just before 12 o'clock, hidden,
-   to its start: it travels clockwise into place, at a steady speed, landing gently. */
+.ring-chart.over { --rim: #d0da00; --tick: #d0da00; }
+/* The waves show only in the channel. Each sits in its place (.wave-place, showing 12 o'clock to
+   the wave's end, --to), drawn as a conic gradient from 12 o'clock (black, rising to its color at
+   --len) turned to its start (--from). Arriving, it turns from just before 12 o'clock, hidden, to
+   its start: it travels clockwise into place, at a steady speed, landing gently. */
 .ring-chart .waves {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  -webkit-mask: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%);
-  mask: radial-gradient(circle closest-side, transparent 66.5%, #000 66.5% 93.5%, transparent 93.5%);
+  -webkit-mask: radial-gradient(circle closest-side, transparent var(--inner), #000 var(--inner) var(--outer), transparent var(--outer));
+  mask: radial-gradient(circle closest-side, transparent var(--inner), #000 var(--inner) var(--outer), transparent var(--outer));
 }
 .ring-chart .wave-place, .ring-chart .wave { position: absolute; inset: 0; border-radius: 50%; }
 .ring-chart .wave-place {
@@ -661,11 +663,11 @@ body.page-open #view-input { visibility: hidden; }
 }
 .ring-chart .tick::before, .ring-chart .tick::after { content: ''; position: absolute; left: -1.6px; width: 4.7px; height: 2px; background: color-mix(in srgb, var(--tick), white 25%); }
 .ring-chart .tick::before { top: 0; }
+.ring-chart .tick::after { bottom: 0; }
 /* As each wave fires, a white copy of the tick flashes over it and fades. */
 .ring-chart .tick.flash { --tick: #fff; opacity: 0; pointer-events: none; }
 .arriving .ring-chart .tick.flash { animation: tick-flash 0.4s ease-out var(--delay) forwards; }
 @keyframes tick-flash { from { opacity: 0.95; } }
-.ring-chart .tick::after { bottom: 0; }
 .ring-center { position: absolute; z-index: 1; inset: 0; display: grid; place-content: center; text-align: center; }
 .ring-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
 .ring-center span { color: var(--soft); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -693,9 +695,9 @@ body.page-open #view-input { visibility: hidden; }
 /* A category's gem, after FF8's item gem (gem-ref.png, measured): 11x13 with rounded corners, a
    thin dark rim, and a 3x3 grid of flat facets lit from the top-left, each its color (--c) mixed
    with white or black. The accent (--c2) is the glint where the light hits: the top-left facet,
-   spilling into the two facets beside it. Each facet runs to the gem's bottom-right corner under the ones after it, so
-   no seams show between them. Written out here, not as variables on :root, where --c and --c2
-   don't exist yet. */
+   spilling into the two facets beside it. Each facet runs to the gem's bottom-right corner under
+   the ones after it, so no seams show between them. Written out here, not as variables on :root,
+   where --c and --c2 don't exist yet. */
 .dot, .chip::before {
   flex: none;
   width: 11px;
@@ -733,7 +735,7 @@ body.page-open #view-input { visibility: hidden; }
    at its start. FF8's fill shows against the trough by hue alone, so dark colors vanish; two
    additions keep every fill's end visible: dark fills are lifted to a minimum lightness (hue and
    saturation kept), and the last 3px is a light tip with a clean end, like the HP bar's. */
-.gauge { position: relative; display: block; padding-bottom: 10px; }
+.gauge { --trough: #323232; position: relative; display: block; padding-bottom: 10px; }
 .gauge .bar {
   position: relative;
   display: block;
@@ -743,7 +745,7 @@ body.page-open #view-input { visibility: hidden; }
   border-width: 3px 8px;
   border-radius: 7px;
   background:
-    linear-gradient(#323232, #323232) content-box,
+    linear-gradient(var(--trough), var(--trough)) content-box,
     linear-gradient(#121214, #121214) padding-box,
     linear-gradient(to right, rgba(0, 0, 0, 0.25), transparent 1.5px, transparent calc(100% - 1.5px), rgba(0, 0, 0, 0.3)) border-box,
     linear-gradient(#7d7d7d, #a0a0a0 3px, #d3d3d3 50%, #9e9e9e calc(100% - 3px), #767676) border-box;
@@ -752,7 +754,8 @@ body.page-open #view-input { visibility: hidden; }
 .gauge .bar span {
   display: block;
   height: 100%;
-  --f: color-mix(in oklab, var(--c) 45%, #323232);
+  --mix: color-mix(in oklab, var(--c) 45%, var(--trough));
+  --f: var(--mix);
   background:
     linear-gradient(to left, color-mix(in oklab, var(--f) 45%, white) 0 2px, color-mix(in oklab, var(--f) 70%, white) 2px 3px, transparent 3px),
     linear-gradient(180deg,
@@ -764,7 +767,7 @@ body.page-open #view-input { visibility: hidden; }
 }
 /* The lift, where relative colors work (otherwise the plain FF8 mix above). */
 @supports (color: oklch(from red l c h)) {
-  .gauge .bar span { --f: oklch(from color-mix(in oklab, var(--c) 45%, #323232) max(l, 0.5) c h); }
+  .gauge .bar span { --f: oklch(from var(--mix) max(l, 0.5) c h); }
 }
 .gauge .number {
   position: absolute;

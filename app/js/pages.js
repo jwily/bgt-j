@@ -203,19 +203,16 @@ function itemRow(expense) {
 // from 12 o'clock, largest first so the smallest comes last, rising from black to its color at a
 // hard leading edge (its clockwise end, so the last edge marks where spending stops). Drawn against
 // the budget, so what's unspent stays black; over budget, against the spending, all of it waves.
-// Arriving, the waves fire one at a time, the furthest first: each travels clockwise from 12
-// o'clock to its place at FF8's constant speed (a lap in about 0.9s, measured from renzo.mov),
-// landing gently, and the next fires as it nears its place (85% of the way). Each travels only
-// through space nothing has landed in yet. The tick at 12 o'clock flashes as each fires. The whole
-// sequence is then rescaled, keeping its rhythm, to PACE times its natural length to the power
-// TEMPO (in seconds): a smooth squeeze, so long journeys don't keep you waiting on a screen you open
-// several times a day and short ones still read as one wave after another (a lone 5% wave's 0.04s
-// plays in 0.33s, 0.43s in 0.66s, 1s in 0.85s, 2.6s in 1.13s, 3.8s, about the most there can be, in
-// 1.28s).
+// Arriving, the waves fire one at a time, the furthest first, each travelling clockwise from 12
+// o'clock to its place at FF8's constant speed (measured from renzo.mov) and landing gently; the
+// next fires as the one before is 85% of the way there, so each travels only through space nothing
+// has landed in yet. The tick at 12 o'clock flashes as each fires. The whole sequence then plays in
+// PACE * (its natural length) ^ TEMPO seconds, rhythm kept: a smooth squeeze, so long sequences
+// don't keep you waiting and short ones still read as one wave after another (about 0.35-1.3s).
 const WAVE_SPEED = 400; // degrees a second
 const NEXT_FIRES_AT = 0.85; // of the previous wave's travel
 const TEMPO = 0.3; // 1 would keep FF8's speed; lower evens lengths out more
-const PACE = 0.85; // the user's: a smidge quicker all round
+const PACE = 0.85;
 function waveRing(slices, total, budget) {
   const whole = Math.max(budget, total);
   let at = 0;
@@ -224,28 +221,26 @@ function waveRing(slices, total, budget) {
     at += value;
     return { color, from, to: (at / whole) * 360 };
   });
+  // Timings at FF8's speed, furthest wave first, then squeezed.
   let fire = 0, end = 0;
-  for (const w of [...placed].reverse()) {
-    w.delay = fire;
-    w.dur = w.to / WAVE_SPEED;
-    fire += w.dur * NEXT_FIRES_AT;
-    end = Math.max(end, w.delay + w.dur);
+  for (const wave of [...placed].reverse()) {
+    wave.delay = fire;
+    wave.dur = wave.to / WAVE_SPEED;
+    fire += wave.dur * NEXT_FIRES_AT;
+    end = Math.max(end, wave.delay + wave.dur);
   }
-  const scale = end && PACE * end ** TEMPO / end;
-  for (const w of placed) {
-    w.delay *= scale;
-    w.dur *= scale;
-  }
+  const scale = end && (PACE * end ** TEMPO) / end;
+  const seconds = (t) => `${(t * scale).toFixed(3)}s`;
   const waves = placed.map(({ color, from, to, delay, dur }) => {
     const wave = el('span', { className: 'wave' });
-    wave.style.cssText = `--c: ${color}; --from: ${from}deg; --len: ${to - from}deg; --delay: ${delay.toFixed(3)}s; --dur: ${dur.toFixed(3)}s`;
+    wave.style.cssText = `--c: ${color}; --from: ${from}deg; --len: ${to - from}deg; --delay: ${seconds(delay)}; --dur: ${seconds(dur)}`;
     const place = el('span', { className: 'wave-place' }, wave);
     place.style.setProperty('--to', `${to}deg`);
     return place;
   });
   const flashes = placed.map(({ delay }) => {
     const flash = el('span', { className: 'tick flash' });
-    flash.style.setProperty('--delay', `${delay.toFixed(3)}s`);
+    flash.style.setProperty('--delay', seconds(delay));
     return flash;
   });
   return el('div', { className: `ring-chart${total > budget ? ' over' : ''}` },
