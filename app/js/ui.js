@@ -39,7 +39,7 @@ export function colorDot(color) {
   return dot;
 }
 
-// An FF8-style gauge filled to `fraction` (0–1) in `color`, with the fraction out of 1000 under its
+// An FF8-style gauge filled to `fraction` (0–1) in `color`, with the fraction out of 100 under its
 // right end, as on FF8's GF Compatibility bars.
 export function gauge(fraction, color) {
   const share = Math.max(0, Math.min(1, fraction));
@@ -48,7 +48,7 @@ export function gauge(fraction, color) {
   fill.style.setProperty('--c', color);
   return el('span', { className: 'gauge' },
     el('span', { className: 'bar' }, fill),
-    el('span', { className: 'number', textContent: String(Math.round(share * 1000)) }));
+    el('span', { className: 'number', textContent: String(Math.round(share * 100)) }));
 }
 
 // Briefly shake an element to say "can't do that".
