@@ -206,10 +206,14 @@ function itemRow(expense) {
 // Arriving, the waves fire one at a time, the furthest first: each travels clockwise from 12
 // o'clock to its place at FF8's constant speed (a lap in about 0.9s, measured from renzo.mov),
 // landing gently, and the next fires as it nears its place (85% of the way). Each travels only
-// through space nothing has landed in yet. The tick at 12 o'clock flashes as each fires. With many
-// categories the speed goes up, so the whole stays within about 2s.
+// through space nothing has landed in yet. The tick at 12 o'clock flashes as each fires. The whole
+// sequence is then rescaled, keeping its rhythm, to its natural length to the power TEMPO (in
+// seconds): a smooth squeeze toward 1s, so long journeys don't keep you waiting on a screen you open
+// several times a day and short ones still read as one wave after another (a lone 5% wave's 0.04s
+// plays in 0.39s, 0.43s in 0.78s, 1s in 1s, 2.6s in 1.33s, 3.8s, about the most there can be, in 1.5s).
 const WAVE_SPEED = 400; // degrees a second
 const NEXT_FIRES_AT = 0.85; // of the previous wave's travel
+const TEMPO = 0.3; // 1 would keep FF8's speed; lower evens lengths out more
 function waveRing(slices, total, budget) {
   const whole = Math.max(budget, total);
   let at = 0;
@@ -218,12 +222,17 @@ function waveRing(slices, total, budget) {
     at += value;
     return { color, from, to: (at / whole) * 360 };
   });
-  const speed = Math.max(WAVE_SPEED, placed.reduce((sum, w) => sum + w.to, 0) * NEXT_FIRES_AT / 1.8);
-  let fire = 0;
+  let fire = 0, end = 0;
   for (const w of [...placed].reverse()) {
     w.delay = fire;
-    w.dur = w.to / speed;
+    w.dur = w.to / WAVE_SPEED;
     fire += w.dur * NEXT_FIRES_AT;
+    end = Math.max(end, w.delay + w.dur);
+  }
+  const scale = end && end ** TEMPO / end;
+  for (const w of placed) {
+    w.delay *= scale;
+    w.dur *= scale;
   }
   const waves = placed.map(({ color, from, to, delay, dur }) => {
     const wave = el('span', { className: 'wave' });
