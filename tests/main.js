@@ -57,6 +57,16 @@ const ringWaves = (page) => page.evaluate(() => {
     const watch = setInterval(() => { if (m.dataset.state === 'walk') seen.add(m.style.getPropertyValue('--frame')); }, 50);
     setTimeout(() => { clearInterval(watch); resolve([...seen].sort().join(',')); }, 9000);
   })), '0,1');
+  // Every walk is whole steps, so it stops right after its feet-together frame, never mid-stride.
+  check('party member settles before it stops', await page.evaluate(() => new Promise((resolve) => {
+    const m = document.querySelector('.party-member'); let prev = null, stops = 0, abrupt = 0;
+    const watch = setInterval(() => {
+      const now = { state: m.dataset.state, frame: m.style.getPropertyValue('--frame') };
+      if (prev && prev.state === 'walk' && now.state === 'idle') { stops++; if (prev.frame !== '1') abrupt++; }
+      prev = now;
+    }, 16);
+    setTimeout(() => { clearInterval(watch); resolve(`${stops > 0} ${abrupt}`); }, 12000);
+  })), 'true 0');
   check('party member stands with its feet together', await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 9000 })
     .then(() => page.locator('.party-member').evaluate((m) => m.style.getPropertyValue('--frame'))), '1');
   // Coming back to the main screen from another, a different party member takes over.

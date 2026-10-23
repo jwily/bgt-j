@@ -19,7 +19,7 @@ const STRIDE = 6; // sprite pixels
 const SPEED = (STRIDE * PX) / (2 * STEP); // px a second
 
 let member, area;
-let x = 0, face = 1, target = 0, mode = 'idle', until = 0, step = 0;
+let x = 0, face = 1, from = 0, target = 0, walkTime = 0, mode = 'idle', until = 0, step = 0;
 let last = 0, away = false;
 
 export function initParty(container) {
@@ -55,17 +55,24 @@ function rest(now) {
 }
 
 // Somewhere to walk to: usually a short stroll on in the same direction, sometimes back the other
-// way; three to ten steps.
-function setOff() {
+// way; three to ten whole steps (stride, then feet together), so every walk ends having just
+// settled onto the standing frame instead of stopping mid-stride. Near an edge, as many whole steps
+// as fit, or it turns back.
+function setOff(now) {
   const span = room();
-  const stroll = SPEED * 2 * STEP * (3 + Math.random() * 7);
-  const turn = Math.random() < 0.35;
-  let dir = turn ? face : -face; // face 1 = facing left, so walking on is toward smaller x
-  if (x - stroll < 0) dir = 1;
-  if (x + stroll > span) dir = -1;
-  target = Math.min(span, Math.max(0, x + dir * stroll));
-  if (Math.abs(target - x) < SPEED) target = dir > 0 ? span : 0;
-  face = target > x ? -1 : 1;
+  const pace = SPEED * 2 * STEP; // ground covered by one step
+  const fits = (dir) => Math.floor((dir > 0 ? span - x : x) / pace + 1e-6);
+  let dir = Math.random() < 0.35 ? face : -face; // face 1 = facing left, so walking on is toward smaller x
+  if (fits(dir) < 1) dir = -dir;
+  const steps = Math.min(3 + Math.floor(Math.random() * 8), fits(dir));
+  if (steps < 1) {
+    rest(now); // no room for a whole step either way
+    return;
+  }
+  from = x;
+  target = x + dir * steps * pace;
+  walkTime = steps * 2 * STEP;
+  face = dir > 0 ? -1 : 1;
   mode = 'walk';
   step = 0;
 }
@@ -86,15 +93,14 @@ function tick(nowMs) {
     enter(now);
   }
   x = Math.min(x, room());
-  if (mode === 'idle' && now >= until) setOff();
+  if (mode === 'idle' && now >= until) setOff(now);
   if (mode === 'walk') {
     step += dt;
-    const move = SPEED * dt;
-    if (Math.abs(target - x) <= move) {
+    if (step >= walkTime) {
       x = target;
       rest(now);
     } else {
-      x += Math.sign(target - x) * move;
+      x = from + Math.sign(target - from) * SPEED * step;
     }
   }
   draw();
