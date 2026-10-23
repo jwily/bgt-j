@@ -99,7 +99,8 @@ Read README.md for what the app does; this file covers how to work on it.
   Opening the summary, the waves fire one at a time, the furthest first (user's design): each travels
   clockwise from 12 o'clock at FF8's constant speed (measured from renzo.mov), smooth (FF8's stepped
   motion was tried and felt choppy), landing gently; the next fires at 85% of the previous one's
-  travel; the tick flashes as each fires; ~2s at most. Not on redraws. Replaced the donut.
+  travel; the tick flashes as each fires. The whole is rescaled, rhythm kept, to its natural length to the
+  power 0.3 (a smooth squeeze toward 1s: 0.4-1.5s in practice, user's choice over a 0.7-1.3s clamp: noticeable, not a wait). Not on redraws. Replaced the donut.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen

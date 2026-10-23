@@ -125,16 +125,24 @@ const ringWaves = (page) => page.evaluate(() => {
   check('ring: waves rise from black to their color', await page.evaluate(() => /conic-gradient\(rgb\(0, 0, 0\) 0deg, rgb\(\d+, \d+, \d+\) [\d.]+deg, rgba\(0, 0, 0, 0\)/.test(getComputedStyle(document.querySelector('.ring-chart .wave')).backgroundImage)), true);
   // Arriving, the waves cascade in from 12 o'clock, the first setting off first; a redraw (opening
   // a category's row) doesn't replay it.
-  // The furthest wave fires first; the next fires when it's 85% of the way to its place (here
-  // Transport travels 94deg at 400deg/s, so Groceries fires at 0.2s). Smooth, not stepped; the
-  // tick flashes as each fires.
-  const cascade = () => page.evaluate(() => {
-    const at = (el) => { const a = el.getAnimations()[0]; return a ? `${a.animationName}@${Math.round(a.effect.getTiming().delay)}` : 'still'; };
-    const waves = [...document.querySelectorAll('.ring-chart .wave')];
-    const smooth = waves.every((w) => !w.getAnimations()[0].effect.getKeyframes()[0].easing.startsWith('steps('));
-    return `${waves.map(at).join(' ')} smooth ${smooth} | ${[...document.querySelectorAll('.ring-chart .flash')].map(at).join(' ')}`;
+  // The furthest wave fires first (Transport, the smallest, ends furthest round); the next fires
+  // when it's 85% of the way to its place; the whole is its natural length (0.43s at FF8's speed
+  // here) to the power 0.3, so about 0.78s. Smooth, not stepped; the tick flashes as each fires.
+  const cascade = await page.evaluate(() => {
+    const timing = (el) => el.getAnimations()[0]?.effect.getComputedTiming();
+    const [groceries, transport] = [...document.querySelectorAll('.ring-chart .wave')].map(timing);
+    const flashes = [...document.querySelectorAll('.ring-chart .flash')].map((f) => Math.round(timing(f).delay));
+    const easing = document.querySelector('.ring-chart .wave').getAnimations()[0].effect.getKeyframes()[0].easing;
+    return {
+      order: transport.delay === 0 && groceries.delay > 0,
+      handOff: Math.abs(groceries.delay - 0.85 * transport.duration) < 2,
+      total: Math.abs(Math.max(groceries.delay + groceries.duration, transport.delay + transport.duration) - 776) < 10,
+      smooth: !easing.startsWith('steps('),
+      flashes: flashes.join(',') === [Math.round(groceries.delay), 0].join(','),
+    };
   });
-  check('ring: the furthest wave fires first, each next as the one before lands; the tick flashes', await cascade(), 'wave-in@200 wave-in@0 smooth true | tick-flash@200 tick-flash@0');
+  check('ring: furthest fires first, next at 85%, length squeezed toward 1s, smooth, tick flashes', JSON.stringify(cascade),
+    JSON.stringify({ order: true, handOff: true, total: true, smooth: true, flashes: true }));
   check('ring: FF8 tick at 12 o\'clock, plain bevel under budget', await page.evaluate(() => {
     const ring = document.querySelector('.ring-chart').getBoundingClientRect();
     const tick = document.querySelector('.ring-chart .tick').getBoundingClientRect();
