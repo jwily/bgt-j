@@ -23,7 +23,7 @@
   --font: 'Nunito', 'Avenir Next', system-ui, sans-serif;
   --text: #ededed;
   --off: #8f8f8f;          /* unchosen / unavailable, like FF8's greyed options */
-  --soft: #cfcfcf;         /* secondary text: sub-lines, dates */
+  --soft: #cfcfcf;         /* secondary text: sub-lines, dates, the gauges' numbers */
   --yellow: #f2e34c;       /* selected / highlighted, like FF8's yellow names */
   --good: #8fe089;
   --bad: #ff7a68;
@@ -699,9 +699,9 @@ body.page-open #view-input { visibility: hidden; }
   line-height: 1;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
-  /* White in a solid black outline, as on FF8's Compatibility bars (the user's choice over
-     FF8's light grey). */
-  color: #fff;
+  /* Light grey in a solid black outline, as on FF8's Compatibility bars; a touch lighter than
+     FF8's #bcbcbc, and greyer than the amount just above it, so the two read apart. */
+  color: var(--soft);
   text-shadow: -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000, -1px 0 0 #000, 1px 0 0 #000,
     -1px 1px 0 #000, 0 1px 0 #000, 1px 1px 0 #000, 0 0 1px #000;
 }

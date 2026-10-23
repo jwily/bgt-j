@@ -83,7 +83,7 @@ Read README.md for what the app does; this file covers how to work on it.
   after `FFVIII_Menu.webp`'s party windows): labelled STATUS, Lv = the period's number, HP = what's left
   with a thin red bar under it for the share left; HP digits yellow under a quarter, red when over.
 - Gauges (the summary's category bars) follow the Status menu's (`FFVIII_Status_Menu_5.webp`):
-  silver capsule, dark trough, translucent fill with a clean end (user's choice); the share, out of 1000 like FF8's compatibility numbers, sits under the
+  silver capsule, dark trough, translucent fill with a clean end (user's choice); the share sits under the
   bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).

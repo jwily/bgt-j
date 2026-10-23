@@ -106,15 +106,15 @@ const donutDrawn = (page) => page.evaluate(() => {
   check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
   check('donut center', await page.locator('.donut-center strong').textContent(), '$523.00');
   check('donut slices', await page.locator('.donut circle.slice').count(), 2);
-  // Shares out of 1000, like FF8's compatibility numbers: $510.50 and $12.50 of $523.
   // The donut is drawn against the budget: $523 of $2,000 fills about a quarter of the ring, and
   // the rest is left empty for what's unspent.
   check('donut leaves the unspent share empty', await donutDrawn(page), '0.26');
-  check('gauge numbers out of 1000', (await page.locator('.gauge .number').allTextContents()).join(','), '976,24');
-  check('window labels and gauge numbers white', await page.evaluate(() => [
+  // The gauges' shares are out of 100: $510.50 and $12.50 of $523.
+  check('gauge numbers out of 100', (await page.locator('.gauge .number').allTextContents()).join(','), '98,2');
+  check('window labels white, gauge numbers light grey', await page.evaluate(() => [
     getComputedStyle(document.querySelector('.window[data-label]'), '::before').color,
     getComputedStyle(document.querySelector('.gauge .number')).color,
-  ].join(' ')), 'rgb(255, 255, 255) rgb(255, 255, 255)');
+  ].join(' ')), 'rgb(255, 255, 255) rgb(207, 207, 207)');
   // The donut's colors match the gauges': translucent over the same dark trough.
   check('donut colored like the gauges', await page.evaluate(() => [
     getComputedStyle(document.querySelector('.donut .slice')).strokeOpacity,
