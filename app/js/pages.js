@@ -203,38 +203,47 @@ function itemRow(expense) {
 // from 12 o'clock, smallest first so the largest comes last, rising from black to its color at a
 // hard leading edge (its clockwise end, so the last edge marks where spending stops). Drawn against
 // the budget, so what's unspent stays black; over budget, against the spending, all of it waves.
-// Arriving, the waves come in as on Renzokuken (renzo.mov, measured frame by frame): each travels
-// clockwise from 12 o'clock to its place at FF8's constant speed (a lap in about 0.9s), moving in
-// FF8's 15-a-second steps, one setting off every beat (FF8's 0.533s; quicker with many categories,
-// so the whole stays within about 2s), the first first, sliding out from under the waves before it.
-// The tick at 12 o'clock pulses on the beat, as the trigger box does.
+// Arriving, the waves fire one at a time, the furthest first: each travels clockwise from 12
+// o'clock to its place at FF8's constant speed (a lap in about 0.9s, measured from renzo.mov),
+// landing gently, and the next fires as it nears its place (85% of the way). Each travels only
+// through space nothing has landed in yet. The tick at 12 o'clock flashes as each fires. With many
+// categories the speed goes up, so the whole stays within about 2s.
 const WAVE_SPEED = 400; // degrees a second
-const WAVE_STEPS = 15; // moves a second
+const NEXT_FIRES_AT = 0.85; // of the previous wave's travel
 function waveRing(slices, total, budget) {
   const whole = Math.max(budget, total);
-  const ordered = [...slices].sort((a, b) => a.value - b.value);
-  const beat = Math.min(0.533, 1.2 / Math.max(1, ordered.length - 1));
   let at = 0;
-  const waves = ordered.map(({ value, color }, i) => {
+  const placed = [...slices].sort((a, b) => a.value - b.value).map(({ value, color }) => {
     const from = (at / whole) * 360;
     at += value;
-    const to = (at / whole) * 360;
+    return { color, from, to: (at / whole) * 360 };
+  });
+  const speed = Math.max(WAVE_SPEED, placed.reduce((sum, w) => sum + w.to, 0) * NEXT_FIRES_AT / 1.8);
+  let fire = 0;
+  for (const w of [...placed].reverse()) {
+    w.delay = fire;
+    w.dur = w.to / speed;
+    fire += w.dur * NEXT_FIRES_AT;
+  }
+  const waves = placed.map(({ color, from, to, delay, dur }) => {
     const wave = el('span', { className: 'wave' });
+    wave.style.cssText = `--c: ${color}; --from: ${from}deg; --len: ${to - from}deg; --delay: ${delay.toFixed(3)}s; --dur: ${dur.toFixed(3)}s`;
     const place = el('span', { className: 'wave-place' }, wave);
-    place.style.cssText = `--to: ${to}deg; z-index: ${ordered.length - i}`;
-    const travel = to / WAVE_SPEED;
-    wave.style.cssText = `--c: ${color}; --from: ${from}deg; --len: ${to - from}deg; `
-      + `--delay: ${(i * beat).toFixed(3)}s; --dur: ${travel.toFixed(3)}s; --steps: ${Math.max(1, Math.round(travel * WAVE_STEPS))}`;
+    place.style.setProperty('--to', `${to}deg`);
     return place;
   });
-  const ring = el('div', { className: `ring-chart${total > budget ? ' over' : ''}` },
+  const flashes = placed.map(({ delay }) => {
+    const flash = el('span', { className: 'tick flash' });
+    flash.style.setProperty('--delay', `${delay.toFixed(3)}s`);
+    return flash;
+  });
+  return el('div', { className: `ring-chart${total > budget ? ' over' : ''}` },
     el('div', { className: 'waves' }, ...waves),
     el('span', { className: 'tick' }),
+    ...flashes,
     el('div', { className: 'ring-center' },
       el('strong', { textContent: formatUsd(total) }),
       el('span', { textContent: 'spent' })));
-  ring.style.cssText = `--beat: ${beat.toFixed(3)}s; --beats: ${ordered.length}`;
-  return ring;
 }
 
 // ---------- list of periods ----------
