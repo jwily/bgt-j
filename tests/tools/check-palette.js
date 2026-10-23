@@ -1,7 +1,9 @@
 // Checks the app's category palette (PALETTE in app/js/store.js) for colors that look too alike.
 // Categories take colors in order, so it reports the closest pair among the first n colors.
 // Distance is OKLab x100; under ~10 starts to look alike. Also checks each accent stands out from
-// its color (15 or more). Usage: npm run palette
+// its color (15 or more), and that it works as the gem's glint: mixed as style.css mixes it, it
+// must come out lighter than the stone's lit side facets, or it reads as a smudge.
+// Usage: npm run palette
 
 const palette = require('../helpers').readPalette();
 
@@ -32,4 +34,11 @@ const faint = palette.map((p) => ({ name: p.name, d: distance(p.hex, p.accent) }
 console.log(`faintest accent: ${faint[0].name} at ${faint[0].d.toFixed(1)}`);
 const accentsOk = faint[0].d >= 15;
 console.log(accentsOk ? 'All accents stand out' : 'WARNING: an accent is too close to its color to see');
-process.exitCode = worst < 10 || !accentsOk ? 1 : 0;
+// The glint (accent 80% with white) against a lit side facet (color 58% with white), in CIE
+// lightness (0-100), the mixes in .dot's --tl and --ml.
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const withWhite = (h, share) => hex(h).map((c) => c * share + 255 * (1 - share));
+const lightness = (rgb) => 116 * Math.cbrt(rgb.map(linear).reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0)) - 16;
+const dull = palette.filter((p) => lightness(withWhite(p.accent, 0.8)) < lightness(withWhite(p.hex, 0.58)));
+console.log(dull.length ? `WARNING: glints darker than their gem's side facets: ${dull.map((p) => p.name).join(', ')}` : 'All glints catch the light');
+process.exitCode = worst < 10 || !accentsOk || dull.length ? 1 : 0;

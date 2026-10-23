@@ -47,7 +47,7 @@ Read README.md for what the app does; this file covers how to work on it.
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
   the base is the category's color everywhere; the accent (a second color from the same portrait)
   is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges and donut slices use the base only, for
-  readability; both are translucent over the same dark trough (`#323232`), so their colors match. Check changes with `npm run palette` (distinct bases, accents that stand out).
+  readability; both are translucent over the same dark trough (`#323232`), so their colors match. Check changes with `npm run palette` (distinct bases, accents that stand out, glints lighter than the stone).
 - **The Categories screen edits a draft** (`categoryDraft` in pages.js): renames, additions,
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
   undo) and sorts right then. Back with unsaved changes asks first (`confirmLeave`). Colors always
