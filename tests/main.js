@@ -6,13 +6,15 @@ const fs = require('fs');
 const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
-// The summary's spending ring, read from its conic gradient: each wave as [color at its clockwise
-// end, start and end angle], and how much of the ring the waves cover (0–1).
+// The summary's spending ring: each wave's color and start and end angles (clockwise from 12
+// o'clock), how much of the ring the waves cover (0–1), and whether it's over budget.
 const ringWaves = (page) => page.evaluate(() => {
   const ring = document.querySelector('.ring-chart');
-  const stops = [...ring.style.getPropertyValue('--waves').matchAll(/(#[0-9a-f]{6}|#000) ([\d.]+)deg/g)].map(([, c, a]) => [c, parseFloat(a)]);
-  const waves = [];
-  for (let i = 0; i + 1 < stops.length - 2; i += 2) waves.push({ color: stops[i + 1][0], from: stops[i][1], to: stops[i + 1][1] });
+  const waves = [...ring.querySelectorAll('.wave')].map((w) => ({
+    color: w.style.getPropertyValue('--c').trim(),
+    from: parseFloat(w.style.getPropertyValue('--from')),
+    to: parseFloat(w.style.getPropertyValue('--from')) + parseFloat(w.style.getPropertyValue('--len')),
+  }));
   return { waves, drawn: ((waves.at(-1)?.to ?? 0) / 360).toFixed(2), over: ring.classList.contains('over') };
 });
 
@@ -120,7 +122,14 @@ const ringWaves = (page) => page.evaluate(() => {
   check('ring: one wave per category', ring.waves.length, 2);
   check('ring leaves the unspent share black', ring.drawn, '0.26');
   check('ring: smallest wave first, largest last', ring.waves[0].to - ring.waves[0].from < ring.waves[1].to - ring.waves[1].from, true);
-  check('ring: waves rise from black to their color', await page.evaluate(() => /#000 0deg, #[0-9a-f]{6} [\d.]+deg, #000/.test(document.querySelector('.ring-chart').style.getPropertyValue('--waves'))), true);
+  check('ring: waves rise from black to their color', await page.evaluate(() => /conic-gradient\(rgb\(0, 0, 0\) 0deg, rgb\(\d+, \d+, \d+\) [\d.]+deg, rgba\(0, 0, 0, 0\)/.test(getComputedStyle(document.querySelector('.ring-chart .wave')).backgroundImage)), true);
+  // Arriving, the waves cascade in from 12 o'clock, the first setting off first; a redraw (opening
+  // a category's row) doesn't replay it.
+  const cascade = () => page.evaluate(() => [...document.querySelectorAll('.ring-chart .wave')].map((w) => {
+    const a = w.getAnimations()[0];
+    return a ? `${a.animationName}@${a.effect.getTiming().delay}` : 'still';
+  }).join(' '));
+  check('ring: waves cascade in, the first first', await cascade(), 'wave-in@0 wave-in@140');
   check('ring: FF8 tick at 12 o\'clock, plain bevel under budget', await page.evaluate(() => {
     const ring = document.querySelector('.ring-chart').getBoundingClientRect();
     const tick = document.querySelector('.ring-chart .tick').getBoundingClientRect();
@@ -140,6 +149,7 @@ const ringWaves = (page) => page.evaluate(() => {
   })), true);
   check('diff', await page.locator('.stat.diff .value').textContent(), '+$1,477.00');
   await page.locator('.cat-head', { hasText: 'Transport' }).tap();
+  check('ring: a redraw doesn\'t replay the cascade', await page.evaluate(() => [...document.querySelectorAll('.ring-chart .wave')].every((w) => w.getAnimations().length === 0)), true);
   check('itemized MXN line', await page.locator('.item .orig').textContent(), 'from MX$250');
   check('itemized note', await page.locator('.item .what').first().textContent(), 'Uber');
   await page.screenshot({ path: `${OUT}/${ENGINE}-3-summary.png`, fullPage: true });

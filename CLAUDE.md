@@ -95,7 +95,8 @@ Read README.md for what the app does; this file covers how to work on it.
   category a wave going clockwise, smallest first so the largest comes last, rising from black to its
   full color at a hard leading edge (W1's faithful fade, reversed so the color leads). Drawn against
   the budget, unspent left black; over budget, bevel and tick turn FF8's trigger yellow (#d0da00).
-  It sweeps in clockwise when the summary opens (not on redraws). Replaced the donut.
+  Opening the summary, the waves cascade from 12 o'clock, first wave first, each sliding out from under
+  the ones before (about 1.6s typical, 2s at most; not on redraws). Replaced the donut.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
