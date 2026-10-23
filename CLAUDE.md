@@ -107,8 +107,10 @@ Read README.md for what the app does; this file covers how to work on it.
   power 0.3, times 0.85 (a smooth squeeze: about 0.35-1.3s in practice, user's choice over a 0.7-1.3s clamp: noticeable, not a wait). Not on redraws. Replaced the donut.
 - A party member (one of FF8's six, random each launch; `party.js`, the user's idea) wanders along
   the top of Note and Date: strolls, pauses, sometimes turns back, mirrored to walk right; taps go
-  through it; the amount area stays in front of it. Its walk is FFRK's two frames, each held 0.5s
-  (from `walk.mov`). Each sprite pixel is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays
+  through it; the amount area stays in front of it. Its walk is FFRK's two frames (from `walk.mov`):
+  stride, then feet together, 0.3s each (the clip marches on the spot at 0.5s); it stands on feet
+  together and sets off on the stride (standing mid-stride looked like sliding); ground speed is
+  matched to the 6px stride so the feet don't skate. Each sprite pixel is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays
   crisp. A victory pose on adding an expense was built and removed until there's a reference clip
   for it (it's in git history: commit d9f95be).
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the

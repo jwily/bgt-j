@@ -1,15 +1,21 @@
 // A party member wandering the main screen: one of FF8's six (FF Record Keeper battle sprites, cut
 // by tests/tools/cut-party.js into sprites/party.png), picked at random each launch. It strolls back
 // and forth along the top of the Note and Date windows, stopping now and then and sometimes turning
-// back. Its walk is FFRK's own: two frames, each held half a second (measured from walk.mov); it
-// stands on the first.
+// back. Its walk is FFRK's own two frames (from walk.mov): a stride, then feet together. It stands on
+// the feet-together one and sets off on the stride (the user's catch: standing on the stride froze it
+// mid-step, which looked like sliding). The clip marches on the spot at half a second a frame;
+// actually travelling, a quicker step looks livelier, and the ground speed is matched to the feet so
+// they stay planted.
 
 import { el } from './ui.js';
 
 const PARTY = ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie']; // party.png's rows
-const SPEED = 24; // walking, in px a second
-const STEP = 0.5; // seconds each walk frame is held
+const STEP = 0.3; // seconds each walk frame is held
 const PX = 4 / 3; // one sprite pixel: 4 screen pixels on a 3x iPhone (keep in sync with style.css)
+// Ground speed to match the feet, so they don't slide: in the stride frame the feet are about 6
+// sprite pixels apart, and a step (stride, then feet together) takes two frames.
+const STRIDE = 6; // sprite pixels
+const SPEED = (STRIDE * PX) / (2 * STEP); // px a second
 
 let member, area;
 let x = 0, face = 1, target = 0, mode = 'idle', until = 0, step = 0;
@@ -40,16 +46,16 @@ function rest(now) {
 }
 
 // Somewhere to walk to: usually a short stroll on in the same direction, sometimes back the other
-// way, anywhere along the windows; always at least a few steps.
+// way; three to ten steps.
 function setOff() {
   const span = room();
-  const stroll = 24 + Math.random() * 70;
+  const stroll = SPEED * 2 * STEP * (3 + Math.random() * 7);
   const turn = Math.random() < 0.35;
   let dir = turn ? face : -face; // face 1 = facing left, so walking on is toward smaller x
   if (x - stroll < 0) dir = 1;
   if (x + stroll > span) dir = -1;
   target = Math.min(span, Math.max(0, x + dir * stroll));
-  if (Math.abs(target - x) < 12) target = dir > 0 ? span : 0;
+  if (Math.abs(target - x) < SPEED) target = dir > 0 ? span : 0;
   face = target > x ? -1 : 1;
   mode = 'walk';
   step = 0;
@@ -78,7 +84,7 @@ function tick(nowMs) {
 
 // The sprites face left; walking right mirrors them.
 function draw() {
-  const frame = mode === 'walk' ? Math.floor(step / STEP) % 2 : 0;
+  const frame = mode === 'walk' ? Math.floor(step / STEP) % 2 : 1;
   member.dataset.state = mode;
   member.style.setProperty('--frame', frame);
   member.style.transform = `translate(${x}px, 0) scaleX(${face})`;
