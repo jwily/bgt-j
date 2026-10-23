@@ -322,8 +322,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .currency-track { width: max-content; padding-left: 20px; /* room for the junction icon by the first */ }
 .currency-track.gliding { transition: transform 0.2s ease-out; }
 /* FF8 Config-style choices (the currency picker, the backup reminder): the chosen one is bright
-   with the hand beside it, the others grey. Only the choices count for centering; the hand hangs
-   outside them. */
+   with the hand beside it, the others grey. The hand hangs outside them and doesn't count for
+   centering; the currency's junction icon does (input.js, centerCurrency). */
 .options { display: flex; gap: 44px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; }
 .options > * { position: relative; color: var(--off); transition: color 0.1s; }
 .options > .on { color: var(--text); }
@@ -335,7 +335,8 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   height: 14px;
   margin-top: -7px;
   background-image: var(--junction);
-  filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.5));
+  /* FF8 draws its shadows as an opaque grey, which shows even on black (measured beside Zell). */
+  filter: drop-shadow(1px 1px 0.5px #505050);
 }
 
 .amount {

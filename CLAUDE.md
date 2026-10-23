@@ -91,8 +91,9 @@ Read README.md for what the app does; this file covers how to work on it.
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
   or unavailable options (except in the category strip, where other categories are white: the user's
   choice; the grid keeps grey).
-- The pointing-hand cursor sits outside whatever it points at: centering ignores it (the USD/MXN
-  pair, category chips). It bobs beside buttons you'd press and sits still beside selections.
+- The pointing-hand cursor sits outside whatever it points at: centering ignores it (category
+  chips). The chosen currency has FF8's junction icon instead (user's choice; the hand stays for
+  categories, an arrow was tried), centered together with the name. It bobs beside buttons you'd press and sits still beside selections.
 - Capitalization: Title Case for names (screens, menu commands, period and category names:
   Current Period, Past Periods, Edit Budget, New Category); sentence case for everything else
   (buttons, labels, help lines, messages: Start new period, Under budget, New period started).

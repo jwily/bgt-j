@@ -38,18 +38,20 @@ const check = (label, ok, detail) => {
     await page.locator('#page .primary').tap();
     await page.waitForTimeout(400);
 
-    // The chosen currency is centered in the Amount window (the junction icon beside it doesn't count),
+    // The chosen currency and its junction icon are centered together in the Amount window,
     // whichever it is, and switching doesn't shift anything up or down.
     const opts = () => page.evaluate(() => {
-      const on = document.querySelector('.currency-opts .on').getBoundingClientRect();
+      const chosen = document.querySelector('.currency-opts .on');
+      const on = chosen.getBoundingClientRect();
+      const iconLeft = on.left + parseFloat(getComputedStyle(chosen, '::after').left);
       const zone = document.querySelector('.currency-zone').getBoundingClientRect();
-      return { top: Math.round(on.top * 10) / 10, offset: Math.round(on.left + on.width / 2 - (zone.left + zone.width / 2)) };
+      return { top: Math.round(on.top * 10) / 10, offset: Math.round((iconLeft + on.right) / 2 - (zone.left + zone.width / 2)) };
     });
     const usd = await opts();
     await page.locator('.currency-zone').tap();
     await page.waitForTimeout(350); // the row's 0.2s glide
     const mxn = await opts();
-    check(`${name}: chosen currency centered (USD, then MXN)`, Math.abs(usd.offset) <= 1 && Math.abs(mxn.offset) <= 1, `${usd.offset}px, ${mxn.offset}px`);
+    check(`${name}: chosen currency and its icon centered (USD, then MXN)`, Math.abs(usd.offset) <= 1 && Math.abs(mxn.offset) <= 1, `${usd.offset}px, ${mxn.offset}px`);
     check(`${name}: no vertical shift switching currency`, usd.top === mxn.top, `${usd.top} -> ${mxn.top}`);
 
     // Worst-case amount fits on one line; nothing scrolls off the page.
