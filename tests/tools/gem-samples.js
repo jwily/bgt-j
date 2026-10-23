@@ -1,6 +1,6 @@
 // Gem design samples over the current palette, beside FF8's item gem (gem-ref.png, linked from
 // ~/projects/ff8-references, never copied), into tests/output/gem-samples.html. Kept as a reference
-// for the gem designs considered: the user chose B2 (Glint, stronger); B3 (swapping dark accents) is shown for comparison. Usage: npm run gems
+// for the gem designs considered: the app uses B (Glint); B2 and B3 were tried alongside it. Usage: npm run gems
 const fs = require('fs');
 const path = require('path');
 const palette = require('../helpers').readPalette();

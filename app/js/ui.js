@@ -31,7 +31,7 @@ export function categoryChip(category, { selected = false } = {}) {
   return chip;
 }
 
-// A small diamond in a category's color, with its accent at the core.
+// A small FF8 item gem in a category's color, with its accent as the glint.
 export function colorDot(color) {
   const dot = el('span', { className: 'dot' });
   dot.style.setProperty('--c', color);

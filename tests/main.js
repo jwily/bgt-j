@@ -213,7 +213,7 @@ const donutDrawn = (page) => page.evaluate(() => {
   check('saved message', await page.locator('#help .text').first().textContent(), 'Categories saved');
   check('Save sorts them right away', (await categoryRows(page)).join(','), 'Bills,Coffee,Dining,Fun,Groceries,Health,Housing,Other,Shopping');
   check('colors in GF order after saving', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
-  check('each diamond has its GF\'s accent at the core', (await page.locator('.cat-row .dot').evaluateAll((ds) => ds.map((d) => d.style.getPropertyValue('--c2')))).join(','),
+  check('each gem has its GF\'s accent as its glint', (await page.locator('.cat-row .dot').evaluateAll((ds) => ds.map((d) => d.style.getPropertyValue('--c2')))).join(','),
     readPalette().map((c) => c.accent).slice(0, 10).join(','));
   await page.screenshot({ path: `${OUT}/${ENGINE}-4-categories.png`, fullPage: true });
   await page.locator('#nav-btn').tap();
