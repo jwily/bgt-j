@@ -659,8 +659,8 @@ body.page-open #view-input { visibility: hidden; }
    middle, which shows only at the rounded ends); rails 4px, end caps 9px, a 2px black liner along
    the trough's top and ends but not its bottom. Here scaled to 16px. Layers, front to back:
    trough, liner, the caps' outer edges, the tube. The fill reads as glowing liquid behind glass:
-   translucent over the dark trough, with a faint sheen along the top, and fading out where it
-   ends. The number sits under the bar's right end, overlapping its bottom rim (compatibility.png). */
+   translucent over the dark trough, with a faint sheen along the top, and a clean edge where it
+   ends (the user's choice over FF8's fade). The number sits under the bar's right end, overlapping its bottom rim (compatibility.png). */
 .gauge { position: relative; display: block; padding-bottom: 10px; }
 .gauge .bar {
   position: relative;
@@ -688,8 +688,6 @@ body.page-open #view-input { visibility: hidden; }
   display: block;
   height: 100%;
   background: linear-gradient(180deg, color-mix(in srgb, var(--c) 85%, transparent), color-mix(in srgb, var(--c) 72%, transparent) 45%, color-mix(in srgb, var(--c) 55%, transparent));
-  -webkit-mask-image: linear-gradient(to left, transparent, #000 6px);
-  mask-image: linear-gradient(to left, transparent, #000 6px);
 }
 .gauge .number {
   position: absolute;
