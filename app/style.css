@@ -23,7 +23,7 @@
   --font: 'Nunito', 'Avenir Next', system-ui, sans-serif;
   --text: #ededed;
   --off: #8f8f8f;          /* unchosen / unavailable, like FF8's greyed options */
-  --soft: #cfcfcf;         /* secondary text: sub-lines, dates, window labels, the gauges' numbers */
+  --soft: #cfcfcf;         /* secondary text: sub-lines, dates */
   --yellow: #f2e34c;       /* selected / highlighted, like FF8's yellow names */
   --good: #8fe089;
   --bad: #ff7a68;
@@ -140,7 +140,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
   line-height: 1;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--soft);
+  color: #fff;
   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
   pointer-events: none;
 }
@@ -699,9 +699,9 @@ body.page-open #view-input { visibility: hidden; }
   line-height: 1;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
-  /* Light grey in a solid black outline, as on FF8's Compatibility bars; a touch lighter than
-     FF8's #bcbcbc, and greyer than the amount just above it, so the two read apart. */
-  color: var(--soft);
+  /* White in a solid black outline, as on FF8's Compatibility bars (the user's choice over
+     FF8's light grey). */
+  color: #fff;
   text-shadow: -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000, -1px 0 0 #000, 1px 0 0 #000,
     -1px 1px 0 #000, 0 1px 0 #000, 1px 1px 0 #000, 0 0 1px #000;
 }

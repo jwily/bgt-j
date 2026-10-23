@@ -98,6 +98,10 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
   check('donut center', await page.locator('.donut-center strong').textContent(), '$523.00');
   check('donut slices', await page.locator('.donut circle.slice').count(), 2);
+  check('window labels and gauge numbers white', await page.evaluate(() => [
+    getComputedStyle(document.querySelector('.window[data-label]'), '::before').color,
+    getComputedStyle(document.querySelector('.gauge .number')).color,
+  ].join(' ')), 'rgb(255, 255, 255) rgb(255, 255, 255)');
   // The donut's colors match the gauges': translucent over the same dark trough.
   check('donut colored like the gauges', await page.evaluate(() => [
     getComputedStyle(document.querySelector('.donut .slice')).strokeOpacity,
