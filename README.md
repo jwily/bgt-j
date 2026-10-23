@@ -7,7 +7,7 @@ Instead of resetting every month, the budget runs in **periods**: each time you 
 ## Folders
 
 - `app/`: the app itself. This is the folder you deploy.
-- `tests/`: browser tests and the tools that generate the hand cursor, the icon and the palette check. Never deployed.
+- `tests/`: browser tests and the tools that generate the hand cursor, the icon, the party sprites and design samples, and the palette check. Never deployed.
 
 ## Run it locally
 
@@ -74,7 +74,7 @@ npm test           # all passes on WebKit (Safari's engine) and Chromium
 
 Before every push, `.githooks/pre-push` runs the whole suite and stops the push if anything fails (switch it on in a fresh clone with `git config core.hooksPath .githooks`).
 
-Tools: `npm run palette` checks the category colors are distinct. `npm run icon` redraws the app icon (the first four category colors as diamonds spiralling into the distance). `npm run hand` cuts FF8's hand cursor out of the menu capture in `~/projects/ff8-references/menuanimations.mov` (needs ffmpeg), combining two copies of it so each one's stray window edges drop out. `npm run screens` screenshots every screen on two iPhone sizes into `tests/output/screens/`.
+Tools: `npm run palette` checks the category colors are distinct. `npm run icon` redraws the app icon (the first category's gem on the window fill). `npm run party` cuts the party members' walk frames out of FF Record Keeper sprite sheets in `~/projects/ff8-references/`. `npm run hand` cuts FF8's hand cursor out of the menu capture in `~/projects/ff8-references/menuanimations.mov` (needs ffmpeg), combining two copies of it so each one's stray window edges drop out. `npm run screens` screenshots every screen on two iPhone sizes into `tests/output/screens/`.
 
 ## App files
 
@@ -86,6 +86,9 @@ Tools: `npm run palette` checks the category colors are distinct. `npm run icon`
 - `js/sheets.js`: pop-up sheets (edit expense, category grid)
 - `js/backup.js`: backup export/restore, CSV export, "last backed up" status
 - `js/ui.js`: shared helpers (elements, keypad, gestures, the HELP window, sheets)
-- `style.css`: the FF8 look. The hand cursor is cut out of a capture of FF8's menus (`npm run hand`); everything else is drawn with CSS.
+- `js/party.js`: the party member wandering the main screen
+- `js/snapshots.js`: safety snapshots in IndexedDB
+- `js/dates.js`: local dates and date formatting
+- `style.css`: the FF8 look. The hand cursor is cut out of a capture of FF8's menus (`npm run hand`) and the party sprites come from FF Record Keeper (`npm run party`, into `sprites/`); everything else is drawn with CSS.
 - `fonts/`: Nunito (SIL Open Font License, see `fonts/OFL.txt`), bundled so it works offline
 - `sw.js`, `manifest.json`, `icons/`: offline support and the home-screen icon
