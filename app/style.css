@@ -612,7 +612,7 @@ body.page-open #view-input { visibility: hidden; }
 /* The channel the waves show in. Each wave sits in its place (.wave-place, showing only 12 o'clock
    to the wave's end, --to), drawn as a conic gradient from 12 o'clock (black, rising to its color
    at --len) turned to its start (--from). Arriving, it turns from just before 12 o'clock, hidden,
-   to its start: it travels clockwise into place. */
+   to its start: it travels clockwise into place, at a steady speed, landing gently. */
 .ring-chart .waves {
   position: absolute;
   inset: 0;
@@ -629,7 +629,7 @@ body.page-open #view-input { visibility: hidden; }
   background: conic-gradient(#000 0deg, var(--c) var(--len), transparent var(--len));
   transform: rotate(var(--from));
 }
-.arriving .ring-chart .wave { animation: wave-in var(--dur) steps(var(--steps)) var(--delay) both; }
+.arriving .ring-chart .wave { animation: wave-in var(--dur) cubic-bezier(0.3, 0.35, 0.5, 1) var(--delay) both; }
 @keyframes wave-in { from { transform: rotate(calc(-1 * var(--len))); } }
 /* The tick across the channel at 12 o'clock: a line with flared ends, like the bar's. */
 .ring-chart .tick {
@@ -644,9 +644,10 @@ body.page-open #view-input { visibility: hidden; }
 }
 .ring-chart .tick::before, .ring-chart .tick::after { content: ''; position: absolute; left: -1.6px; width: 4.7px; height: 2px; background: color-mix(in srgb, var(--tick), white 25%); }
 .ring-chart .tick::before { top: 0; }
-/* On the beat the waves set off, the tick flashes and dims in six steps, as FF8's trigger box does. */
-.arriving .ring-chart .tick { animation: tick-pulse var(--beat) steps(6) var(--beats); }
-@keyframes tick-pulse { from { filter: brightness(1.9); } }
+/* As each wave fires, a white copy of the tick flashes over it and fades. */
+.ring-chart .tick.flash { --tick: #fff; opacity: 0; pointer-events: none; }
+.arriving .ring-chart .tick.flash { animation: tick-flash 0.4s ease-out var(--delay) forwards; }
+@keyframes tick-flash { from { opacity: 0.95; } }
 .ring-chart .tick::after { bottom: 0; }
 .ring-center { position: absolute; z-index: 1; inset: 0; display: grid; place-content: center; text-align: center; }
 .ring-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }

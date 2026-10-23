@@ -125,13 +125,16 @@ const ringWaves = (page) => page.evaluate(() => {
   check('ring: waves rise from black to their color', await page.evaluate(() => /conic-gradient\(rgb\(0, 0, 0\) 0deg, rgb\(\d+, \d+, \d+\) [\d.]+deg, rgba\(0, 0, 0, 0\)/.test(getComputedStyle(document.querySelector('.ring-chart .wave')).backgroundImage)), true);
   // Arriving, the waves cascade in from 12 o'clock, the first setting off first; a redraw (opening
   // a category's row) doesn't replay it.
-  // As on Renzokuken: waves step along at a constant speed (no easing), one per beat (0.533s),
-  // and the tick pulses once per wave.
-  const cascade = () => page.evaluate(() => [...document.querySelectorAll('.ring-chart .wave')].map((w) => {
-    const a = w.getAnimations()[0];
-    return a ? `${a.animationName}@${a.effect.getTiming().delay} ${a.effect.getKeyframes()[0].easing.startsWith('steps(')}` : 'still';
-  }).join(' ') + ' | ' + (() => { const t = document.querySelector('.ring-chart .tick').getAnimations()[0]; return t ? `${t.animationName} x${t.effect.getTiming().iterations}` : 'still'; })());
-  check('ring: waves step in on FF8\'s beat, the first first; the tick pulses per wave', await cascade(), 'wave-in@0 true wave-in@533 true | tick-pulse x2');
+  // The furthest wave fires first; the next fires when it's 85% of the way to its place (here
+  // Groceries travels 94deg at 400deg/s, so Transport fires at 0.2s). Smooth, not stepped; the tick
+  // flashes as each fires.
+  const cascade = () => page.evaluate(() => {
+    const at = (el) => { const a = el.getAnimations()[0]; return a ? `${a.animationName}@${Math.round(a.effect.getTiming().delay)}` : 'still'; };
+    const waves = [...document.querySelectorAll('.ring-chart .wave')];
+    const smooth = waves.every((w) => !w.getAnimations()[0].effect.getKeyframes()[0].easing.startsWith('steps('));
+    return `${waves.map(at).join(' ')} smooth ${smooth} | ${[...document.querySelectorAll('.ring-chart .flash')].map(at).join(' ')}`;
+  });
+  check('ring: the furthest wave fires first, each next as the one before lands; the tick flashes', await cascade(), 'wave-in@200 wave-in@0 smooth true | tick-flash@200 tick-flash@0');
   check('ring: FF8 tick at 12 o\'clock, plain bevel under budget', await page.evaluate(() => {
     const ring = document.querySelector('.ring-chart').getBoundingClientRect();
     const tick = document.querySelector('.ring-chart .tick').getBoundingClientRect();
