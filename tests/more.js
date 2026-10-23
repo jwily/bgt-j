@@ -172,6 +172,20 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.locator('.add-btn').tap();
   check('spent after both', await spentText(page), '$57.50');
 
+  // No double-tap zoom: a quick second tap on empty space has its default (the zoom) cancelled; a
+  // quick second tap on a key keeps it (fast typing), and so do two slow taps.
+  const secondTapBlocked = (selector, gap) => page.evaluate(async ([selector, gap]) => {
+    const target = document.querySelector(selector);
+    const tap = () => { const e = new Event('touchend', { bubbles: true, cancelable: true }); target.dispatchEvent(e); return e.defaultPrevented; };
+    tap();
+    await new Promise((r) => setTimeout(r, gap));
+    const blocked = tap();
+    await new Promise((r) => setTimeout(r, 400)); // let the next check start fresh
+    return blocked;
+  }, [selector, gap]);
+  check('double tap on empty space: no zoom; on a key, or slow taps: untouched',
+    [await secondTapBlocked('.strip-window', 120), await secondTapBlocked('#view-input .key', 120), await secondTapBlocked('.strip-window', 600)].join(' '), 'true false false');
+
   // Summary: backdated item shows its date; edit category; delete with undo
   await openSummary(page);
   await page.locator('.cat-head', { hasText: 'Health' }).tap();
