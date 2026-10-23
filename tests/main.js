@@ -121,6 +121,12 @@ const donutDrawn = (page) => page.evaluate(() => {
     getComputedStyle(document.querySelector('.window[data-label]'), '::before').color,
     getComputedStyle(document.querySelector('.gauge .number')).color,
   ].join(' ')), 'rgb(255, 255, 255) rgb(207, 207, 207)');
+  // Every gauge's end shows: dark fills are lifted and end in a light tip, so the tip is always
+  // well above the trough's lightness (OKLab L of #323232 is about 0.32).
+  check('gauge fills end in a light tip', await page.evaluate(() => [...document.querySelectorAll('.gauge .bar span')].every((s) => {
+    const tip = getComputedStyle(s).backgroundImage.match(/to left, (oklab|color)\(([^)]*)\)/);
+    return tip && parseFloat(tip[2].replace(/^oklab /, '')) >= 0.7;
+  })), true);
   // The donut's colors match the gauges': translucent over the same dark trough.
   check('donut colored like the gauges', await page.evaluate(() => [
     getComputedStyle(document.querySelector('.donut .slice')).strokeOpacity,
