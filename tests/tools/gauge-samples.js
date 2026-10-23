@@ -16,10 +16,12 @@ const VARIANTS = [
   ['lift', 'B. FF8, lifted', 'A, with colors too dark to read against the trough raised to a minimum lightness (hue and saturation kept).'],
   ['tip', 'C. FF8 + tip', 'A with a brighter tip where the fill ends, like the HP bar\'s, so every color shows where it stops.'],
   ['both', 'D. B + C', 'Lifted colors and the bright tip.'],
+  ['both soft', 'D2. D, softer tip', 'D with its 3px tip less bright (40% white at the end instead of 55%).'],
+  ['both softest', 'D3. D, softest tip', 'D with a 2px tip a quarter white: a hint of an edge.'],
 ];
 const gauge = (p, level) => `<span class="gauge"><span class="bar"><span style="width:${level * 100}%;--c:${p.hex}"></span></span><span class="number">${Math.round(level * 100)}</span></span>`;
 const sections = VARIANTS.map(([id, title, text]) => `
-<section class="window v-${id}"><h2>${title}</h2><p>${text}</p>
+<section class="window ${id.split(' ').map((c) => `v-${c}`).join(' ')}"><h2>${title}</h2><p>${text}</p>
   <div class="rows">${palette.map((p) => `<div class="row"><span class="name">${p.name}</span>${LEVELS.map((l) => gauge(p, l)).join('')}</div>`).join('')}</div>
 </section>`).join('');
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
@@ -49,10 +51,14 @@ section:not(.v-now) .gauge .bar span {
 section.v-lift .gauge .bar span, section.v-both .gauge .bar span {
   --f: oklch(from color-mix(in oklab, var(--c) 45%, #323232) max(l, 0.5) c h);
 }
-/* The tip: the last 3px of the fill lighter, with a clean end so the tip stays crisp. */
+/* The tip: the last few px of the fill lighter, with a clean end so the tip stays crisp. --tip is
+   how much of the fill's color is left at the very end (the rest white), --tip-w its width. */
+section.v-tip, section.v-both { --tip: 45%; --tip-w: 3px; }
+section.v-soft { --tip: 60%; --tip-w: 3px; }
+section.v-softest { --tip: 75%; --tip-w: 2px; }
 section.v-tip .gauge .bar span, section.v-both .gauge .bar span {
   background:
-    linear-gradient(to left, color-mix(in oklab, var(--f) 45%, white) 0 2px, color-mix(in oklab, var(--f) 70%, white) 2px 3px, transparent 3px),
+    linear-gradient(to left, color-mix(in oklab, var(--f) var(--tip), white) 0 calc(var(--tip-w) - 1px), color-mix(in oklab, var(--f) calc((100% + var(--tip)) / 2), white) calc(var(--tip-w) - 1px) var(--tip-w), transparent var(--tip-w)),
     linear-gradient(180deg,
       color-mix(in oklab, var(--f) 55%, black) 0%, var(--f) 28%,
       color-mix(in oklab, var(--f) 90%, white) 60%, var(--f) 82%,
