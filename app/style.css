@@ -62,7 +62,8 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
    tapped element or one containing it opts out, so a fast tap that landed between keys (or on a
    window's edge) could swallow the next one. Set on the root, it covers the whole app; pinch zoom
    still works. Every element inherits it in effect (touch-action combines with its ancestors'), so
-   nothing else needs it; the menu narrows it further. */
+   nothing else needs it; the menu narrows it further. iOS doesn't always honour it for double-tap
+   zoom, so ui.js (blockDoubleTapZoom) blocks that too. */
 html { touch-action: manipulation; }
 /* Nothing to select or copy except what you type: no accidental highlighting or callouts. */
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }

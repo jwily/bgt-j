@@ -124,11 +124,29 @@ function openOnRelease(menu, command) {
   }, () => command?.click());
 }
 
+// Things you press (see trackPresses).
+const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
+
+// No double-tap zoom: iOS doesn't always honour the page's touch-action (style.css), and still zooms
+// on a double tap of text or a window's empty space. So a second tap within DOUBLE_TAP of the last
+// has its default (the zoom) cancelled, except on things you press, type in or scroll, which keep
+// their taps: fast typing on the keypad, a quick second tap on a chip. Pinch zoom still works.
+const DOUBLE_TAP = 350; // ms
+export function blockDoubleTapZoom() {
+  let lastTap = -Infinity;
+  document.addEventListener('touchend', (event) => {
+    if (event.touches?.length) return; // another finger is still down: not a tap
+    const now = performance.now();
+    const quick = now - lastTap < DOUBLE_TAP;
+    lastTap = now;
+    if (quick && !event.target.closest?.(`${PRESSABLE}, input, textarea, select, .strip, .tappable`)) event.preventDefault();
+  }, { passive: false });
+}
+
 // Presses, app-wide: a press that slides off its button before lifting doesn't count (iOS would
 // otherwise still tap it). In the menu, a press can slide between commands: the hand follows the
 // thumb, and lifting opens the command under it. Each finger is tracked on its own, so overlapping
 // taps (the next finger landing before the last lifts, as in fast typing) don't cancel each other.
-const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
 
 export function trackPresses() {
   const presses = new Map(); // pointerId -> { target, menu }
