@@ -50,12 +50,15 @@ const ringWaves = (page) => page.evaluate(() => {
     ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'].includes(member.name) && member.sheet && member.through === 'none' && member.standsOnTop, true);
   const startedAt = await page.locator('.party-member').evaluate((m) => m.style.transform);
   check('party member wanders', await page.waitForFunction((t) => document.querySelector('.party-member').style.transform.split(')')[0] !== t.split(')')[0], startedAt, { timeout: 9000 }).then(() => true, () => false), true);
-  // Its walk is FFRK's two frames (from walk.mov), so walking it shows both, and only those.
+  // Its walk is FFRK's two frames (from walk.mov), so walking it shows both, and only those; standing,
+  // it's on the feet-together frame (1), not mid-stride.
   check('party member walks on its two frames', await page.evaluate(() => new Promise((resolve) => {
     const m = document.querySelector('.party-member'), seen = new Set();
     const watch = setInterval(() => { if (m.dataset.state === 'walk') seen.add(m.style.getPropertyValue('--frame')); }, 50);
     setTimeout(() => { clearInterval(watch); resolve([...seen].sort().join(',')); }, 9000);
   })), '0,1');
+  check('party member stands with its feet together', await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 9000 })
+    .then(() => page.locator('.party-member').evaluate((m) => m.style.getPropertyValue('--frame'))), '1');
 
   // USD entry with implied cents
   for (const k of '51050') await mainKey(k);

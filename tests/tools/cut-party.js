@@ -3,7 +3,7 @@
 // a row per character, in PARTY order, each two 20x26 cells, the sprite's feet on the cell's bottom
 // edge, centered across it. Each walk is two frames, alternating every half second, found by
 // matching every frame of walk.mov (FFRK's title screen, the six walking on the spot) against every
-// sprite on the sheets; frame 0 is also the standing pose, as in the clip's still moments.
+// sprite on the sheets: frame 0 is the stride, frame 1 feet together (also the standing pose).
 // Each frame is its rectangle on the sheet: [x, y, w, h]. Usage: npm run party
 const { webkit } = require('playwright');
 const fs = require('fs');
