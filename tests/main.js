@@ -98,6 +98,12 @@ const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chr
   check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
   check('donut center', await page.locator('.donut-center strong').textContent(), '$523.00');
   check('donut slices', await page.locator('.donut circle.slice').count(), 2);
+  // The donut's colors match the gauges': translucent over the same dark trough.
+  check('donut colored like the gauges', await page.evaluate(() => [
+    getComputedStyle(document.querySelector('.donut .slice')).strokeOpacity,
+    getComputedStyle(document.querySelector('.donut .ring')).stroke,
+    getComputedStyle(document.querySelector('.gauge .bar')).backgroundImage.includes('rgb(50, 50, 50)'),
+  ].join(' ')), '0.72 rgb(50, 50, 50) true');
   check('diff', await page.locator('.stat.diff .value').textContent(), '+$1,477.00');
   await page.locator('.cat-head', { hasText: 'Transport' }).tap();
   check('itemized MXN line', await page.locator('.item .orig').textContent(), 'from MX$250');

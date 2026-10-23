@@ -618,7 +618,8 @@ body.page-open #view-input { visibility: hidden; }
   mask: var(--cut);
   --cut: radial-gradient(circle closest-side, transparent 64%, #000 64.4%, #000 66%, transparent 66.4%);
 }
-.donut .ring { stroke: #2b2b2b; }
+.donut .ring { stroke: #323232; } /* the gauges' trough */
+.donut .slice { stroke-opacity: 0.72; } /* translucent like the gauges' fill, so the two colors match */
 .donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
 .donut-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
 .donut-center span { color: var(--soft); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
