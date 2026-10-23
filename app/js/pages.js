@@ -200,7 +200,7 @@ function itemRow(expense) {
 }
 
 // The spending ring, after the bar of Squall's Renzokuken: each category a wave going clockwise
-// from 12 o'clock, smallest first so the largest comes last, rising from black to its color at a
+// from 12 o'clock, largest first so the smallest comes last, rising from black to its color at a
 // hard leading edge (its clockwise end, so the last edge marks where spending stops). Drawn against
 // the budget, so what's unspent stays black; over budget, against the spending, all of it waves.
 // Arriving, the waves fire one at a time, the furthest first: each travels clockwise from 12
@@ -213,7 +213,7 @@ const NEXT_FIRES_AT = 0.85; // of the previous wave's travel
 function waveRing(slices, total, budget) {
   const whole = Math.max(budget, total);
   let at = 0;
-  const placed = [...slices].sort((a, b) => a.value - b.value).map(({ value, color }) => {
+  const placed = [...slices].sort((a, b) => b.value - a.value).map(({ value, color }) => {
     const from = (at / whole) * 360;
     at += value;
     return { color, from, to: (at / whole) * 360 };

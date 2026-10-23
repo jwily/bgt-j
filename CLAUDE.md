@@ -92,7 +92,8 @@ Read README.md for what the app does; this file covers how to work on it.
   bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
 - The summary's spending ring (user's design, after Squall's Renzokuken bar in `renzo.mov`): in the
   SPENT window, a black channel in FF8's light grey bevel with an I-beam tick at 12 o'clock; each
-  category a wave going clockwise, smallest first so the largest comes last, rising from black to its
+  category a wave going clockwise, largest first so the smallest comes last (user's choice over the
+  reverse), rising from black to its
   full color at a hard leading edge (W1's faithful fade, reversed so the color leads). Drawn against
   the budget, unspent left black; over budget, bevel and tick turn FF8's trigger yellow (#d0da00).
   Opening the summary, the waves fire one at a time, the furthest first (user's design): each travels
