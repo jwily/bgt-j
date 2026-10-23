@@ -1,6 +1,8 @@
 // Gem design samples over the current palette, beside FF8's item gem (gem-ref.png, linked from
 // ~/projects/ff8-references, never copied), into tests/output/gem-samples.html. Kept as a reference
-// for the gem designs considered: the app uses B (Glint); B2 and B3 were tried alongside it. Usage: npm run gems
+// for the gem designs considered: the app uses B (Glint); B2 and B3 were tried alongside it.
+// Usage: npm run gems [-- accents.json], where accents.json ({ "GF name": "#accent", ... }) proposes
+// new accents: B, B2 and F are then shown again with them, changed gems marked *.
 const fs = require('fs');
 const path = require('path');
 const palette = require('../helpers').readPalette();
@@ -20,14 +22,18 @@ const VARIANTS = [
 // Relative luminance, to find accents darker than their base.
 const lum = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)).reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0);
 const swapped = palette.map((p) => (lum(p.accent) < lum(p.hex) ? { ...p, hex: p.accent, accent: p.hex, name: `${p.name} *` } : p));
+const proposed = process.argv[2] && JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const withProposed = proposed && palette.map((p) => (proposed[p.name] ? { ...p, accent: proposed[p.name], name: `${p.name} *` } : p));
+const runs = VARIANTS.flatMap(([id, title, text]) => [[id, title, text, id === 'swapped' ? swapped : palette],
+  ...(proposed && ['glint', 'glint2', 'gleam'].includes(id) ? [[id, `${title}: proposed accents`, 'The same, with the proposed accents (changed ones marked *).', withProposed]] : [])]);
 const row = (p) => `<div class="cat" style="--c:${p.hex};--a:${p.accent}"><span class="gem"></span>${p.name}</div>`;
 const big = (p) => `<span class="gem zoom" style="--c:${p.hex};--a:${p.accent}" title="${p.name}"></span>`;
-const sections = VARIANTS.map(([id, title, text]) => ((list) => `
+const sections = runs.map(([id, title, text, list]) => `
 <section class="window v-${id}"><h2>${title}</h2><p>${text}</p>
   <div class="zooms">${list.map(big).join('')}</div>
   <div class="cats">${list.map(row).join('')}</div>
   <div class="strip">${list.slice(0, 4).map((p, i) => `<span class="chip${i === 0 ? ' sel' : ''}" style="--c:${p.hex};--a:${p.accent}"><span class="gem"></span>${['Bills','Dining','Fun','Groceries'][i]}</span>`).join('')}</div>
-</section>`)(id === 'swapped' ? swapped : palette)).join('');
+</section>`).join('');
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>Gem samples</title>
 <style>
