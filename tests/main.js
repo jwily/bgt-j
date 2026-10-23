@@ -40,11 +40,25 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/${ENGINE}-1-main-empty.png` });
 
+  // A party member, one of FF8's six, wanders along the top of Note and Date; taps go through it.
+  const member = await page.evaluate(() => {
+    const m = document.querySelector('.details .party-member');
+    const box = m.getBoundingClientRect(), details = m.parentElement.getBoundingClientRect();
+    return { name: m.dataset.member, sheet: getComputedStyle(m).backgroundImage.includes('sprites/party.png'), through: getComputedStyle(m).pointerEvents, standsOnTop: Math.abs(box.bottom - details.top) <= 3 };
+  });
+  check('party member: one of the six, from the sprite sheet, standing on Note and Date, taps go through',
+    ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'].includes(member.name) && member.sheet && member.through === 'none' && member.standsOnTop, true);
+  const startedAt = await page.locator('.party-member').evaluate((m) => m.style.transform);
+  check('party member wanders', await page.waitForFunction((t) => document.querySelector('.party-member').style.transform.split(')')[0] !== t.split(')')[0], startedAt, { timeout: 9000 }).then(() => true, () => false), true);
+
   // USD entry with implied cents
   for (const k of '51050') await mainKey(k);
   check('USD 5-1-0-5-0', await page.locator('.amount').textContent(), '$510.50');
   await page.locator('.add-btn').tap();
   check('spent after $510.50', await spentText(page), '$510.50');
+  // Adding an expense: the party member does its victory pose, facing you, then wanders on.
+  check('party member celebrates the expense', await page.locator('.party-member').evaluate((m) => `${m.dataset.state} ${m.style.transform.includes('scaleX(1)')}`), 'victory true');
+  check('...then wanders on', await page.waitForFunction(() => document.querySelector('.party-member').dataset.state !== 'victory', null, { timeout: 4000 }).then(() => true, () => false), true);
   check('toast', await page.locator('#help .text').first().textContent(), 'Added $510.50 · Groceries');
 
   // Currency switch: tap the choices
