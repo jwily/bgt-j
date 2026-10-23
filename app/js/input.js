@@ -121,14 +121,16 @@ function cycleCurrency() {
   setInputPrefs({ currency: next });
 }
 
-// Moves the row so the chosen currency's name is centered (the hand hangs outside it and doesn't
-// count). glide: animate, as after a tap; not when only the layout changed.
+// Moves the row so the chosen currency and its junction icon are centered as one, the icon
+// hanging off the name's left (its ::after, positioned in style.css). glide: animate, as after a
+// tap; not when only the layout changed.
 function centerCurrency(glide) {
   const on = parts.currencies.find((span) => span.classList.contains('on'));
   const row = parts.currencyTrack.parentElement;
   if (!on || !row.clientWidth) return;
+  const iconLeft = parseFloat(getComputedStyle(on, '::after').left) || 0;
   parts.currencyTrack.classList.toggle('gliding', glide);
-  parts.currencyTrack.style.transform = `translateX(${row.clientWidth / 2 - (on.offsetLeft + on.offsetWidth / 2)}px)`;
+  parts.currencyTrack.style.transform = `translateX(${row.clientWidth / 2 - (on.offsetLeft + (iconLeft + on.offsetWidth) / 2)}px)`;
 }
 
 // ---------- category strip ----------
