@@ -1,11 +1,12 @@
-// Renders the app icon: the first category color (Quezacotl) as a single gem, its accent at the
-// core like the gems in the app, on a dark charcoal glow (FF8's dark menu backdrop, without hard
-// corners, since iOS rounds the icon itself). Colors come from the app's palette. Also writes a
+// Renders the app icon: the first category color's gem (Quezacotl), exactly as the app draws it
+// (style.css's .dot: FF8's item gem with its glint), scaled up with CSS zoom so it's drawn sharp at
+// size, on the app's window fill (--window-fill: shaded left to right, flat grey in the middle),
+// without the windows' bevel (the user's choice; iOS rounds the corners itself). Also writes a
 // preview at home-screen size with iOS's rounded corners (tests/output/icon-preview.png).
 // Usage: npm run icon
 //
-// (Earlier versions spiralled the first four colors' gems into the distance; the user preferred
-// just the first.)
+// (Earlier versions: the first four colors' diamonds spiralling into the distance, then one diamond
+// on a dark charcoal glow.)
 const { webkit } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -13,59 +14,43 @@ const { readPalette } = require('../helpers');
 
 const OUT = path.join(__dirname, '../../app/icons');
 const PREVIEW = path.join(__dirname, '../output/icon-preview.png');
+// The app's stylesheet, inlined (a page set with setContent can't load files).
+const CSS = fs.readFileSync(path.join(__dirname, '../../app/style.css'), 'utf8');
 
-const SIZE = 0.58;                           // the gem, point to point, as a share of the icon
+const HEIGHT = 0.56;                         // the gem's height as a share of the icon
 const OPTICAL_CENTER = { x: 0.5, y: 0.49 };  // a hair above the middle, where a centered shape looks centered
+const GEM = { width: 11, height: 13 };       // .dot's size in style.css
 
-function layout() {
-  return [{ size: SIZE, depth: 0, x: OPTICAL_CENTER.x, y: OPTICAL_CENTER.y }];
+function iconHtml(px, { hex, accent }) {
+  const zoom = (HEIGHT * px) / GEM.height;
+  const left = OPTICAL_CENTER.x * px - (GEM.width * zoom) / 2;
+  const top = OPTICAL_CENTER.y * px - (GEM.height * zoom) / 2;
+  return `<div style="position:relative;width:${px}px;height:${px}px;overflow:hidden;background:var(--window-fill)">
+    <span class="dot" style="position:absolute;margin:0;zoom:${zoom};left:${left / zoom}px;top:${top / zoom}px;--c:${hex};--c2:${accent}"></span></div>`;
 }
 
-// color: { hex, accent } from the palette. Like the app's gems, the accent is a diamond at the core.
-function diamondHtml(d, color, px) {
-  const side = (d.size * px) / Math.SQRT2; // the rotated square's side, so point to point is d.size
-  const lift = 1 - d.depth * 0.22;         // nearer = higher off the backdrop = longer shadow
-  const blur = d.depth * 0.0016 * px;      // a touch of haze with distance
-  const contrast = 1 - d.depth * 0.06;
-  // Rotated 45°, the square's own top-left corner is the diamond's top point, so light from the
-  // top-left falls on the box's top and left edges: shadow offsets (x, y) become (diagonal, 0).
-  const shade = (x) => `${x}px ${x}px`;
-  return `<div style="position:absolute;left:${d.x * px - side / 2}px;top:${d.y * px - side / 2}px;
-    width:${side}px;height:${side}px;transform:rotate(45deg);
-    background:linear-gradient(${color.accent},${color.accent}) center / 42% 42% no-repeat, ${color.hex};
-    filter:contrast(${contrast}) blur(${blur}px);
-    box-shadow:0 0 0 ${Math.max(1.5, side * 0.035)}px #0d0d0d,
-      inset ${side * 0.1}px 0 0 rgba(255,255,255,.34),
-      inset ${shade(-side * 0.07)} 0 rgba(0,0,0,.22),
-      ${side * 0.13 * lift}px 0 ${side * 0.14 * lift}px rgba(0,0,0,${(0.4 + 0.3 * lift).toFixed(2)})"></div>`;
-}
-
-function iconHtml(px, colors) {
-  const glow = `radial-gradient(circle at ${OPTICAL_CENTER.x * 100}% ${OPTICAL_CENTER.y * 100}%,
-    #4f4f4f 0%, #343434 30%, #1a1a1a 64%, #0a0a0a 100%)`;
-  // Drawn farthest first, so nearer diamonds overlap the ones behind them.
-  const diamonds = layout().map((d, i) => diamondHtml(d, colors[i], px)).reverse().join('');
-  return `<div style="position:relative;width:${px}px;height:${px}px;overflow:hidden;background:${glow}">${diamonds}</div>`;
-}
+const page = (body) => `<!doctype html><meta charset="utf-8"><style>${CSS}</style>
+  <style>html, body { height: auto; overflow: visible; margin: 0; background: transparent; }</style><body>${body}</body>`;
 
 (async () => {
-  const colors = readPalette().slice(0, 1);
+  const [first] = readPalette();
   const browser = await webkit.launch();
   for (const size of [512, 180]) {
-    const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
-    await page.setContent(`<!doctype html><meta charset="utf-8"><body style="margin:0">${iconHtml(size, colors)}</body>`);
-    await page.screenshot({ path: path.join(OUT, `icon-${size}.png`) });
-    await page.close();
+    const tab = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
+    await tab.setContent(page(iconHtml(size, first)), { waitUntil: 'load' });
+    await tab.screenshot({ path: path.join(OUT, `icon-${size}.png`) });
+    await tab.close();
   }
   // Preview: large, then at home-screen size (180px = 60pt at 3x) on light and dark wallpaper.
   fs.mkdirSync(path.dirname(PREVIEW), { recursive: true });
-  const masked = (px) => `<div style="width:${px}px;height:${px}px;border-radius:${px * 0.2237}px;overflow:hidden">${iconHtml(px, colors)}</div>`;
-  const page = await browser.newPage({ viewport: { width: 760, height: 330 } });
-  await page.setContent(`<!doctype html><meta charset="utf-8"><body style="margin:0;display:flex">
+  const masked = (px) => `<div style="width:${px}px;height:${px}px;border-radius:${px * 0.2237}px;overflow:hidden">${iconHtml(px, first)}</div>`;
+  // Taller than it's shown, so the app's sideways-phone rule (landscape and short) doesn't hide it.
+  const tab = await browser.newPage({ viewport: { width: 760, height: 600 } });
+  await tab.setContent(page(`<div style="display:flex">
     <div style="padding:20px;background:#fff">${masked(290)}</div>
     <div style="padding:20px;background:#cfd6e2">${masked(180)}</div>
-    <div style="padding:20px;background:#1c1c1e;flex:1">${masked(180)}</div></body>`);
-  await page.screenshot({ path: PREVIEW });
+    <div style="padding:20px;background:#1c1c1e;flex:1">${masked(180)}</div></div>`), { waitUntil: 'load' });
+  await tab.screenshot({ path: PREVIEW, clip: { x: 0, y: 0, width: 760, height: 330 } });
   await browser.close();
   console.log(`Icons written to ${OUT}; preview at ${PREVIEW}`);
 })();
