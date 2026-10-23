@@ -207,13 +207,15 @@ function itemRow(expense) {
 // o'clock to its place at FF8's constant speed (a lap in about 0.9s, measured from renzo.mov),
 // landing gently, and the next fires as it nears its place (85% of the way). Each travels only
 // through space nothing has landed in yet. The tick at 12 o'clock flashes as each fires. The whole
-// sequence is then rescaled, keeping its rhythm, to its natural length to the power TEMPO (in
-// seconds): a smooth squeeze toward 1s, so long journeys don't keep you waiting on a screen you open
+// sequence is then rescaled, keeping its rhythm, to PACE times its natural length to the power
+// TEMPO (in seconds): a smooth squeeze, so long journeys don't keep you waiting on a screen you open
 // several times a day and short ones still read as one wave after another (a lone 5% wave's 0.04s
-// plays in 0.39s, 0.43s in 0.78s, 1s in 1s, 2.6s in 1.33s, 3.8s, about the most there can be, in 1.5s).
+// plays in 0.33s, 0.43s in 0.66s, 1s in 0.85s, 2.6s in 1.13s, 3.8s, about the most there can be, in
+// 1.28s).
 const WAVE_SPEED = 400; // degrees a second
 const NEXT_FIRES_AT = 0.85; // of the previous wave's travel
 const TEMPO = 0.3; // 1 would keep FF8's speed; lower evens lengths out more
+const PACE = 0.85; // the user's: a smidge quicker all round
 function waveRing(slices, total, budget) {
   const whole = Math.max(budget, total);
   let at = 0;
@@ -229,7 +231,7 @@ function waveRing(slices, total, budget) {
     fire += w.dur * NEXT_FIRES_AT;
     end = Math.max(end, w.delay + w.dur);
   }
-  const scale = end && end ** TEMPO / end;
+  const scale = end && PACE * end ** TEMPO / end;
   for (const w of placed) {
     w.delay *= scale;
     w.dur *= scale;

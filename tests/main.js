@@ -127,7 +127,7 @@ const ringWaves = (page) => page.evaluate(() => {
   // a category's row) doesn't replay it.
   // The furthest wave fires first (Transport, the smallest, ends furthest round); the next fires
   // when it's 85% of the way to its place; the whole is its natural length (0.43s at FF8's speed
-  // here) to the power 0.3, so about 0.78s. Smooth, not stepped; the tick flashes as each fires.
+  // here) to the power 0.3, times 0.85, so about 0.66s. Smooth, not stepped; the tick flashes as each fires.
   const cascade = await page.evaluate(() => {
     const timing = (el) => el.getAnimations()[0]?.effect.getComputedTiming();
     const [groceries, transport] = [...document.querySelectorAll('.ring-chart .wave')].map(timing);
@@ -136,7 +136,7 @@ const ringWaves = (page) => page.evaluate(() => {
     return {
       order: transport.delay === 0 && groceries.delay > 0,
       handOff: Math.abs(groceries.delay - 0.85 * transport.duration) < 2,
-      total: Math.abs(Math.max(groceries.delay + groceries.duration, transport.delay + transport.duration) - 776) < 10,
+      total: Math.abs(Math.max(groceries.delay + groceries.duration, transport.delay + transport.duration) - 660) < 10,
       smooth: !easing.startsWith('steps('),
       flashes: flashes.join(',') === [Math.round(groceries.delay), 0].join(','),
     };
