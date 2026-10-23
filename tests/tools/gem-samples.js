@@ -1,6 +1,6 @@
 // Gem design samples over the current palette, beside FF8's item gem (gem-ref.png, linked from
 // ~/projects/ff8-references, never copied), into tests/output/gem-samples.html. Kept as a reference
-// for the gem designs considered: the user chose B (Glint). Usage: npm run gems
+// for the gem designs considered: the user chose B2 (Glint, stronger); B3 (swapping dark accents) is shown for comparison. Usage: npm run gems
 const fs = require('fs');
 const path = require('path');
 const palette = require('../helpers').readPalette();
@@ -11,19 +11,23 @@ const VARIANTS = [
   ['plain', 'A. Plain FF8', 'The measured gem in the base color only, no accent. For comparison.'],
   ['glint', 'B. Glint', 'The accent tints the top-left highlight facet, where the light hits.'],
   ['glint2', 'B2. Glint, stronger', 'B with more of the accent in the highlight, spilling into the two facets beside it.'],
+  ['swapped', 'B3. B2, swapped where the accent is darker', 'Where the accent is darker than the base, the gem swaps them (accent stone, base glint); gauges and the donut would keep the base. Swapped gems are marked *.'],
   ['heart', 'C. Heart', 'The accent is the center facet: color seen through the table, like today\'s core.'],
   ['luster', 'D. Luster', 'The accent glows in the shadowed lower-right facets, as light bouncing back through the stone.'],
   ['sheen', 'E. Sheen', 'A diagonal streak of the accent across the facets, top-left to center.'],
   ['gleam', 'F. Gleam (E, softened)', 'A narrower, fainter streak of the accent with a white hot spot where it crosses the top-left facet; the facets stay readable.'],
 ];
+// Relative luminance, to find accents darker than their base.
+const lum = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)).reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0);
+const swapped = palette.map((p) => (lum(p.accent) < lum(p.hex) ? { ...p, hex: p.accent, accent: p.hex, name: `${p.name} *` } : p));
 const row = (p) => `<div class="cat" style="--c:${p.hex};--a:${p.accent}"><span class="gem"></span>${p.name}</div>`;
 const big = (p) => `<span class="gem zoom" style="--c:${p.hex};--a:${p.accent}" title="${p.name}"></span>`;
-const sections = VARIANTS.map(([id, title, text]) => `
+const sections = VARIANTS.map(([id, title, text]) => ((list) => `
 <section class="window v-${id}"><h2>${title}</h2><p>${text}</p>
-  <div class="zooms">${palette.map(big).join('')}</div>
-  <div class="cats">${palette.map(row).join('')}</div>
-  <div class="strip">${palette.slice(0, 4).map((p, i) => `<span class="chip${i === 0 ? ' sel' : ''}" style="--c:${p.hex};--a:${p.accent}"><span class="gem"></span>${['Bills','Dining','Fun','Groceries'][i]}</span>`).join('')}</div>
-</section>`).join('');
+  <div class="zooms">${list.map(big).join('')}</div>
+  <div class="cats">${list.map(row).join('')}</div>
+  <div class="strip">${list.slice(0, 4).map((p, i) => `<span class="chip${i === 0 ? ' sel' : ''}" style="--c:${p.hex};--a:${p.accent}"><span class="gem"></span>${['Bills','Dining','Fun','Groceries'][i]}</span>`).join('')}</div>
+</section>`)(id === 'swapped' ? swapped : palette)).join('');
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>Gem samples</title>
 <style>
@@ -65,6 +69,7 @@ h1 { font-size: 22px; } h2 { margin: 0 0 4px; font-size: 18px; } p { margin: 0 0
 .gem.zoom { --k: 5; }
 .v-glint .gem { --tl: color-mix(in srgb, var(--a) 55%, white); --tc: color-mix(in srgb, color-mix(in srgb, var(--a) 35%, var(--c)) 58%, white); }
 .v-glint2 .gem { --tl: color-mix(in srgb, var(--a) 80%, white); --tc: color-mix(in srgb, color-mix(in srgb, var(--a) 50%, var(--c)) 62%, white); --ml: var(--tc); }
+.v-swapped .gem { --tl: color-mix(in srgb, var(--a) 80%, white); --tc: color-mix(in srgb, color-mix(in srgb, var(--a) 50%, var(--c)) 62%, white); --ml: var(--tc); }
 .v-heart .gem { --mc: var(--a); }
 .v-luster .gem { --mr: color-mix(in srgb, var(--a) 80%, black); --bc: color-mix(in srgb, var(--a) 80%, black); --br: color-mix(in srgb, var(--a) 60%, black); }
 .v-gleam .gem { --over: radial-gradient(circle at 22% 18%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 18%), linear-gradient(135deg, transparent 30%, color-mix(in srgb, var(--a) 55%, transparent) 40%, color-mix(in srgb, var(--a) 55%, transparent) 46%, transparent 56%); }
