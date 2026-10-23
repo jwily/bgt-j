@@ -79,7 +79,7 @@ export function onLongPress(node, handler, ms = 450) {
 }
 
 // Watches the clicks that follow a press for `ms`, until `onClick(event)` returns true; then, if it
-// never did, calls `onTimeout`.
+// never did, calls `onTimeout`. Returns a function that stops watching early.
 function watchClicks(ms, onClick, onTimeout = () => {}) {
   let done = false;
   const finish = () => {
@@ -93,6 +93,7 @@ function watchClicks(ms, onClick, onTimeout = () => {}) {
     finish();
     onTimeout();
   }, ms);
+  return finish;
 }
 const stopClick = (event) => {
   event.stopPropagation();
@@ -101,12 +102,16 @@ const stopClick = (event) => {
 
 // Ignores the click the browser may send to `button` right after a press we cancelled or a gesture
 // we already handled; only that button's, so another finger's tap is never caught.
+// A new press on the button ends the wait: the browser sends a press's click straight after it
+// lifts, so by then none is coming (iOS sends none for a press that strayed far), and the new
+// press's own click must count.
 function dropClickOn(button) {
-  watchClicks(400, (event) => {
+  const stop = watchClicks(400, (event) => {
     if (!button.contains(event.target)) return false;
     stopClick(event);
     return true;
   });
+  button.addEventListener('pointerdown', stop, { once: true, capture: true });
 }
 
 // Opens the menu command under the thumb when a press lifts (none if it lifted off the commands).
@@ -130,7 +135,9 @@ const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
 // No double-tap zoom: iOS doesn't always honour the page's touch-action (style.css), and still zooms
 // on a double tap of text or a window's empty space. So a second tap within DOUBLE_TAP of the last
 // has its default (the zoom) cancelled, except on things you press, type in or scroll, which keep
-// their taps: fast typing on the keypad, a quick second tap on a chip. Pinch zoom still works.
+// their taps: fast typing on the keypad, a quick second tap on a chip. Also except in the gaps
+// between pressable things (GAPS), where iOS gives a tap to the nearest one. Pinch zoom still works.
+const GAPS = '.keypad, .dock, .actions, .details, .grid';
 const DOUBLE_TAP = 350; // ms
 export function blockDoubleTapZoom() {
   let lastTap = -Infinity;
@@ -139,7 +146,7 @@ export function blockDoubleTapZoom() {
     const now = performance.now();
     const quick = now - lastTap < DOUBLE_TAP;
     lastTap = now;
-    if (quick && !event.target.closest?.(`${PRESSABLE}, input, textarea, select, .strip, .tappable`)) event.preventDefault();
+    if (quick && !event.target.closest?.(`${PRESSABLE}, input, textarea, select, .strip, .tappable`) && !event.target.matches?.(GAPS)) event.preventDefault();
   }, { passive: false });
 }
 

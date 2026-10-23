@@ -69,6 +69,17 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await mainKey('3');
   check('a quick tap right after a press that drifted off its key still counts', await page.locator('.amount').textContent(), '$0.03');
   await mainKey('⌫');
+  // ...and the same key, pressed again right away: its new tap isn't taken for the old one's late click.
+  await page.evaluate(() => {
+    const key = [...document.querySelectorAll('#view-input .key')].find((k) => k.textContent === '2');
+    const box = key.getBoundingClientRect();
+    const send = (type, y) => key.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 9, pointerType: 'touch', isPrimary: true, clientX: box.left + box.width / 2, clientY: y }));
+    send('pointerdown', box.top + box.height / 2);
+    send('pointerup', box.bottom + 40);
+  });
+  await mainKey('2');
+  check('the same key pressed again right after a drifted press still counts', await page.locator('.amount').textContent(), '$0.02');
+  await mainKey('⌫');
 
   // Overlapping taps (the next finger lands before the last lifts), with the clicks Safari sends
   // when each lifts: both count.
@@ -185,6 +196,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   }, [selector, gap]);
   check('double tap on empty space: no zoom; on a key, or slow taps: untouched',
     [await secondTapBlocked('.strip-window', 120), await secondTapBlocked('#view-input .key', 120), await secondTapBlocked('.strip-window', 600)].join(' '), 'true false false');
+  // A quick tap in the gap between keys is left alone too: iOS gives it to the nearest key.
+  check('double tap in the gap between keys: untouched', await secondTapBlocked('#view-input .keypad', 120), false);
 
   // Summary: backdated item shows its date; edit category; delete with undo
   await openSummary(page);
