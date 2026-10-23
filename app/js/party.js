@@ -1,12 +1,10 @@
 // A party member wandering the main screen: one of FF8's six (FF Record Keeper battle sprites, cut
 // by tests/tools/cut-party.js into sprites/party.png), picked at random each launch, and a different
-// one each time you come back to the main screen from another. It strolls back
-// and forth along the top of the Note and Date windows, stopping now and then and sometimes turning
-// back. Its walk is FFRK's own two frames (from walk.mov): a stride, then feet together. It stands on
-// the feet-together one and sets off on the stride (the user's catch: standing on the stride froze it
-// mid-step, which looked like sliding). The clip marches on the spot at half a second a frame;
-// actually travelling, a quicker step looks livelier (the user's: a touch quicker than 0.3s), and
-// the ground speed is matched to the feet so they stay planted.
+// one each time you come back to the main screen from another. It strolls back and forth along the
+// top of the Note and Date windows, stopping now and then and sometimes turning back. Its walk is
+// FFRK's own two frames (from walk.mov): a stride, then feet together. It stands on the
+// feet-together one and sets off on the stride, a little quicker than the clip's march on the spot,
+// with the ground speed matched to its feet so they stay planted.
 
 import { el } from './ui.js';
 
@@ -46,7 +44,7 @@ function enter(now) {
   draw();
 }
 
-const room = () => Math.max(0, area.clientWidth - 20 * PX);
+const room = () => Math.max(0, area.clientWidth - member.offsetWidth);
 
 // Stand still for a while (longer, now and then), then set off.
 function rest(now) {
