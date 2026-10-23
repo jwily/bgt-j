@@ -59,6 +59,13 @@ const ringWaves = (page) => page.evaluate(() => {
   })), '0,1');
   check('party member stands with its feet together', await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 9000 })
     .then(() => page.locator('.party-member').evaluate((m) => m.style.getPropertyValue('--frame'))), '1');
+  // Coming back to the main screen from another, a different party member takes over.
+  const before = await page.locator('.party-member').getAttribute('data-member');
+  await openSummary(page);
+  await page.locator('#nav-btn').tap();
+  await page.waitForTimeout(300);
+  const after = await page.locator('.party-member').getAttribute('data-member');
+  check('back on the main screen, a different party member', after !== before && ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'].includes(after), true);
 
   // USD entry with implied cents
   for (const k of '51050') await mainKey(k);
