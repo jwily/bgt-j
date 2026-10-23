@@ -61,7 +61,7 @@ const check = (label, ok, detail) => {
     check(`${name}: MX$9,999,999 fits`, fit.amountFits);
     check(`${name}: main screen doesn't scroll`, !fit.pageScrolls);
 
-    // Every category: no name cut off, [gem] Name centered when selected, arrow clear of the gem.
+    // Every category: no name cut off, [gem] Name centered when selected, hand clear of the gem.
     const names = await page.locator('.strip .chip').allTextContents();
     const cut = await page.evaluate(() => [...document.querySelectorAll('.strip .chip span')].filter((s) => s.scrollWidth > s.clientWidth).map((s) => s.textContent));
     check(`${name}: no category names cut off`, cut.length === 0, cut);
@@ -75,15 +75,15 @@ const check = (label, ok, detail) => {
         const box = chip.getBoundingClientRect();
         const gemLeft = box.left + parseFloat(getComputedStyle(chip, '::before').left);
         const textRight = chip.querySelector('span').getBoundingClientRect().right;
-        const arrow = getComputedStyle(chip, '::after');
-        const arrowRight = box.left + parseFloat(arrow.left) + parseFloat(arrow.width);
-        return { offset: Math.round((gemLeft + textRight) / 2 - (strip.left + strip.width / 2)), gap: Math.round(gemLeft - arrowRight) };
+        const hand = getComputedStyle(chip, '::after');
+        const handRight = box.left + parseFloat(hand.left) + parseFloat(hand.width);
+        return { offset: Math.round((gemLeft + textRight) / 2 - (strip.left + strip.width / 2)), gap: Math.round(gemLeft - handRight) };
       });
       if (Math.abs(m.offset) > Math.abs(worstOffset)) worstOffset = m.offset;
       smallestGap = Math.min(smallestGap, m.gap);
     }
     check(`${name}: every category centered when selected`, Math.abs(worstOffset) <= 2, `worst ${worstOffset}px`);
-    check(`${name}: arrow stays clear of the gem`, smallestGap >= 4, `${smallestGap}px`);
+    check(`${name}: hand stays clear of the gem`, smallestGap >= 8, `${smallestGap}px`);
 
     // Top to bottom: amount, note + date, category strip (changed more often, so nearer the thumb), keypad.
     const order = await page.evaluate(() => ['.currency-zone', '.details', '.strip-window', '#view-input .keypad']
