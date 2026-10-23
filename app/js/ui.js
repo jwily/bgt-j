@@ -247,6 +247,7 @@ function showHelpLine() {
   const node = $('help');
   const { text, onTap, status } = helpLine;
   node.className = `window help${onTap ? ' tappable' : ''}${status ? ' status' : ''}`;
+  node.dataset.label = status ? 'Status' : 'Help';
   node.onclick = onTap;
   if (status) {
     node.setAttribute('aria-label', text);
@@ -258,7 +259,8 @@ function showHelpLine() {
 }
 
 // After FF8's party status rows ("Lv 45  HP 1801", a thin red bar under the HP filled to the share
-// left), without a label: level, hp (text), share (0–1, of the bar), hpTone ('', 'low' or 'over').
+// left), in a window labelled STATUS like theirs: level, hp (text), share (0–1, of the bar), hpTone
+// ('', 'low' or 'over').
 function statusRow({ level, hp, share, hpTone }) {
   const fill = el('span');
   fill.style.width = `${Math.max(0, Math.min(1, share)) * 100}%`;
@@ -337,6 +339,7 @@ export function toast(message, undo) {
     undo();
   } : null;
   node.className = 'window help message';
+  node.dataset.label = 'Help';
   node.onclick = null;
   node.removeAttribute('aria-label');
   const pass = showHelpText(message);

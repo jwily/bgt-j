@@ -80,7 +80,7 @@ Read README.md for what the app does; this file covers how to work on it.
   keys use the tighter `--gap-keys` (6px). Use the variables, not new numbers.
 - Small uppercase label tabs on a window's top-left edge (HELP, CATEGORY...).
 - The main screen's HELP window is a status row while no message shows (`statusRow` in ui.js,
-  after `FFVIII_Menu.webp`'s reserve party): no label, Lv = the period's number, HP = what's left
+  after `FFVIII_Menu.webp`'s party windows): labelled STATUS, Lv = the period's number, HP = what's left
   with a thin red bar under it for the share left; HP digits yellow under a quarter, red when over.
 - Gauges (the summary's category bars) follow the Status menu's (`FFVIII_Status_Menu_5.webp`):
   silver capsule, dark trough, fill fading out at its end; the share out of 100 sits under the
