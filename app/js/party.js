@@ -1,21 +1,18 @@
 // A party member wandering the main screen: one of FF8's six (FF Record Keeper battle sprites, cut
 // by tests/tools/cut-party.js into sprites/party.png), picked at random each launch. It strolls back
 // and forth along the top of the Note and Date windows, stopping now and then and sometimes turning
-// back; when an expense is added it turns to you and does its victory pose, then wanders on.
+// back. Its walk is FFRK's own: two frames, each held half a second (measured from walk.mov); it
+// stands on the first.
 
 import { el } from './ui.js';
 
 const PARTY = ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie']; // party.png's rows
-// party.png's columns. The sprites face left; walking right mirrors them.
-const FRAME = { stand: 0, stride: 1, start: 2, up: 3, cheer: 4, pose: 5 };
-// The victory: [frame, seconds, hop in sprite pixels].
-const VICTORY = [['start', 0.28, 0], ['up', 0.24, 3], ['cheer', 0.24, 0], ['up', 0.24, 3], ['cheer', 0.24, 0], ['pose', 0.9, 0]];
 const SPEED = 24; // walking, in px a second
-const STEP = 0.2; // seconds per stride or stand while walking
+const STEP = 0.5; // seconds each walk frame is held
 const PX = 4 / 3; // one sprite pixel: 4 screen pixels on a 3x iPhone (keep in sync with style.css)
 
 let member, area;
-let x = 0, face = 1, target = 0, mode = 'idle', until = 0, step = 0, victory = 0;
+let x = 0, face = 1, target = 0, mode = 'idle', until = 0, step = 0;
 let last = 0;
 
 export function initParty(container) {
@@ -32,15 +29,6 @@ export function initParty(container) {
     last = now;
     requestAnimationFrame(tick);
   });
-}
-
-// The victory pose, from wherever it is (again from the start if it's already celebrating).
-export function celebrate() {
-  if (!member) return;
-  mode = 'victory';
-  victory = 0;
-  until = performance.now() / 1000 + VICTORY[0][1];
-  draw();
 }
 
 const room = () => Math.max(0, area.clientWidth - 20 * PX);
@@ -85,27 +73,13 @@ function tick(nowMs) {
       x += Math.sign(target - x) * move;
     }
   }
-  if (mode === 'victory' && now >= until) {
-    victory += 1;
-    if (victory < VICTORY.length) until = now + VICTORY[victory][1];
-    else rest(now);
-  }
   draw();
 }
 
+// The sprites face left; walking right mirrors them.
 function draw() {
-  let frame = FRAME.stand, hop = 0, mirror = face;
-  if (mode === 'walk') {
-    const striding = Math.floor(step / STEP) % 2 === 0;
-    frame = striding ? FRAME.stride : FRAME.stand;
-    hop = striding ? 0 : 1;
-  } else if (mode === 'victory') {
-    const [name, , lift] = VICTORY[victory];
-    frame = FRAME[name];
-    hop = lift;
-    mirror = 1; // facing you
-  }
+  const frame = mode === 'walk' ? Math.floor(step / STEP) % 2 : 0;
   member.dataset.state = mode;
   member.style.setProperty('--frame', frame);
-  member.style.transform = `translate(${x}px, ${-hop * PX}px) scaleX(${mirror})`;
+  member.style.transform = `translate(${x}px, 0) scaleX(${face})`;
 }

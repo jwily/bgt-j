@@ -27,8 +27,10 @@ Read README.md for what the app does; this file covers how to work on it.
   commit; when you fix a bug, add a check that would have caught it.
 - `npm run gauges` writes gauge fill samples (FF8-measured fills, all 16 colors at three levels) to `tests/output/gauge-samples.html`.
 - `npm run waves` writes the Renzokuken wave samples (bar and ring, from renzo.mov) to `tests/output/wave-samples.html`; the app uses the ring.
-- `npm run party` cuts the party members' frames from the FF Record Keeper sheets in
-  `~/projects/ff8-references/` into `app/sprites/party.png` (frames chosen by eye; the sheets stay out).
+- `npm run party` cuts the party members' walk frames from the FF Record Keeper sheets in
+  `~/projects/ff8-references/` into `app/sprites/party.png` (the sheets stay out). The frames were
+  found by matching every frame of `walk.mov` against every sprite on the sheets; picking by eye got
+  them wrong (e.g. Irvine's Blind-status frames).
 - `npm run gems` writes the gem design samples (A–F; the app uses B2, Glint stronger) to `tests/output/gem-samples.html`.
 - FF8 reference screenshots are in `~/projects/ff8-references/`, outside the repo on purpose
   (they're the game's artwork). Never copy them into `app/`.
@@ -105,9 +107,10 @@ Read README.md for what the app does; this file covers how to work on it.
   power 0.3, times 0.85 (a smooth squeeze: about 0.35-1.3s in practice, user's choice over a 0.7-1.3s clamp: noticeable, not a wait). Not on redraws. Replaced the donut.
 - A party member (one of FF8's six, random each launch; `party.js`, the user's idea) wanders along
   the top of Note and Date: strolls, pauses, sometimes turns back, mirrored to walk right; taps go
-  through it; the amount area stays in front of it. Adding an expense plays its victory pose
-  (facing you, arms up with hops, cheer, final pose), then it wanders on. Each sprite pixel is 4
-  screen pixels on a 3x iPhone (`--px`, PX), so it stays crisp.
+  through it; the amount area stays in front of it. Its walk is FFRK's two frames, each held 0.5s
+  (from `walk.mov`). Each sprite pixel is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays
+  crisp. A victory pose on adding an expense was built and removed until there's a reference clip
+  for it (it's in git history: commit d9f95be).
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
