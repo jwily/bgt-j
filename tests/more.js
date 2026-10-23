@@ -5,7 +5,7 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, leftText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check } = require('./helpers');
+const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check } = require('./helpers');
 const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
 
 (async () => {
@@ -170,7 +170,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   for (const k of '300') await mainKey(k);
   await page.locator('.note').fill('Tacos, "al pastor"');
   await page.locator('.add-btn').tap();
-  check('left after both', await leftText(page), '$1,442.50 left');
+  check('spent after both', await spentText(page), '$57.50');
 
   // Summary: backdated item shows its date; edit category; delete with undo
   await openSummary(page);
@@ -264,7 +264,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   page.once('dialog', (d) => d.dismiss());
   await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/x-backup-different.json`);
   await page.waitForTimeout(300);
-  check('dismissed restore changes nothing', await leftText(page), '$1,442.50 left');
+  check('dismissed restore changes nothing', await spentText(page), '$57.50');
   await page.locator('#nav-btn').tap();
 
   // New Period sheet look; empty new period summary
@@ -537,17 +537,17 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('undo restores its expenses', (await saved()).expenses.length, expenseCount);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(250);
-  const leftBefore = await leftText(page);
+  const spentBefore = await spentText(page);
   await openMenuItem('Current Period');
   page.once('dialog', (d) => d.accept());
   await page.locator('.delete-btn').tap();
   await page.waitForTimeout(300);
   check('deleting the current period returns to the main screen', await page.locator('#page').isHidden(), true);
-  check('previous period reopened', await leftText(page), '$1,442.50 left');
+  check('previous period reopened', await spentText(page), '$57.50');
   check('reopened period is current', (await saved()).periods.map((p) => p.end).join(','), '');
   await page.locator('#undo-btn').tap();
   await page.waitForTimeout(300);
-  check('undo makes the newer period current again', await leftText(page), leftBefore);
+  check('undo makes the newer period current again', await spentText(page), spentBefore);
   check('and closes the reopened one again', (await saved()).periods.filter((p) => !p.end).length, 1);
 
   // Reload the same day: no second rate download
@@ -858,7 +858,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('v1 data: expense keeps its rate as perUsd', JSON.stringify(upgraded.expenses[0].original), '{"currency":"MXN","amount":250,"perUsd":18.5}');
   check('v1 data: the day\u2019s rate downloads into the new shape', upgraded.rates.perUsd.MXN, 20);
   check('v1 data: remembered currency still MXN', await p3.locator('.currency-opts .on').textContent(), 'MXN');
-  check('v1 data: totals intact', await leftText(p3), '$986.49 left');
+  check('v1 data: totals intact', await spentText(p3), '$13.51');
   await p3.locator('#help').click({ position: { x: 20, y: 30 } });
   await p3.waitForTimeout(300);
   await p3.locator('.cat-head', { hasText: 'Food' }).tap();

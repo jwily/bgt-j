@@ -65,12 +65,12 @@ function renderChrome() {
 
   const period = currentPeriod();
   if (!period) return;
-  const left = period.budgetCents - spentIn(period.id);
+  const spent = spentIn(period.id);
+  const left = period.budgetCents - spent;
   const over = left < 0;
   $('stat-day').textContent = String(periodDay(period));
-  $('stat-left-label').textContent = over ? 'Over' : 'Left';
-  $('stat-left').textContent = formatUsd(Math.abs(left));
-  $('stat-left').classList.toggle('bad', over);
+  $('stat-spent').textContent = formatUsd(spent);
+  $('stat-spent').classList.toggle('bad', over);
   if (!pageOpen && inSafariTab) {
     setHelp('Install: Share → Add to Home Screen', { onTap: explainInstall });
   } else if (!pageOpen) {

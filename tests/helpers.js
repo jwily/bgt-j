@@ -23,7 +23,8 @@ exports.grabFile = async (page, engine, action) => {
 };
 
 // FF8 layout helpers: "left" lives in the menu's stats box; the screen name is in the title window.
-exports.leftText = async (page) => `${await page.locator('#stat-left').textContent()} ${(await page.locator('#stat-left-label').textContent()).toLowerCase()}`;
+// The menu's SPENT stat: the current period's spending (what's left is the status row's HP).
+exports.spentText = (page) => page.locator('#stat-spent').textContent();
 exports.titleText = (page) => page.locator('#title').textContent();
 // Opens a menu command and waits until its screen is showing and has finished fading in (every
 // screen's title is its menu command's name).
