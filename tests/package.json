@@ -12,7 +12,8 @@
     "splash": "node tools/make-splash.js",
     "icon": "node tools/make-icon.js",
     "gems": "node tools/gem-samples.js",
-    "gauges": "node tools/gauge-samples.js"
+    "gauges": "node tools/gauge-samples.js",
+    "waves": "node tools/wave-samples.js"
   },
   "devDependencies": {
     "playwright": "1.56.1"
