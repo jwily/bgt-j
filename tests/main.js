@@ -73,8 +73,19 @@ const ringWaves = (page) => page.evaluate(() => {
   check('party member stands with its feet together', await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 9000 })
     .then(() => page.locator('.party-member').evaluate((m) => m.style.getPropertyValue('--frame'))), '1');
   // Coming back to the main screen from another, a different party member takes over.
+  // It only draws while walking: standing, and with another screen open, it asks for no frames.
+  const framesOver = (ms) => page.evaluate((ms) => new Promise((resolve) => {
+    const original = window.requestAnimationFrame;
+    let count = 0;
+    window.requestAnimationFrame = (callback) => { count++; return original.call(window, callback); };
+    setTimeout(() => { window.requestAnimationFrame = original; resolve(count); }, ms);
+  }), ms);
+  await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 9000 });
+  check('party member standing: no frames drawn', await framesOver(500), 0);
   const before = await page.locator('.party-member').getAttribute('data-member');
   await openSummary(page);
+  await page.waitForTimeout(1200); // the summary's own animations finish
+  check('another screen open: the party member draws no frames', await framesOver(1500), 0);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
   const after = await page.locator('.party-member').getAttribute('data-member');
