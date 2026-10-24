@@ -113,7 +113,8 @@ function setOff(now) {
 }
 
 function walk(nowMs) {
-  step += Math.min(0.1, (nowMs - last) / 1000);
+  // A frame's time can be a touch earlier than when the walk began (it's when the frame started).
+  step += Math.min(0.1, Math.max(0, (nowMs - last) / 1000));
   last = nowMs;
   if (step >= walkTime) {
     x = target;
