@@ -4,7 +4,7 @@
 import { state, getPeriod, getCategory, isValid, migrate, replaceState, markBackedUp, VERSION } from './store.js';
 import { todayISO, localDay, daysBetween } from './dates.js';
 import { takeSnapshot } from './snapshots.js';
-import { saveFile } from './ui.js';
+import { el } from './ui.js';
 import { HOME, plainAmount } from './money.js';
 
 export const REMINDER_CHOICES = [7, 14, 30, 60]; // days; the user picks one on the Backup screen
@@ -62,4 +62,25 @@ function toCsv() {
     ].map(cell).join(','));
   }
   return lines.join('\n');
+}
+
+// On iPhone the share sheet is the reliable way to save a file ("Save to Files", AirDrop, Mail).
+// Returns false if the person cancelled, true otherwise.
+async function saveFile(filename, text, type) {
+  const file = new File([text], filename, { type });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return true;
+    } catch (err) {
+      if (err.name === 'AbortError') return false;
+    }
+  }
+  const url = URL.createObjectURL(file);
+  const link = el('a', { href: url, download: filename });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
 }

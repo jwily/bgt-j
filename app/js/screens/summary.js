@@ -3,7 +3,9 @@
 
 import { state, currentPeriod, getPeriod, periodExpenses, spentIn, totalUsd, getCategory, deletePeriod } from '../store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from '../money.js';
-import { $, el, toast, colorDot, gauge } from '../ui.js';
+import { el } from '../ui.js';
+import { toast } from '../help.js';
+import { colorDot, gauge } from '../widgets.js';
 import { formatDate } from '../dates.js';
 import { openExpenseSheet } from '../sheets.js';
 import { takeSnapshot } from '../snapshots.js';
