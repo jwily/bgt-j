@@ -4,7 +4,8 @@
 // top of the Note and Date windows, stopping now and then and sometimes turning back. Its walk is
 // FFRK's own two frames (from walk.mov): a stride, then feet together. It stands on the
 // feet-together one and sets off on the stride, a little quicker than the clip's march on the spot,
-// with the ground speed matched to its feet so they stay planted.
+// with the ground speed matched to its feet so they stay planted. It only draws while walking: a
+// pause is one timer, and with another screen open or the app in the background it stops.
 
 import { el } from './ui.js';
 
@@ -18,17 +19,53 @@ const SPEED = (STRIDE * PX) / (2 * STEP); // px a second
 
 let member, area;
 let x = 0, face = 1, from = 0, target = 0, walkTime = 0, mode = 'idle', until = 0, step = 0;
-let last = 0, away = false;
+let last = 0, away = false, running = false, frame = 0, wake = 0;
+const seconds = () => performance.now() / 1000;
 
 export function initParty(container) {
   area = container;
   member = el('span', { className: 'party-member', 'aria-hidden': 'true' });
   area.append(member);
-  requestAnimationFrame((now) => {
-    enter(now / 1000);
-    last = now;
-    requestAnimationFrame(tick);
+  // Runs only on the main screen with the app in view: another screen opening (body.page-open)
+  // or the app going to the background stops it; coming back resumes it.
+  new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('visibilitychange', sync);
+  new ResizeObserver(() => {
+    x = Math.min(x, room());
+    draw();
+  }).observe(area);
+  requestAnimationFrame(() => {
+    enter(seconds());
+    sync();
   });
+}
+
+function sync() {
+  const screenOpen = document.body.classList.contains('page-open');
+  const run = !document.hidden && !screenOpen;
+  if (screenOpen) away = true;
+  if (run === running) return;
+  running = run;
+  if (run && away) {
+    away = false;
+    enter(seconds()); // back on the main screen: someone new
+  }
+  last = performance.now();
+  schedule();
+}
+
+// What happens next: walking, the next frame; standing, setting off when the pause ends.
+function schedule() {
+  cancelAnimationFrame(frame);
+  clearTimeout(wake);
+  if (!running) return;
+  if (mode === 'walk') frame = requestAnimationFrame(walk);
+  else wake = setTimeout(() => {
+    setOff(seconds());
+    last = performance.now();
+    draw();
+    schedule();
+  }, Math.max(0, (until - seconds()) * 1000));
 }
 
 // A party member (any but the one there now) takes the stage: somewhere along the windows, facing
@@ -75,33 +112,17 @@ function setOff(now) {
   step = 0;
 }
 
-function tick(nowMs) {
-  const now = nowMs / 1000;
-  const dt = Math.min(0.1, (nowMs - last) / 1000);
+function walk(nowMs) {
+  step += Math.min(0.1, (nowMs - last) / 1000);
   last = nowMs;
-  requestAnimationFrame(tick);
-  if (document.hidden) return;
-  // Away on another screen: still. Back on the main screen: someone new.
-  if (document.body.classList.contains('page-open')) {
-    away = true;
-    return;
-  }
-  if (away) {
-    away = false;
-    enter(now);
-  }
-  x = Math.min(x, room());
-  if (mode === 'idle' && now >= until) setOff(now);
-  if (mode === 'walk') {
-    step += dt;
-    if (step >= walkTime) {
-      x = target;
-      rest(now);
-    } else {
-      x = from + Math.sign(target - from) * SPEED * step;
-    }
+  if (step >= walkTime) {
+    x = target;
+    rest(nowMs / 1000);
+  } else {
+    x = from + Math.sign(target - from) * SPEED * step;
   }
   draw();
+  schedule();
 }
 
 // The sprites face left; walking right mirrors them.
