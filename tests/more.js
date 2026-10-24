@@ -241,7 +241,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
       }, 15);
       window.watching = seen;
     }));
-    // Caught mid-stride, it finishes the step and cheers from standing, within a quarter second.
+    // Caught mid-stride, it finishes that step (one 0.24s frame) and cheers from standing: well under
+    // the 0.48s another whole step would take, with room for a busy machine's timers.
     await page.waitForFunction(() => { const m = document.querySelector('.party-member'); return m.dataset.state === 'walk' && m.style.getPropertyValue('--frame') === '0'; }, null, { timeout: 15000, polling: 10 });
     const watching = watch();
     const rightAfter = await page.evaluate(async () => {
@@ -251,7 +252,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     });
     const midStride = await watching;
     check('cheer caught mid-stride: the stride isn\'t cut short', rightAfter, 'walk:0');
-    check('...then it cheers from standing, within a quarter second', `${midStride.seen.slice(0, 2).join(' ')} ${midStride.began < 260}`, 'walk:0 cheer:1 true');
+    check('...then it cheers from standing, before another step', `${midStride.seen.slice(0, 2).join(' ')} ${midStride.began < 400}`, 'walk:0 cheer:1 true');
     // Another expense mid-cheer starts it over: after two arm-ups, three more (five in all).
     const again = page.evaluate(() => new Promise((resolve) => {
       const m = document.querySelector('.party-member'); let ups = 0, last = '';
