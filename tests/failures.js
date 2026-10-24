@@ -4,7 +4,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check } = require('./helpers');
+const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check, scenarios } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
@@ -24,19 +24,21 @@ const sample = (overrides = {}) => ({
 });
 
 (async () => {
+  const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
+  const errors = [];
+  const scenario = scenarios(browser);
+
   // Offline: every file the app runs on is on the service worker's list (sw.js FILES), so a new
   // one can't quietly break opening offline. Launch images are left out on purpose (iOS fetches
   // them when the app is installed, not at launch).
-  {
+  await scenario('every file available offline', async () => {
     const app = path.join(__dirname, '..', 'app');
     const sw = fs.readFileSync(path.join(app, 'sw.js'), 'utf8');
     const listed = [...sw.slice(sw.indexOf('const FILES'), sw.indexOf('];', sw.indexOf('const FILES'))).matchAll(/'([^']+)'/g)].map((m) => m[1]);
     const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.relative(app, path.join(dir, e.name))]));
     const missing = walk(app).filter((f) => !/^(sw\.js|fonts\/OFL\.txt|icons\/launch-.*)$|\.DS_Store$/.test(f) && !listed.includes(f));
     check('every app file is available offline', missing.join(', '), '');
-  }
-  const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
-  const errors = [];
+  });
 
   // Opens the app in a fresh context. Options: saved (data to start with), snapshots, rate
   // (response body), status, serviceWorkers, clock (a Date to start the fake clock at).
@@ -70,7 +72,7 @@ const sample = (overrides = {}) => ({
   const menu = openMenu;
 
   // --- Storage full: an unmissable warning instead of failing silently.
-  {
+  await scenario('storage full', async () => {
     const { context, page, dialogs, type } = await open({ saved: JSON.stringify(sample()) });
     await page.evaluate(() => {
       const real = Storage.prototype.setItem;
@@ -85,11 +87,11 @@ const sample = (overrides = {}) => ({
     check('storage full: warns', dialogs.some((m) => m.startsWith("Couldn't save: this phone's storage for the app is full")), true);
     check('storage full: the screen still shows what you did', await page.locator('#help .text').textContent(), 'Added $5.00 · Food');
     await context.close();
-  }
+  });
 
   // --- Corrupted data with a snapshot (saved the old way, in localStorage, so this also checks
   // that old snapshots move to IndexedDB): recovered from it, with a message; the bad copy is kept.
-  {
+  await scenario('corrupted data with a snapshot', async () => {
     const good = sample();
     const { context, page, dialogs, stored } = await open({
       saved: '{"version":2,"categ',
@@ -100,30 +102,32 @@ const sample = (overrides = {}) => ({
     check('corrupted: the unreadable copy is kept', await stored('budget-tracker-unreadable'), '{"version":2,"categ');
     check('corrupted: lands on the main screen', await page.locator('#page').isHidden(), true);
     await context.close();
-  }
+  });
 
   // --- Corrupted data and no snapshot: starts fresh, but the unreadable copy is still kept.
-  {
+  await scenario('corrupted data, no snapshot', async () => {
     const { context, page, dialogs, stored } = await open({ saved: 'not json at all' });
     check('corrupted, no snapshot: starts fresh', await page.locator('#title').textContent(), 'First Budget');
     check('corrupted, no snapshot: no recovery message', dialogs.length, 0);
     check('corrupted, no snapshot: unreadable copy kept', await stored('budget-tracker-unreadable'), 'not json at all');
     await context.close();
-  }
+  });
 
   // --- Rate server failures on first launch: no crash, an honest estimate line.
-  for (const [label, rate, status] of [['HTTP 500', 'oops', 500], ['not JSON', '<html>', 200], ['no MXN', RATE(localToday(), {}), 200], ['negative', RATE(localToday(), { MXN: -3 }), 200]]) {
-    const { context, page, type } = await open({ rate, status });
-    await type('100000');
-    await page.locator('#page .primary').tap();
-    await page.waitForTimeout(300);
-    await page.locator('.currency-opts').tap();
-    check(`rate server ${label}: honest estimate`, (await page.locator('.amount-sub span').allTextContents())[1], '~18.5 MXN per USD (estimate: no rates downloaded yet)');
-    await context.close();
-  }
+  await scenario('rate server failures', async () => {
+    for (const [label, rate, status] of [['HTTP 500', 'oops', 500], ['not JSON', '<html>', 200], ['no MXN', RATE(localToday(), {}), 200], ['negative', RATE(localToday(), { MXN: -3 }), 200]]) {
+      const { context, page, type } = await open({ rate, status });
+      await type('100000');
+      await page.locator('#page .primary').tap();
+      await page.waitForTimeout(300);
+      await page.locator('.currency-opts').tap();
+      check(`rate server ${label}: honest estimate`, (await page.locator('.amount-sub span').allTextContents())[1], '~18.5 MXN per USD (estimate: no rates downloaded yet)');
+      await context.close();
+    }
+  });
 
   // --- An old rate while the server is down: the rate line says how old it is.
-  {
+  await scenario('an old rate while the server is down', async () => {
     const old = new Date(Date.now() - 10 * 86400000);
     const { context, page } = await open({
       saved: JSON.stringify(sample({ rates: { perUsd: { MXN: 19.1 }, date: localToday(old), checkedAt: 0 }, input: { currency: 'MXN', categoryId: 'c1' } })),
@@ -132,10 +136,10 @@ const sample = (overrides = {}) => ({
     const line = (await page.locator('.amount-sub span').allTextContents())[1];
     check('old rate: shows its date', /^1 USD = 19\.10 MXN \(rate from [A-Z][a-z]{2} \d+\)$/.test(line), true);
     await context.close();
-  }
+  });
 
   // --- A backup from a newer version of the app, and one with broken references.
-  {
+  await scenario('newer and broken backups', async () => {
     const { context, page } = await open({ saved: JSON.stringify(sample()) });
     fs.mkdirSync(OUT, { recursive: true });
     fs.writeFileSync(path.join(OUT, 'newer-backup.json'), JSON.stringify(sample({ version: 99 })));
@@ -161,10 +165,10 @@ const sample = (overrides = {}) => ({
     await menu(page, 'Current Period');
     check('broken references: summary shows the expense as Unknown', await page.locator('.cat-head', { hasText: 'Unknown' }).count(), 1);
     await context.close();
-  }
+  });
 
   // --- Left open overnight: "Today" means the new day when you tap Add.
-  {
+  await scenario('left open overnight', async () => {
     const evening = new Date();
     evening.setHours(23, 50, 0, 0);
     const { context, page, type, stored } = await open({ clock: evening, saved: JSON.stringify(sample({ periods: [{ id: 'p1', budgetCents: 100000, start: localToday(evening), end: null }] })) });
@@ -176,10 +180,10 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(300);
     check('overnight: filed under the new day', JSON.parse(await stored()).expenses.at(-1).date, localToday(morning));
     await context.close();
-  }
+  });
 
   // --- A period spanning New Year shows the year on the dates that need it.
-  {
+  await scenario('a period spanning New Year', async () => {
     const thisYear = new Date().getFullYear();
     const { context, page } = await open({
       saved: JSON.stringify(sample({
@@ -192,12 +196,12 @@ const sample = (overrides = {}) => ({
     await menu(page, 'Past Periods');
     check('New Year period: last year’s date has its year', await page.locator('.period-row').nth(1).locator('small').first().textContent(), `Dec 20, ${thisYear - 1} – Jan 5`);
     await context.close();
-  }
+  });
 
   // --- Opens offline (from the service worker's copy) after one online visit.
   // Chromium only: Playwright's WebKit build fails internally when reloading while simulated
   // offline (a limit of the test browser, not the app; its service-worker support is partial).
-  if (ENGINE === 'chromium') {
+  if (ENGINE === 'chromium') await scenario('opening offline', async () => {
     const { context, page, type } = await open({ serviceWorkers: 'allow' });
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.reload(); // now controlled by the service worker, which caches as it goes
@@ -211,12 +215,12 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(300);
     check('offline: and works', await page.locator('#page').isHidden(), true);
     await context.close();
-  }
+  });
 
   // --- Launches come straight from the saved copy; a deploy is downloaded in the background and
   // shows up on the launch after, even though the host lets browsers reuse files for 10 minutes
   // unchecked (GitHub Pages sends max-age=600). Chromium only, like the offline check.
-  if (ENGINE === 'chromium') {
+  if (ENGINE === 'chromium') await scenario('deploys', async () => {
     let version = 'old';
     const pages = await serveApp({
       port: 8766,
@@ -259,11 +263,11 @@ const sample = (overrides = {}) => ({
     check('deploy: only the newest two versions are kept', JSON.stringify((await savedVersion('newer'))?.includes(firstSaved?.[0])), 'false');
     await context.close();
     pages.close();
-  }
+  });
 
   // --- Starting up: the app stays hidden until it's built, then shows all at once. If its code
   // never runs, the page still shows after 2.5s instead of staying black.
-  {
+  await scenario('starting up', async () => {
     const { context, page } = await open();
     await page.waitForTimeout(250); // the 0.15s fade-in
     check('start: revealed once built', await page.evaluate(() => !document.body.classList.contains('starting') && getComputedStyle(document.body).opacity), '1');
@@ -285,10 +289,10 @@ const sample = (overrides = {}) => ({
     await bare.waitForTimeout(2800);
     check('start: if the app never starts, the page still shows after 2.5s', `${hidden} -> ${await bare.evaluate(() => getComputedStyle(document.body).opacity)}`, '0 -> 1');
     await noScript.close();
-  }
+  });
 
   // --- A lot of data (about three years of paychecks): still quick.
-  {
+  await scenario('lots of data', async () => {
     const categories = Array.from({ length: 16 }, (_, i) => ({ id: `c${i}`, name: `Category ${String(i).padStart(2, '0')}`, color: null, archived: false }));
     const periods = Array.from({ length: 72 }, (_, i) => ({ id: `p${i}`, budgetCents: 200000, start: localToday(new Date(Date.now() - (72 - i) * 15 * 86400000)), end: i === 71 ? null : localToday(new Date(Date.now() - (71 - i) * 15 * 86400000)) }));
     const expenses = Array.from({ length: 4000 }, (_, i) => ({ id: `e${i}`, periodId: `p${Math.min(71, Math.floor(i / 56))}`, categoryId: `c${i % 16}`, usdCents: 100 + (i % 9000), date: localToday(), note: `expense ${i}`, original: i % 3 ? null : { currency: 'MXN', amount: 200, perUsd: 20 }, createdAt: i }));
@@ -308,7 +312,7 @@ const sample = (overrides = {}) => ({
     const listed = await page.locator('.period-row').count();
     check(`lots of data: all 72 periods listed in under 1.5s (${Date.now() - t}ms)`, listed === 72 && Date.now() - t < 1500, true);
     await context.close();
-  }
+  });
 
   console.log(errors.length ? `ERRORS:\n${errors.join('\n')}` : 'No console errors');
   await browser.close();

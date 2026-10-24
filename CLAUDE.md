@@ -18,6 +18,10 @@ Read README.md for what the app does; this file covers how to work on it.
 - Shared test helpers live in `tests/helpers.js` (`check`, `openMenu`, `appReady`, `mockRates`,
   `startFirstPeriod`, `messageCleared`, `asInstalledApp`, ...). Prefer waiting for a condition over
   fixed `waitForTimeout` sleeps.
+- Tests are independent scenarios (`scenarios(browser)` in helpers.js: `await scenario(name, async
+  (open) => ...)`): each starts a fresh app with just the data it needs, and a crash fails only its
+  own scenario. Keep new checks in that shape rather than chaining onto earlier steps' state. `main.js`
+  is the exception: one deliberate end-to-end journey.
 - After deploying, `npm run smoke` runs an end-to-end check against the live site (fresh storage,
   real rates and service worker).
 - Run `npm test` before every commit. Pushing runs it too: `.githooks/pre-push` (switched on for this
