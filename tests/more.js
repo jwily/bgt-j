@@ -226,6 +226,21 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('currency row: a redraw doesn\'t glide it', await gliding(), false);
   });
 
+  await scenario('category strip taps', async (open) => {
+    // Tapping a neighbouring chip selects it at once (the highlight and hand move on the tap) and the
+    // strip glides it to the middle quickly, not at the browser's slower smooth-scroll pace.
+    const { page } = await launch(open);
+    const next = page.locator('.strip .chip.selected + .chip');
+    const name = await next.textContent();
+    await next.tap();
+    check('strip tap: selected at once', await page.locator('.strip .chip.selected').textContent(), name);
+    await page.waitForTimeout(300);
+    check('strip tap: centred within 0.3s', await page.evaluate(() => {
+      const strip = document.querySelector('.strip'), chip = strip.querySelector('.chip.selected');
+      return Math.abs(chip.offsetLeft + chip.offsetWidth / 2 - (strip.scrollLeft + strip.clientWidth / 2)) <= 2;
+    }), true);
+  });
+
   await scenario('category grid', async (open) => {
     const { page } = await launch(open);
     // Taps on the strip don't open the grid; a long press does. Then pick Health.
