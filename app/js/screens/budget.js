@@ -7,6 +7,7 @@ import { toast } from '../help.js';
 import { keypad } from '../widgets.js';
 import { formatDate } from '../dates.js';
 import { exportBackup } from '../backup.js';
+import { assemble } from '../party.js';
 import { fill, panel, goBack, closePages, renderPage } from '../pages.js';
 
 let budgetDigits = '';        // what's typed (kept across redraws)
@@ -65,6 +66,7 @@ export function render({ mode }) {
     } else {
       startPeriod(cents);
       closePages();
+      assemble(); // the whole party turns out for a new period
       toast(`New period started · ${formatUsd(cents)}`);
     }
   });

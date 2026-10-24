@@ -51,13 +51,14 @@ const ringWaves = (page) => page.evaluate(() => {
   });
   check('party member: one of the six, from the sprite sheet, standing on Note and Date, taps go through',
     PARTY.includes(member.name) && member.sheet && member.through === 'none' && member.standsOnTop, true);
-  // Its walking, standing and cheering are timed on a fake clock in more.js ('party member').
+  // Its walking, standing and cheering, and the whole party assembling for a new period (on now), are
+  // timed on a fake clock in more.js. The one who stays on is the first.
   // Coming back to the main screen from another, a different party member takes over.
-  const before = await page.locator('.party-member').getAttribute('data-member');
+  const before = await page.locator('.party-member').first().getAttribute('data-member');
   await openSummary(page);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
-  const after = await page.locator('.party-member').getAttribute('data-member');
+  const after = await page.locator('.party-member').first().getAttribute('data-member');
   check('back on the main screen, a different party member', after !== before && PARTY.includes(after), true);
 
   // USD entry with implied cents

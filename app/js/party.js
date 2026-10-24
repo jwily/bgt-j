@@ -5,8 +5,10 @@
 // FFRK's own two frames (from walk.mov): a stride, then feet together. It stands on the
 // feet-together one and sets off on the stride, a little quicker than the clip's march on the spot,
 // with the ground speed matched to its feet so they stay planted. When an expense is added it
-// stops and does FFRK's victory cheer (celebrate). It only draws while walking: a pause or a cheer
-// is timers, and with another screen open or the app in the background it stops.
+// stops and does FFRK's victory cheer (celebrate). When a period starts, the whole party assembles
+// for a cheer and then all but one walk off (assemble). It only draws while walking (or
+// assembling): a pause or a cheer is timers, and with another screen open or the app in the
+// background it stops.
 
 import { el } from './ui.js';
 
@@ -27,6 +29,7 @@ const SPEED = (STRIDE * PX) / (2 * STEP); // px a second
 let member, area;
 let x = 0, face = 1, from = 0, target = 0, walkTime = 0, mode = 'idle', until = 0, step = 0;
 let last = 0, away = false, running = false, frame = 0, wake = 0, cheer = 0, cheerNext = false;
+let scene = null; // while the party is assembled: { cast: [{ node, x, dir }], time, offLeft, offRight }
 const seconds = () => performance.now() / 1000;
 
 export function initParty(container) {
@@ -50,7 +53,10 @@ export function initParty(container) {
 function sync() {
   const screenOpen = document.body.classList.contains('page-open');
   const run = !document.hidden && !screenOpen;
-  if (screenOpen) away = true;
+  if (screenOpen) {
+    away = true;
+    endScene();
+  }
   if (run === running) return;
   running = run;
   if (run && away) {
@@ -65,7 +71,7 @@ function sync() {
 // before wandering on. It cheers from standing: caught mid-stride, it finishes the step first (a
 // fraction of a second), so it never snaps from a stride into the cheer.
 export function celebrate() {
-  if (!member) return;
+  if (!member || scene) return; // the assembled party is cheering already
   if (mode === 'walk' && walkCell() === STRIDE_FRAME) {
     cheerNext = true;
     return;
@@ -84,7 +90,8 @@ function schedule() {
   cancelAnimationFrame(frame);
   clearTimeout(wake);
   if (!running) return;
-  if (mode === 'walk') frame = requestAnimationFrame(walk);
+  if (scene) frame = requestAnimationFrame(perform);
+  else if (mode === 'walk') frame = requestAnimationFrame(walk);
   else wake = setTimeout(() => {
     const now = seconds();
     if (mode === 'cheer') {
@@ -171,3 +178,82 @@ function draw() {
   member.style.setProperty('--frame', cell);
   member.style.transform = `translate(${x}px, 0) scaleX(${face})`;
 }
+
+// ---------- a new period: the party assembles ----------
+// All six line up along the windows in a random order, facing left, and do the victory cheer
+// together; then everyone but the third or fourth walks off, those left of it off the left of the
+// screen and those right of it off the right, and the one left stays on to wander.
+const CHEER_LENGTH = CHEER.reduce((sum, [, t]) => sum + t, 0);
+// Leaving, they walk off a bit quicker than a stroll (the user's choice): quicker steps, the ground
+// speed matched to them as ever so the feet don't slide.
+const EXIT_STEP = 0.15;
+const EXIT_SPEED = (STRIDE * PX) / (2 * EXIT_STEP);
+
+export function assemble() {
+  if (!member) return;
+  endScene();
+  const order = [...PARTY].sort(() => Math.random() - 0.5);
+  const stays = 2 + Math.floor(Math.random() * 2); // the third or fourth
+  const width = member.offsetWidth;
+  const spacing = area.clientWidth / PARTY.length;
+  const cast = order.map((name, i) => {
+    const node = i === stays ? member : el('span', { className: 'party-member', 'aria-hidden': 'true' });
+    if (node !== member) area.append(node);
+    node.dataset.member = name;
+    node.style.setProperty('--row', PARTY.indexOf(name));
+    return { node, x: i * spacing + (spacing - width) / 2, dir: Math.sign(i - stays) };
+  });
+  const left = area.getBoundingClientRect().left;
+  scene = { cast, time: 0, offLeft: -left - width, offRight: window.innerWidth - left };
+  x = cast[stays].x;
+  face = 1;
+  mode = 'idle';
+  cheerNext = false;
+  away = false; // this is who's on stage now
+  last = performance.now();
+  perform(last);
+}
+
+function perform(nowMs) {
+  if (!scene) return;
+  scene.time += Math.min(0.1, Math.max(0, (nowMs - last) / 1000));
+  last = nowMs;
+  const { cast, time } = scene;
+  if (time < CHEER_LENGTH) {
+    let t = time, i = 0;
+    while (t >= CHEER[i][1]) t -= CHEER[i++][1];
+    for (const actor of cast) pose(actor.node, 'cheer', CHEER[i][0], actor.x, 1);
+  } else {
+    const t = time - CHEER_LENGTH;
+    const cell = [STRIDE_FRAME, STAND][Math.floor(t / EXIT_STEP) % 2];
+    let offstage = 0;
+    for (const actor of cast) {
+      if (!actor.dir) pose(actor.node, 'idle', STAND, actor.x, 1);
+      else {
+        const at = actor.x + actor.dir * EXIT_SPEED * t;
+        if (at < scene.offLeft || at > scene.offRight) offstage++;
+        pose(actor.node, 'walk', cell, at, -actor.dir); // facing left is 1; walking right mirrors
+      }
+    }
+    if (offstage === cast.length - 1) {
+      endScene();
+      rest(nowMs / 1000);
+      draw();
+    }
+  }
+  schedule();
+}
+
+function pose(node, state, cell, at, facing) {
+  node.dataset.state = state;
+  node.style.setProperty('--frame', cell);
+  node.style.transform = `translate(${at}px, 0) scaleX(${facing})`;
+}
+
+// The ones who walked off (or, cut short by leaving the screen, are still there) go.
+function endScene() {
+  if (!scene) return;
+  for (const { node } of scene.cast) if (node !== member) node.remove();
+  scene = null;
+}
+
