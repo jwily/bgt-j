@@ -34,7 +34,8 @@ const sameBytes = (a, b) => {
 };
 
 // Downloads every file; if all arrived and any differs from the saved version, saves them as a new
-// complete version, keeping just the one it replaces. A failure (e.g. offline) changes nothing.
+// complete version, keeping just the one it replaces, and tells the open launches an update is
+// ready (not on the first install). A failure (e.g. offline) changes nothing.
 async function checkForUpdate() {
   try {
     const downloads = await Promise.all(FILES.map(async (file) => {
@@ -61,6 +62,7 @@ async function checkForUpdate() {
     await next.put(COMPLETE, new Response('ok'));
     // Keep the version just replaced (an open launch may still be using it); drop older ones.
     for (const other of await caches.keys()) if (other !== name && other !== savedName) await caches.delete(other);
+    if (saved) for (const client of await self.clients.matchAll({ type: 'window' })) client.postMessage('update-ready');
   } catch {
     // Offline or a download failed: keep the saved version; try again next launch.
   }
