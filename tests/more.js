@@ -947,25 +947,68 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   });
 
   await scenario('categories: all 16 in use', async (open) => {
-    const { page } = await launch(open, { budget: '100000' });
-    // Sixteen active categories and an archived one.
-    await page.evaluate(() => {
-      const data = JSON.parse(localStorage.getItem('budget-tracker'));
-      const names = 'Bills,Books,Coffee,Dining,Fun,Gifts,Groceries,Health,Housing,Kids,Other,Pets,Shopping,Sports,Transport,Travel'.split(',');
-      data.categories = [...names.map((name, i) => ({ id: `c${i}`, name, color: null, archived: false })), { id: 'old', name: 'Games', color: null, archived: true }];
-      data.input.categoryId = 'c0';
-      localStorage.setItem('budget-tracker', JSON.stringify(data));
-    });
-    await page.reload();
-    await appReady(page);
-    await openMenu(page, 'Categories');
-    check('all 16 named: no empty slots', `${await page.locator('.cat-row input').count()} ${await page.locator('.cat-row.slot').count()}`, '16 0');
+    const { page, nameField, savedNames } = await (async () => {
+      const { page } = await launch(open, { budget: '100000' });
+      // Fifteen active categories and an archived one.
+      await page.evaluate(() => {
+        const data = JSON.parse(localStorage.getItem('budget-tracker'));
+        const names = 'Bills,Books,Coffee,Dining,Fun,Gifts,Groceries,Health,Housing,Kids,Other,Pets,Shopping,Sports,Transport'.split(',');
+        data.categories = [...names.map((name, i) => ({ id: `c${i}`, name, color: null, archived: false })), { id: 'old', name: 'Games', color: null, archived: true }];
+        data.input.categoryId = 'c0';
+        localStorage.setItem('budget-tracker', JSON.stringify(data));
+      });
+      await page.reload();
+      await appReady(page);
+      await openMenu(page, 'Categories');
+      return { page, nameField: (n) => page.locator('.cat-row input').nth(n), savedNames: () => page.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).categories.filter((c) => !c.archived).length) };
+    })();
     const restore = page.locator('.cat-row button', { hasText: 'Restore' });
-    check('no free slot: Restore is off, and says why', `${await restore.isDisabled()} ${await page.locator('#page .hint').textContent()}`, 'true All 16 slots are in use: remove one to restore a category.');
+    const hint = page.locator('#page .hint');
+    check('15 named, one free slot: Restore on', `${await page.locator('.cat-row.slot').count()} ${await restore.isDisabled()} ${await hint.isVisible()}`, '1 false false');
+    // Naming the last free slot fills it: Restore turns off as you type, not only when the screen
+    // is next drawn (or restoring would make 17).
+    await page.locator('.cat-row.slot input').fill('Travel');
+    check('typing in the last slot: Restore off, and says why', `${await restore.isDisabled()} ${await hint.textContent()}`, 'true All 16 slots are in use: remove one to restore a category.');
+    await page.locator('.cat-row.slot input').fill('');
+    check('cleared again: Restore back on', `${await restore.isDisabled()} ${await hint.isVisible()}`, 'false false');
+    await page.locator('.cat-row.slot input').fill('Travel');
+    await page.locator('#page .actions .primary').tap();
+    await page.waitForTimeout(300);
+    check('all 16 saved: no empty slots, Restore off', `${await savedNames()} ${await page.locator('.cat-row.slot').count()} ${await restore.isDisabled()}`, '16 0 true');
     await page.locator('.cat-row').first().locator('.mini').tap(); // Bills
     check('removing one frees a slot for it', await restore.isDisabled(), false);
     await restore.tap();
     check('restored into the free slot', `${(await categoryRows(page)).at(-1)} ${await page.locator('.cat-row.slot').count()}`, 'Games 0');
+  });
+
+  await scenario('categories: a refused save, redraws, typing', async (open) => {
+    const { page, save, nameField, savedNames } = await categoriesScreen(open);
+    const slot = page.locator('.cat-row.slot input').first();
+    // A refused save leaves every row as it was: what's typed afterwards still counts.
+    await slot.fill('x');
+    await slot.fill('');
+    const funIndex = (await categoryRows(page)).indexOf('Fun');
+    await nameField(funIndex).fill('groceries');
+    await save.tap();
+    check('a clashing name: refused', await page.locator('#help .text').first().textContent(), "There's already a category called Groceries.");
+    await nameField(funIndex).fill('Fun');
+    await slot.fill('Gas');
+    await save.tap();
+    await page.waitForTimeout(300);
+    check('after a refused save, a slot typed in again is saved', (await savedNames()).split(',').includes('Gas'), true);
+    // Something saved elsewhere (the day's rate arriving, say) doesn't rebuild the screen under a
+    // field being typed in.
+    const next = page.locator('.cat-row.slot input').first();
+    await next.tap();
+    await page.keyboard.type('Ta');
+    await page.evaluate(() => window.dispatchEvent(new Event('budget:change')));
+    await page.keyboard.type('xi');
+    check('a redraw for something else: still typing in the same field', await page.evaluate(() => `${document.activeElement.closest('.cat-row.slot') !== null} ${document.activeElement.value}`), 'true Taxi');
+    // Typing in a named row doesn't repaint the gems (only a row gaining or losing a name does).
+    await page.evaluate(() => { window.gems = [...document.querySelectorAll('.cat-row .dot')]; });
+    await nameField(0).press('End');
+    await page.keyboard.type('s');
+    check('typing in a named row leaves every gem as it was', await page.evaluate(() => window.gems.every((g) => g.isConnected)), true);
   });
 
   await scenario('categories: saving with blanks', async (open) => {

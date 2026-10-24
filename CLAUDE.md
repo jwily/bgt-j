@@ -76,6 +76,8 @@ Read README.md for what the app does; this file covers how to work on it.
   "Empty", a recessed socket instead of a gem) that become categories when typed in (the user's
   idea; it replaced an Add category button). On Save any blank one is removed (an existing one like
   ✕: archived if it has expenses). Restoring an archived one needs a free slot.
+  Redraws for other changes (rates arriving) leave the screen alone (`render` only redraws when the
+  saved categories change; edits call `draw`), so a field isn't rebuilt mid-typing.
   (Tried and replaced: instant saving with an instant re-sort, then re-sorting on leaving; an Add
   category button.)
 - Buttons that must stay reachable on a long screen use `.actions.pinned` (fixed above the bar; a
@@ -159,6 +161,12 @@ Read README.md for what the app does; this file covers how to work on it.
 - Their phone is an iPhone 14 Pro (in the layout tests).
 
 - Likes DRY code and periodic refactor passes; asks for them by name.
+- In reviews and refactors, refine rather than minimize: keep (or add) the seams that make likely
+  additions easy (the currency table, the screens registry, the palette), even where today they
+  serve one or two cases; cut duplication, dead code and anything that must be kept in sync by hand.
+- Make obvious efficiency fixes even where N is small (16 categories, a few windows): do work in
+  proportion to what changed (e.g. repaint the one gem that changed, not every row per keystroke).
+  The user's principle; it should hold at 100 rows too.
 - Also asks for an **architecture review** now and then: step back from the code as it stands and
   ask whether any part's design still fits what the app has become (its goals, constraints and the
   user's preferences have shifted a lot), and propose rebuilding what doesn't, with the trade-offs,
