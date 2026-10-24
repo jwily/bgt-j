@@ -3,7 +3,7 @@
 import { currentPeriod, periodNumber, spentIn, refreshRate, needsRecovery } from './store.js';
 import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
-import { $, setHelp, keepFieldsAboveKeyboard, trackPresses, pinHelp } from './ui.js';
+import { $, setHelp, keepFieldsAboveKeyboard, trackPresses, toast } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave } from './pages.js';
 import { backupStatus } from './backup.js';
@@ -147,9 +147,9 @@ document.addEventListener('visibilitychange', () => {
 // The service worker lets the app open offline. It only registers on HTTPS or localhost.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
-  // A new version has downloaded in the background (sw.js); it runs from the next launch, so HELP
-  // says so until then.
+  // A new version has downloaded in the background (sw.js); it runs from the next launch. HELP says
+  // so briefly, like any message.
   navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data === 'update-ready') pinHelp('Update ready');
+    if (event.data === 'update-ready') toast('Update ready');
   });
 }

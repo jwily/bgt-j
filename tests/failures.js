@@ -254,7 +254,7 @@ const sample = (overrides = {}) => ({
     check('deploy: HELP says an update is ready', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready', null, { timeout: 5000 }).then(() => true, () => false), true);
     await page.waitForTimeout(4500); // longer than a message shows for
     const helpText = () => page.evaluate(() => document.querySelector('#help .text')?.textContent ?? '');
-    check('deploy: "Update ready" stays until the next launch', await helpText(), 'Update ready');
+    check('deploy: "Update ready" shows briefly, like any message', await helpText() === 'Update ready', false);
     await page.reload(); // the next launch
     check('deploy: and runs on the launch after', await deployed(), 'new');
     check('deploy: where "Update ready" is gone', await helpText() === 'Update ready', false);
