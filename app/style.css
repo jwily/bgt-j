@@ -16,7 +16,8 @@
      menu's windows swish in from the right, settling in ~0.2s with a strong ease-out, as in FF8;
      sheets (Edit Expense, the category grid) swish in the same way from the left. Nothing
      animates on the way out. */
-  --fade-in: fade-in 0.18s ease-out;
+  --fade-time: 0.18s;
+  --fade-in: fade-in var(--fade-time) ease-out;
   --swish-in: swish-in-right 0.22s cubic-bezier(0.1, 0.8, 0.25, 1);
   --swish-in-left: swish-in-left 0.22s cubic-bezier(0.1, 0.8, 0.25, 1);
   color-scheme: dark;
@@ -632,7 +633,8 @@ body.page-open #view-input { visibility: hidden; }
 /* The waves show only in the channel. Each sits in its place (.wave-place, showing 12 o'clock to
    the wave's end, --to), drawn as a conic gradient from 12 o'clock (black, rising to its color at
    --len) turned to its start (--from). Arriving, it turns from just before 12 o'clock, hidden, to
-   its start: it travels clockwise into place, at a steady speed, landing gently. */
+   its start: it travels clockwise into place, at a steady speed, landing gently. The waves start
+   once the window has faded in, so the first is seen setting off. */
 .ring-chart .waves {
   position: absolute;
   inset: 0;
@@ -649,7 +651,7 @@ body.page-open #view-input { visibility: hidden; }
   background: conic-gradient(#000 0deg, var(--c) var(--len), transparent var(--len));
   transform: rotate(var(--from));
 }
-.arriving .ring-chart .wave { animation: wave-in var(--dur) cubic-bezier(0.3, 0.35, 0.5, 1) var(--delay) both; }
+.arriving .ring-chart .wave { animation: wave-in var(--dur) cubic-bezier(0.3, 0.35, 0.5, 1) calc(var(--fade-time) + var(--delay)) both; }
 @keyframes wave-in { from { transform: rotate(calc(-1 * var(--len))); } }
 /* The tick across the channel at 12 o'clock: a line with flared ends, like the bar's. */
 .ring-chart .tick {
@@ -667,7 +669,7 @@ body.page-open #view-input { visibility: hidden; }
 .ring-chart .tick::after { bottom: 0; }
 /* As each wave fires, a white copy of the tick flashes over it and fades. */
 .ring-chart .tick.flash { --tick: #fff; opacity: 0; pointer-events: none; }
-.arriving .ring-chart .tick.flash { animation: tick-flash 0.4s ease-out var(--delay) forwards; }
+.arriving .ring-chart .tick.flash { animation: tick-flash 0.4s ease-out calc(var(--fade-time) + var(--delay)) forwards; }
 @keyframes tick-flash { from { opacity: 0.95; } }
 .ring-center { position: absolute; z-index: 1; inset: 0; display: grid; place-content: center; text-align: center; }
 .ring-center strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
