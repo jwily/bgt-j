@@ -186,7 +186,8 @@ Read README.md for what the app does; this file covers how to work on it.
 - Launches are instant from a saved version (app/sw.js); a deploy downloads in the background and
   shows on the launch after (the user chose this over waiting on the network at every launch).
   Each launch stays on one version. It also checks when the app comes back from the background
-  (iOS mostly resumes rather than relaunches); a new version shows a brief "Update ready" in HELP.
+  (iOS mostly resumes rather than relaunches); the first launch running a new version says
+  "App updated" briefly in HELP (app.js asks sw.js which version it runs).
   Add any new app file to FILES in sw.js.
 - Tried and replaced on the summary: a donut (became the ring), Renzokuken's stepped motion (felt
   choppy), the reverse wave order, a 0.7-1.3s clamp on the ring's length (now a smooth curve),

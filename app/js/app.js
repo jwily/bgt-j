@@ -9,6 +9,7 @@ import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBa
 import { backupStatus } from './backup.js';
 import { moveOldSnapshots, recoverFromSnapshot, takeDailySnapshot } from './snapshots.js';
 
+const VERSION_KEY = 'budget-tracker-app-version'; // the app version the last launch ran (sw.js names them)
 const navButton = $('nav-btn');
 const menuBackdrop = $('menu-backdrop');
 const isMenuOpen = () => menuBackdrop.classList.contains('open');
@@ -149,9 +150,20 @@ document.addEventListener('visibilitychange', () => {
 // The service worker lets the app open offline. It only registers on HTTPS or localhost.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
-  // A new version has downloaded in the background (sw.js); it runs from the next launch. HELP says
-  // so briefly, like any message.
+  // New versions download in the background (sw.js) and run from the next launch. The first launch
+  // running a new one says so briefly, like any message. (The version seen last is kept apart from
+  // the budget data, so it's never in backups.)
   navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data === 'update-ready') toast('Update ready');
+    const { version } = event.data ?? {};
+    if (!version) return;
+    const seen = localStorage.getItem(VERSION_KEY);
+    if (seen === version) return;
+    try {
+      localStorage.setItem(VERSION_KEY, version);
+    } catch {
+      return; // storage full: rather say nothing than say it at every launch
+    }
+    if (seen) toast('App updated');
   });
+  navigator.serviceWorker.controller?.postMessage('which-version');
 }
