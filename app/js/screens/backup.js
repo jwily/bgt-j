@@ -42,7 +42,7 @@ export function render() {
   }).catch(() => {});
 
   // Fills in once IndexedDB answers.
-  const snapshotList = el('div');
+  const snapshotList = el('div', { className: 'snapshot-list' });
   readSnapshots().then((list) => snapshotList.replaceChildren(...list.map((snapshot) => {
     const when = formatMoment(snapshot.at);
     const goBackButton = el('button', { className: 'link', textContent: 'Go back' });
