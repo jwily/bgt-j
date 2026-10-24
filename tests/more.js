@@ -882,6 +882,27 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('going back to before the first budget: First Budget', await titleText(page), 'First Budget');
   });
 
+  await scenario('daily snapshot on resume', async (open) => {
+    // iOS mostly resumes the app rather than relaunching it: coming back on a new day takes that
+    // day's snapshot too.
+    const { page } = await launch(open);
+    await page.waitForTimeout(300);
+    await page.evaluate(() => new Promise((resolve) => { // make today's snapshot yesterday's
+      const request = indexedDB.open('budget-tracker', 1);
+      request.onsuccess = () => {
+        const store = request.result.transaction('snapshots', 'readwrite').objectStore('snapshots');
+        const all = store.getAll();
+        all.onsuccess = () => {
+          for (const s of all.result) { store.delete(s.at); store.put({ ...s, at: s.at - 86400000 }); }
+          store.transaction.oncomplete = resolve;
+        };
+      };
+    }));
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(300);
+    check('back from the background on a new day: that day\'s snapshot', (await snapshotReasons(page)).filter((r) => r === 'start of the day').length, 2);
+  });
+
   await scenario('undo after deleting the only period', async (open) => {
     const { page } = await launch(open);
     await openMenu(page, 'Current Period');

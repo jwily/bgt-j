@@ -76,11 +76,23 @@ export function migrate(data) {
   return data;
 }
 
+// Everything the app reads without checking: at least one active category, at most one open
+// period, and the fields every category, period and expense needs.
+// (Function declarations: load() runs near the top of this file, before a const here would exist.)
+function isText(value) {
+  return typeof value === 'string';
+}
+function isAmount(value) {
+  return Number.isFinite(value);
+}
 export function isValid(data) {
   return data?.version === VERSION
-    && Array.isArray(data.categories) && data.categories.length > 0
-    && Array.isArray(data.periods)
+    && Array.isArray(data.categories) && data.categories.some((c) => !c?.archived)
+    && data.categories.every((c) => isText(c?.id) && isText(c.name))
+    && Array.isArray(data.periods) && data.periods.filter((p) => !p?.end).length <= 1
+    && data.periods.every((p) => isText(p?.id) && isText(p.start) && isAmount(p.budgetCents))
     && Array.isArray(data.expenses)
+    && data.expenses.every((e) => isText(e?.id) && isText(e.periodId) && isText(e.categoryId) && isText(e.date) && isAmount(e.usdCents))
     && data.rates !== null && typeof data.rates?.perUsd === 'object'
     && data.settings?.backupReminderDays > 0
     && data.input !== null && typeof data.input === 'object'; // typeof null is also 'object'
@@ -149,11 +161,14 @@ function write() {
   }
 }
 
-// A failed save fires "budget:save-failed" (app.js warns); the screen still redraws so it shows
-// what you did.
+// A save that fails, after ones that worked, fires "budget:save-failed" (app.js warns, once rather
+// than at every change while storage stays full); the screen still redraws so it shows what you did.
+let failing = false;
 export function save() {
   tidy(state);
-  if (!write()) window.dispatchEvent(new Event('budget:save-failed'));
+  const saved = write();
+  if (!saved && !failing) window.dispatchEvent(new Event('budget:save-failed'));
+  failing = !saved;
   window.dispatchEvent(new Event('budget:change'));
 }
 

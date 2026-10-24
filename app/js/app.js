@@ -116,6 +116,7 @@ if (needsRecovery) {
   await moveOldSnapshots(); // recovery may need snapshots an older version kept in localStorage
   const recoveredFrom = await recoverFromSnapshot();
   if (recoveredFrom) alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
+  else alert("Your saved data couldn't be read, and there's no snapshot to go back to. It's been kept aside, not deleted: restore a backup from Menu → Backup if you have one.");
 }
 
 // iPhone Safari only shows a button's pressed look (:active) when something listens for touches,
@@ -150,6 +151,7 @@ refreshRate();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   refreshRate();
+  takeDailySnapshot(); // iOS mostly resumes the app rather than relaunching it (once a day at most)
   refresh(); // e.g. "Today" may be a new day
   navigator.serviceWorker?.controller?.postMessage('check-for-update');
 });
