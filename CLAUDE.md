@@ -122,7 +122,9 @@ Read README.md for what the app does; this file covers how to work on it.
   (stride, then feet together) at 0.24s each; it stands on feet together, sets off on the stride, and
   always settles back onto feet together before stopping; ground speed matches its 6px stride so
   the feet don't skate. Taps go through it; the amount area stays in front of it. Each sprite pixel
-  is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays crisp.
+  is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays crisp. Adding an expense plays FFRK's
+  victory cheer (from `cheer.mov`): standing and arm up alternating every 0.37s, twice, then holding
+  0.8s; the arm-up frames are described in `cut-party.js`.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
@@ -186,8 +188,8 @@ Read README.md for what the app does; this file covers how to work on it.
   translucent gauge fills with a glass sheen. Gauge numbers went to out of 1000, back to 100, and
   out of 1000 again (the user's current choice).
 - Tried and replaced elsewhere: FF8's selection arrow beside categories (the hand stays), a party
-  member standing on its stride frame (looked like sliding), and a victory pose on adding an expense
-  (removed until there's a clear reference clip; it's in git history, d9f95be).
+  member standing on its stride frame (looked like sliding), and a first victory pose picked by eye
+  (d9f95be; replaced by the cheer measured from cheer.mov).
 - Animations ignore the phone's Reduce Motion setting: the user keeps it on elsewhere but wants the
   hand to bob and windows to fade in here.
 
