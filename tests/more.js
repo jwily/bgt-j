@@ -624,6 +624,23 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check(`launch screens: ${launchScreens.length}, all present at the right size`, launchScreens.length >= 10 && launchScreens.every(Boolean), true);
   });
 
+  await scenario('messages and leaving the app', async (open) => {
+    // A message and its Undo end when the app goes to the background, rather than greeting you
+    // (with a stale Undo beside Menu) when you come back hours later.
+    const { page, type } = await launch(open);
+    await type('500');
+    await page.locator('.add-btn').tap();
+    check('adding: a message with Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Added $5.00 · Groceries true');
+    const setHidden = (hidden) => page.evaluate((hidden) => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (hidden ? 'hidden' : 'visible') });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, hidden);
+    await setHidden(true);
+    await setHidden(false);
+    check('back from the background: the message and Undo are gone, the status row is back', `${await page.locator('#undo-btn').isVisible()} ${await page.locator('#help').getAttribute('data-label')}`, 'false Status');
+  });
+
   await scenario('HELP and the status row', async (open) => {
     const app = await launch(open);
     const { page } = app;

@@ -87,21 +87,27 @@ export function setHelp(text, { onTap = null, status = null } = {}) {
   if (!toastTimer && !unchanged) showHelpLine();
 }
 
+// The message showing ends: the help line comes back, and Undo goes.
+function endToast() {
+  clearTimeout(toastTimer);
+  toastTimer = null;
+  const undoButton = $('undo-btn');
+  undoButton.hidden = true;
+  undoButton.onclick = null;
+  showHelpLine();
+}
+// Leaving the app ends it too: coming back hours later to a stale message, with an Undo beside
+// Menu, would be confusing (and the Undo easy to hit by mistake).
+document.addEventListener('visibilitychange', () => { if (document.hidden && toastTimer) endToast(); });
+
 // Pass an undo function (as returned by the store's changes) to show an Undo button. The message
 // shows in the HELP window; Undo appears at the bottom, beside the Menu/Back button.
 export function toast(message, undo) {
   const node = $('help');
   const undoButton = $('undo-btn');
-  const end = () => {
-    clearTimeout(toastTimer);
-    toastTimer = null;
-    undoButton.hidden = true;
-    undoButton.onclick = null;
-    showHelpLine();
-  };
   undoButton.hidden = !undo;
   undoButton.onclick = undo ? () => {
-    end();
+    endToast();
     undo();
   } : null;
   node.className = 'window help message';
@@ -110,5 +116,5 @@ export function toast(message, undo) {
   node.removeAttribute('aria-label');
   const pass = showHelpText(message);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(end, Math.max(4000, pass + 500)); // long enough to read a long message once
+  toastTimer = setTimeout(endToast, Math.max(4000, pass + 500)); // long enough to read a long message once
 }
