@@ -35,6 +35,7 @@ export function initInput() {
   // Category: a snapping strip; whichever chip is centered is selected. Long-press for a grid.
   parts.strip = el('div', { className: 'strip' });
   parts.strip.addEventListener('scroll', pickCenteredChip, { passive: true });
+  parts.strip.addEventListener('pointerdown', stopGlide);
   onLongPress(parts.strip, () => openCategoryGrid(state.input.categoryId, selectCategory, parts.strip.parentElement));
 
   parts.note = el('input', { type: 'text', className: 'note', placeholder: 'Optional', enterKeyHint: 'done', 'aria-label': 'Note' });
@@ -147,7 +148,7 @@ function renderStrip() {
     stripKey = key;
     parts.strip.replaceChildren(...categories.map((category) => {
       const chip = categoryChip(category);
-      chip.addEventListener('click', () => centerChip(chip, 'smooth'));
+      chip.addEventListener('click', () => selectCategory(category.id));
       return chip;
     }));
     recenter();
@@ -161,20 +162,48 @@ function renderStrip() {
 function recenter() {
   recentering = true;
   requestAnimationFrame(() => {
-    centerChip(chipFor(state.input.categoryId), 'auto');
+    centerChip(chipFor(state.input.categoryId));
     setTimeout(() => { recentering = false; }, 150);
   });
 }
 
 const chipFor = (id) => [...parts.strip.children].find((chip) => chip.dataset.id === id);
 
-function centerChip(chip, behavior) {
+function centerChip(chip) {
   if (!chip) return;
-  parts.strip.scrollTo({ left: chip.offsetLeft - (parts.strip.clientWidth - chip.offsetWidth) / 2, behavior });
+  parts.strip.scrollLeft = chip.offsetLeft - (parts.strip.clientWidth - chip.offsetWidth) / 2;
+}
+
+// A tap (or a pick from the grid) selects at once, and the strip glides the chip to the middle in
+// GLIDE seconds, easing out, like the windows' slide; the browser's own smooth scroll is slower and
+// can't be tuned. Snapping is off while it glides (it would pull each step back to a chip), and a
+// finger on the strip stops it.
+const GLIDE = 0.18;
+let glide = 0; // the glide's next frame, while one runs
+function glideTo(chip) {
+  if (!chip) return;
+  stopGlide();
+  const strip = parts.strip;
+  const from = strip.scrollLeft;
+  const to = chip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2;
+  const start = performance.now();
+  strip.style.scrollSnapType = 'none';
+  const frame = (now) => {
+    const t = Math.min(1, (now - start) / (GLIDE * 1000));
+    strip.scrollLeft = from + (to - from) * (1 - (1 - t) ** 3);
+    if (t < 1) glide = requestAnimationFrame(frame);
+    else stopGlide();
+  };
+  glide = requestAnimationFrame(frame);
+}
+function stopGlide() {
+  cancelAnimationFrame(glide);
+  glide = 0;
+  parts.strip.style.scrollSnapType = '';
 }
 
 function pickCenteredChip() {
-  if (recentering || SIDEWAYS.matches) return;
+  if (recentering || glide || SIDEWAYS.matches) return;
   const middle = parts.strip.scrollLeft + parts.strip.clientWidth / 2;
   let best = null;
   let bestDistance = Infinity;
@@ -190,7 +219,7 @@ function pickCenteredChip() {
 
 function selectCategory(id) {
   setInputPrefs({ categoryId: id });
-  centerChip(chipFor(id), 'smooth');
+  glideTo(chipFor(id));
 }
 
 // ---------- adding ----------
