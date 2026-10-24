@@ -43,7 +43,9 @@ exports.appReady = (page) => page.waitForFunction(() => document.getElementById(
 
 // Independent scenarios: scenario(name, async (open) => ...) runs one on its own; open(options)
 // makes it a phone-sized browser context, closed afterwards. A crash fails just that scenario (a
-// FAIL line naming it) and the rest still run, so one problem can't hide the checks after it.
+// FAIL line naming it) and the rest still run, so one problem can't hide the checks after it. So
+// does one that never finishes (LIMIT): a stuck browser call would otherwise hang the whole run.
+const LIMIT = 120000; // ms per scenario; the longest take about 20s
 exports.scenarios = (browser) => async (name, run) => {
   const { devices } = require('playwright');
   const contexts = [];
@@ -52,12 +54,16 @@ exports.scenarios = (browser) => async (name, run) => {
     contexts.push(context);
     return context;
   };
+  let timer;
+  const stuck = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`didn't finish in ${LIMIT / 1000}s`)), LIMIT); });
   try {
-    await run(open);
+    await Promise.race([run(open), stuck]);
   } catch (error) {
     console.log(`FAIL  ${name}: CRASHED: ${error.message.split('\n')[0]}`);
   } finally {
-    for (const context of contexts) await context.close().catch(() => {});
+    clearTimeout(timer);
+    // Closing can hang too if the browser is stuck; don't wait on it for long.
+    for (const context of contexts) await Promise.race([context.close().catch(() => {}), new Promise((r) => setTimeout(r, 5000))]);
   }
 };
 
