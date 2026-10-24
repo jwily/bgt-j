@@ -137,6 +137,11 @@ Read README.md for what the app does; this file covers how to work on it.
 - Their phone is an iPhone 14 Pro (in the layout tests).
 
 - Likes DRY code and periodic refactor passes; asks for them by name.
+- Also asks for an **architecture review** now and then: step back from the code as it stands and
+  ask whether any part's design still fits what the app has become (its goals, constraints and the
+  user's preferences have shifted a lot), and propose rebuilding what doesn't, with the trade-offs,
+  before doing it. A refactor pass tidies code; an architecture review questions its shape (example:
+  the press handling, rebuilt from layered click workarounds into one controller).
 - Whenever a change touches how category colors are used or shown (gems, gauges, the spending ring, ...),
   also do a judgement pass on the palette as part of it: do the 16 GF colors and their accents
   still read well, stay distinct and stay evocative in every place they now appear? Report what
