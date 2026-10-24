@@ -299,27 +299,5 @@ const sample = (overrides = {}) => ({
   }
 
   console.log(errors.length ? `ERRORS:\n${errors.join('\n')}` : 'No console errors');
-  // Cold launch: the page is dark from its first line and its stylesheet doesn't hold up the first
-  // (black) paint, which on an iPhone otherwise left the web view's white showing as a grey flash;
-  // the screens are built and shown only once the stylesheet is in, so nothing appears unstyled.
-  // (The test browsers don't paint like a cold iPhone launch, so this checks the setup, not pixels.)
-  const slowStyles = await browser.newContext({ ...devices['iPhone 13'] });
-  await mockRates(slowStyles, RATE());
-  let stylesArrived = 0;
-  await slowStyles.route('**/style.css', async (route) => { await new Promise((r) => setTimeout(r, 1500)); stylesArrived = Date.now(); await route.continue(); });
-  const cold = await slowStyles.newPage();
-  await cold.goto(APP_URL, { waitUntil: 'commit' });
-  check('cold launch: dark from the first line, stylesheet not blocking the first paint', await cold.evaluate(() => [
-    document.querySelector('meta[name=color-scheme]')?.content,
-    document.querySelector('link[rel=stylesheet][href="style.css"]')?.getAttribute('media'),
-  ].join(' ')).catch(() => 'not loaded'), 'dark print');
-  await appReady(cold);
-  check('...shown only once styled', await cold.evaluate(() => [
-    document.getElementById('styles').media,
-    getComputedStyle(document.querySelector('.window')).boxShadow !== 'none',
-  ].join(' ')), 'all true');
-  check('...and not before the stylesheet arrived', stylesArrived > 0, true);
-  await slowStyles.close();
-
   await browser.close();
 })().catch((e) => { console.error('TEST CRASHED:', e.message); process.exit(1); });

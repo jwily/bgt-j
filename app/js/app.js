@@ -112,16 +112,6 @@ if (needsRecovery) {
 // so without this only ⌫ (which has a press-and-hold listener) lit up when pressed.
 document.addEventListener('touchstart', () => {}, { passive: true });
 
-// The stylesheet doesn't hold up the first (black) paint (index.html); the screens are built once
-// it's in, since they measure themselves.
-const styles = document.getElementById('styles');
-if (styles.media !== 'all') {
-  await new Promise((resolve) => {
-    styles.addEventListener('load', resolve, { once: true });
-    styles.addEventListener('error', resolve, { once: true });
-  });
-}
-
 takeDailySnapshot(); // before anything changes today
 keepFieldsAboveKeyboard();
 trackPresses();
@@ -132,7 +122,7 @@ window.addEventListener('budget:change', refresh);
 
 if (!currentPeriod()) showPage('budget', { mode: 'first' });
 
-// Everything is built: show it all at once (index.html hides the page until now), once the font has
+// Everything is built: show it all at once (style.css hides the page until now), once the font has
 // loaded so text doesn't swap fonts in front of you; waiting a second at most.
 await Promise.race([document.fonts.load('600 1em Nunito'), new Promise((resolve) => setTimeout(resolve, 1000))]).catch(() => {});
 document.body.classList.remove('starting');
