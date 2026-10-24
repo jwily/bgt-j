@@ -22,6 +22,10 @@ function runPass(pass, engine) {
   });
 }
 
+// On a Mac, keep it from sleeping while the tests run (a sleeping Mac freezes the browsers, and the
+// run sits silently until it wakes). caffeinate -w lets go as soon as this process ends.
+if (process.platform === 'darwin') spawn('caffeinate', ['-i', '-w', String(process.pid)], { stdio: 'ignore' }).on('error', () => {}).unref();
+
 (async () => {
   const [onlyEngine, onlyPass] = process.argv.slice(2);
   const engines = ENGINES.filter((e) => !onlyEngine || e === onlyEngine);
