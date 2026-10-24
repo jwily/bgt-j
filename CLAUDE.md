@@ -123,8 +123,9 @@ Read README.md for what the app does; this file covers how to work on it.
   always settles back onto feet together before stopping; ground speed matches its 6px stride so
   the feet don't skate. Taps go through it; the amount area stays in front of it. Each sprite pixel
   is 4 screen pixels on a 3x iPhone (`--px`, PX), so it stays crisp. Adding an expense plays FFRK's
-  victory cheer (from `cheer.mov`): standing and arm up alternating every 0.37s, twice, then holding
-  0.8s; the arm-up frames are the user's picks, listed in `cut-party.js`.
+  victory cheer (from `cheer.mov`): standing and arm up alternating every 0.37s, three times (the
+  user's choice; the clip has two), then holding 0.8s; another expense mid-cheer starts it over;
+  caught mid-stride it finishes the step first, so it always cheers from standing; the arm-up frames are the user's picks, listed in `cut-party.js`.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen

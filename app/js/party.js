@@ -13,9 +13,10 @@ import { el } from './ui.js';
 const PARTY = ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie']; // party.png's rows
 // party.png's columns: the walk's stride, feet together (standing), and the cheer's arm thrown up.
 const STRIDE_FRAME = 0, STAND = 1, ARM_UP = 2;
-// FFRK's victory cheer, measured from cheer.mov: standing and an arm thrown up, alternating about
-// every 0.37s, twice, then holding the stance a moment: [frame, seconds].
-const CHEER = [[STAND, 0.37], [ARM_UP, 0.37], [STAND, 0.37], [ARM_UP, 0.37], [STAND, 0.8]];
+// FFRK's victory cheer, timed from cheer.mov: standing and an arm thrown up, alternating about every
+// 0.37s, three times (the user's choice; the clip has two), then holding the stance a moment:
+// [frame, seconds].
+const CHEER = [...Array(3).fill([[STAND, 0.37], [ARM_UP, 0.37]]).flat(), [STAND, 0.8]];
 const STEP = 0.24; // seconds each walk frame is held
 const PX = 4 / 3; // one sprite pixel: 4 screen pixels on a 3x iPhone (keep in sync with style.css)
 // Ground speed to match the feet, so they don't slide: in the stride frame the feet are about 6
@@ -25,7 +26,7 @@ const SPEED = (STRIDE * PX) / (2 * STEP); // px a second
 
 let member, area;
 let x = 0, face = 1, from = 0, target = 0, walkTime = 0, mode = 'idle', until = 0, step = 0;
-let last = 0, away = false, running = false, frame = 0, wake = 0, cheer = 0;
+let last = 0, away = false, running = false, frame = 0, wake = 0, cheer = 0, cheerNext = false;
 const seconds = () => performance.now() / 1000;
 
 export function initParty(container) {
@@ -60,10 +61,16 @@ function sync() {
   schedule();
 }
 
-// An expense was added: it stops where it is and cheers (again from the start if it already is),
-// then rests a moment before wandering on.
+// An expense was added: it cheers (again from the start if it already is), then rests a moment
+// before wandering on. It cheers from standing: caught mid-stride, it finishes the step first (a
+// fraction of a second), so it never snaps from a stride into the cheer.
 export function celebrate() {
   if (!member) return;
+  if (mode === 'walk' && walkCell() === STRIDE_FRAME) {
+    cheerNext = true;
+    return;
+  }
+  cheerNext = false;
   mode = 'cheer';
   cheer = 0;
   until = seconds() + CHEER[0][1];
@@ -147,13 +154,19 @@ function walk(nowMs) {
   } else {
     x = from + Math.sign(target - from) * SPEED * step;
   }
+  if (cheerNext && (mode !== 'walk' || walkCell() === STAND)) {
+    celebrate(); // the step's done: standing, it cheers
+    return;
+  }
   draw();
   schedule();
 }
 
+const walkCell = () => [STRIDE_FRAME, STAND][Math.floor(step / STEP) % 2];
+
 // The sprites face left; walking right mirrors them.
 function draw() {
-  const cell = mode === 'walk' ? [STRIDE_FRAME, STAND][Math.floor(step / STEP) % 2] : mode === 'cheer' ? CHEER[cheer][0] : STAND;
+  const cell = mode === 'walk' ? walkCell() : mode === 'cheer' ? CHEER[cheer][0] : STAND;
   member.dataset.state = mode;
   member.style.setProperty('--frame', cell);
   member.style.transform = `translate(${x}px, 0) scaleX(${face})`;

@@ -226,6 +226,47 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('currency row: a redraw doesn\'t glide it', await gliding(), false);
   });
 
+  await scenario('party cheer', async (open) => {
+    const { page } = await launch(open);
+    const celebrate = () => page.evaluate(async () => (await import('./js/party.js')).celebrate());
+    // Watches the member until its cheer ends: the poses it showed, and when the cheer began.
+    const watch = () => page.evaluate(() => new Promise((resolve) => {
+      const m = document.querySelector('.party-member'), seen = [], t0 = performance.now();
+      let began = null;
+      const id = setInterval(() => {
+        const now = `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
+        if (seen.at(-1) !== now) seen.push(now);
+        if (began === null && m.dataset.state === 'cheer') began = performance.now() - t0;
+        if (began !== null && m.dataset.state !== 'cheer') { clearInterval(id); resolve({ seen, began }); }
+      }, 15);
+      window.watching = seen;
+    }));
+    // Caught mid-stride, it finishes the step and cheers from standing, within a quarter second.
+    await page.waitForFunction(() => { const m = document.querySelector('.party-member'); return m.dataset.state === 'walk' && m.style.getPropertyValue('--frame') === '0'; }, null, { timeout: 15000, polling: 10 });
+    const watching = watch();
+    const rightAfter = await page.evaluate(async () => {
+      (await import('./js/party.js')).celebrate();
+      const m = document.querySelector('.party-member');
+      return `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
+    });
+    const midStride = await watching;
+    check('cheer caught mid-stride: the stride isn\'t cut short', rightAfter, 'walk:0');
+    check('...then it cheers from standing, within a quarter second', `${midStride.seen.slice(0, 2).join(' ')} ${midStride.began < 260}`, 'walk:0 cheer:1 true');
+    // Another expense mid-cheer starts it over: after two arm-ups, three more (five in all).
+    const again = page.evaluate(() => new Promise((resolve) => {
+      const m = document.querySelector('.party-member'); let ups = 0, last = '';
+      const id = setInterval(() => {
+        const now = `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
+        if (now !== last && now === 'cheer:2') ups++;
+        if (ups === 2 && now === 'cheer:1' && !window.restarted) { window.restarted = true; import('./js/party.js').then((p) => p.celebrate()); }
+        if (last.startsWith('cheer') && !now.startsWith('cheer')) { clearInterval(id); resolve(ups); }
+        last = now;
+      }, 15);
+    }));
+    await celebrate();
+    check('an expense mid-cheer starts it over: 2 + 3 arm-ups', await again, 5);
+  });
+
   await scenario('category strip taps', async (open) => {
     // Tapping a neighbouring chip selects it at once (the highlight and hand move on the tap) and the
     // strip glides it to the middle quickly, not at the browser's slower smooth-scroll pace.
