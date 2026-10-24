@@ -202,8 +202,8 @@ const ringWaves = (page) => page.evaluate(() => {
     const tick = document.querySelector('.ring-chart .tick').getBoundingClientRect();
     return Math.abs(tick.left + tick.width / 2 - (ring.left + ring.width / 2)) < 1 && tick.top - ring.top < ring.height * 0.1;
   }) && !ring.over, true);
-  // The gauges' shares are out of 100: $510.50 and $12.50 of $523.
-  check('gauge numbers out of 100', (await page.locator('.gauge .number').allTextContents()).join(','), '98,2');
+  // The gauges' shares are out of 1000, like FF8's compatibility numbers: $510.50 and $12.50 of $523.
+  check('gauge numbers out of 1000', (await page.locator('.gauge .number').allTextContents()).join(','), '976,24');
   check('window labels white, gauge numbers light grey', await page.evaluate(() => [
     getComputedStyle(document.querySelector('.window[data-label]'), '::before').color,
     getComputedStyle(document.querySelector('.gauge .number')).color,
