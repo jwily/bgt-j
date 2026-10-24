@@ -1,12 +1,12 @@
 // The Backup screen: export a backup or CSV, restore one, the reminder, and safety snapshots.
 
-import { state, currentPeriod, setBackupReminder } from '../store.js';
+import { state, setBackupReminder } from '../store.js';
 import { el } from '../ui.js';
 import { toast } from '../help.js';
 import { formatMoment } from '../dates.js';
 import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, REMINDER_CHOICES } from '../backup.js';
 import { readSnapshots, restoreSnapshot } from '../snapshots.js';
-import { fill, panel, note, showPage } from '../pages.js';
+import { fill, panel, note } from '../pages.js';
 
 export function render() {
   const status = backupStatus();
@@ -30,7 +30,6 @@ export function render() {
     if (!confirm(`Replace everything in the app with this backup (${data.periods.length} periods, ${data.expenses.length} expenses)?`)) return;
     restoreBackup(data);
     toast('Backup restored');
-    if (!currentPeriod()) showPage('budget', { mode: 'first' });
   });
   const restore = el('label', { className: 'wide-btn' }, 'Restore from backup', file);
 

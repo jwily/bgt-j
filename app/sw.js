@@ -60,8 +60,9 @@ async function checkForUpdate() {
     const next = await caches.open(name);
     await Promise.all(downloads.map(([file, response]) => next.put(file, response)));
     await next.put(COMPLETE, new Response('ok'));
-    // Keep the version just replaced (an open launch may still be using it); drop older ones.
-    for (const other of await caches.keys()) if (other !== name && other !== savedName) await caches.delete(other);
+    // Keep the version just replaced (an open launch may still be using it); drop older ones. Only
+    // this app's: other pages on the same site have their own caches.
+    for (const other of await caches.keys()) if (other.startsWith(PREFIX) && other !== name && other !== savedName) await caches.delete(other);
   } catch {
     // Offline or a download failed: keep the saved version; try again next launch.
   }

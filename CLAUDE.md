@@ -214,6 +214,8 @@ Read README.md for what the app does; this file covers how to work on it.
   choppy), the reverse wave order, a 0.7-1.3s clamp on the ring's length (now a smooth curve),
   translucent gauge fills with a glass sheen. Gauge numbers went to out of 1000, back to 100, and
   out of 1000 again (the user's current choice).
+- Undo stays a temporary button, shown only while a message offers it (an always-there greyed Undo,
+  so ADD wouldn't shrink under the thumb, was proposed and declined).
 - Tried and replaced elsewhere: FF8's selection arrow beside categories (the hand stays), a party
   member standing on its stride frame (looked like sliding), and a first victory pose picked by eye
   (d9f95be; replaced by the cheer measured from cheer.mov).

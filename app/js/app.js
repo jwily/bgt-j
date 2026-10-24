@@ -8,7 +8,7 @@ import { trackPresses } from './presses.js';
 import { keepFieldsAboveKeyboard } from './keyboard.js';
 import { setHelp, toast } from './help.js';
 import { initInput, renderInput } from './input.js';
-import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave } from './pages.js';
+import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave, currentScreen } from './pages.js';
 import { backupStatus } from './backup.js';
 import { moveOldSnapshots, recoverFromSnapshot, takeDailySnapshot } from './snapshots.js';
 
@@ -93,8 +93,14 @@ function renderChrome() {
   }
 }
 
-// Every save, and every change of screen, redraws whatever is showing.
+// Every save, and every change of screen, redraws whatever is showing. Without a period (a fresh
+// start, the only one deleted, going back to data from before the first) the app can only set a
+// first budget, whatever led there.
 function refresh() {
+  if (!currentPeriod() && currentScreen() !== 'budget') {
+    showPage('budget', { mode: 'first' }); // which redraws
+    return;
+  }
   renderInput();
   renderPage();
   renderChrome();
@@ -123,8 +129,6 @@ initInput();
 initPages({ onNavigate: refresh });
 refresh();
 window.addEventListener('budget:change', refresh);
-
-if (!currentPeriod()) showPage('budget', { mode: 'first' });
 
 // Everything is built: show it all at once (style.css hides the page until now), once the font has
 // loaded so text doesn't swap fonts in front of you; waiting a second at most.

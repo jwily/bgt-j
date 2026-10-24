@@ -251,10 +251,12 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(800);
     check('deploy: a fresh install says nothing', await helpText() === 'App updated', false);
     const firstSaved = await savedVersion('old');
+    await page.evaluate(() => caches.open('another-app-on-this-site').then((c) => c.put('x', new Response('y'))));
     version = 'new';
     await page.reload(); // a launch: served at once from the saved copy; the new version downloads for next time
     check('deploy: the launch right after a deploy still runs the saved version', await deployed(), 'old');
     check('deploy: the new version is saved in the background, next to the one in use', (await savedVersion('new'))?.length, 2);
+    check('deploy: other caches on the site are left alone', await page.evaluate(() => caches.has('another-app-on-this-site')), true);
     check('deploy: nothing said while it only downloads', await helpText() === 'App updated', false);
     await page.reload(); // the next launch
     check('deploy: and runs on the launch after', await deployed(), 'new');

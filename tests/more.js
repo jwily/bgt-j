@@ -874,6 +874,24 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await page.waitForTimeout(300);
     check('going back restores the deleted expense', await expensesNow(), 1);
     check('going back snapshots the current data first', (await snaps())[0], 'before going back to a snapshot');
+    // The first launch's snapshot is from before the first budget: going back to it means no
+    // period, so First Budget (Add used to crash with no period to add to).
+    page.once('dialog', (d) => d.accept());
+    await page.locator('.snapshot-row', { hasText: 'start of the day' }).locator('.link').tap();
+    await page.waitForTimeout(300);
+    check('going back to before the first budget: First Budget', await titleText(page), 'First Budget');
+  });
+
+  await scenario('undo after deleting the only period', async (open) => {
+    const { page } = await launch(open);
+    await openMenu(page, 'Current Period');
+    page.once('dialog', (d) => d.accept());
+    await page.locator('.delete-btn').tap();
+    await page.waitForTimeout(300);
+    check('the only period deleted: First Budget', await titleText(page), 'First Budget');
+    await page.locator('#undo-btn').tap();
+    await page.waitForTimeout(300);
+    check('Undo: the period is back, and so is the main screen (not First Budget over it)', `${(await saved(page)).periods.length} ${await page.locator('#page').isHidden()}`, '1 true');
   });
 
   await scenario('backup reminder', async (open) => {

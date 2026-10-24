@@ -8,7 +8,7 @@ import { keypad } from '../widgets.js';
 import { formatDate } from '../dates.js';
 import { exportBackup } from '../backup.js';
 import { assemble } from '../party.js';
-import { fill, panel, goBack, closePages, renderPage } from '../pages.js';
+import { fill, panel, goBack, closePages, hidePages, renderPage } from '../pages.js';
 
 let budgetDigits = '';        // what's typed (kept across redraws)
 let budgetBackedUp = false;   // whether "Back up first" succeeded
@@ -39,6 +39,11 @@ const BUDGET_SCREENS = {
 export function render({ mode }) {
   const current = currentPeriod();
   if (!current) mode = 'first';
+  else if (mode === 'first') {
+    // A period again (Undo after deleting the only one): nothing to set up any more.
+    hidePages();
+    return;
+  }
   const screen = BUDGET_SCREENS[mode];
 
   const amount = el('div', { className: 'budget-amount' });
