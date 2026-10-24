@@ -234,6 +234,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await scenario('party member', async (open) => {
     const { page, type } = await launch(open, { clock: true });
     await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+    // Starting the first period assembles the whole party (checked in 'party assembles'); let them go.
+    await page.clock.runFor(20000);
     // The member's pose ("state:frame") at every change, with the time it changed (ms since watch()).
     // Watched for changes rather than polled: on the fake clock every timer costs real time.
     await page.evaluate(() => {
@@ -323,6 +325,52 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const began = midStride.find((p) => p.pose.startsWith('cheer'));
     check('cheer caught mid-stride: the stride isn\'t cut short', rightAfter, 'walk:0');
     check('...then it cheers from standing, once the step is done', `${midStride[0].pose} ${began?.pose} ${began?.at <= 260}`, 'walk:0 cheer:1 true');
+  });
+
+  // A new period: all six line up in a random order facing left and cheer together, then all but the
+  // third or fourth walk off, those left of it to the left and those right of it to the right.
+  await scenario('party assembles', async (open) => {
+    const { page } = await launch(open, { clock: true }); // starting the first period assembles them
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+    const cast = () => page.evaluate(() => [...document.querySelectorAll('.party-member')]
+      .map((m) => {
+        const [, x, facing] = m.style.transform.match(/translate\(([-\d.]+)px(?:, 0px)?\) scaleX\(([-\d]+)\)/);
+        return { name: m.dataset.member, state: m.dataset.state, frame: m.style.getPropertyValue('--frame'), x: Number(x), facing: Number(facing) };
+      })
+      .sort((a, b) => a.x - b.x));
+    const lineUp = await cast();
+    check('a new period: all six, each once, in a line', `${lineUp.length} ${new Set(lineUp.map((m) => m.name)).size}`, '6 6');
+    check('...all facing left, cheering together', lineUp.map((m) => `${m.state}:${m.facing}`).join(' '), Array(6).fill('cheer:1').join(' '));
+    // Count arm-ups across the cheer (FF8's three), on the clock.
+    let ups = 0, before = '';
+    for (let t = 0; t < 3100; t += 50) {
+      const frames = (await cast()).map((m) => m.frame).join('');
+      if (frames === '222222' && before !== '222222') ups++;
+      before = frames;
+      await page.clock.runFor(50);
+    }
+    check('...three arm-ups, all together', ups, 3);
+    await page.clock.runFor(1000);
+    const leaving = await cast();
+    const stays = leaving.findIndex((m) => m.state !== 'walk');
+    check('then one stays, the third or fourth, facing left', `${[2, 3].includes(stays)} ${leaving.filter((m) => m.state !== 'walk').length} ${leaving[stays].facing}`, 'true 1 1');
+    check('those left of it walk off left, those right of it off right', leaving.map((m, i) => (i === stays ? 'stays' : `${m.state}:${m.facing}`)).join(' '),
+      leaving.map((m, i) => (i < stays ? 'walk:1' : i > stays ? 'walk:-1' : 'stays')).join(' '));
+    const stayer = leaving[stays].name;
+    await page.clock.runFor(20000);
+    const after = await cast();
+    check('...and once they\'re off the screen, only the one who stayed is left', `${after.length} ${after[0].name}`, `1 ${stayer}`);
+    // Opening another screen mid-scene ends it: back on the main screen there's just the one.
+    await page.clock.resume();
+    await openMenu(page, 'New Period');
+    for (const k of '50000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+    await page.locator('#page .primary').tap();
+    await page.waitForFunction(() => !document.body.classList.contains('page-open'));
+    check('New Period assembles them too', (await cast()).length, 6);
+    await openSummary(page);
+    await page.locator('#nav-btn').tap();
+    await page.waitForFunction(() => !document.body.classList.contains('page-open'));
+    check('another screen mid-scene: back to one', (await cast()).length, 1);
   });
 
   await scenario('category strip taps', async (open) => {
