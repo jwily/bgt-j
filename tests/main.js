@@ -176,27 +176,24 @@ const ringWaves = (page) => page.evaluate(() => {
   check('ring leaves the unspent share black', ring.drawn, '0.26');
   check('ring: largest wave first, smallest last', ring.waves[0].to - ring.waves[0].from > ring.waves[1].to - ring.waves[1].from, true);
   check('ring: waves rise from black to their color', await page.evaluate(() => /conic-gradient\(rgb\(0, 0, 0\) 0deg, rgb\(\d+, \d+, \d+\) [\d.]+deg, rgba\(0, 0, 0, 0\)/.test(getComputedStyle(document.querySelector('.ring-chart .wave')).backgroundImage)), true);
-  // Arriving, the ring waits for its window to fade in (0.18s), then the furthest wave fires first
-  // (Transport, the smallest, ends furthest round); the next fires when it's 85% of the way to its
-  // place; the cascade is its natural length (0.43s at FF8's speed here) to the power 0.3, times
-  // 0.85, so about 0.66s. Smooth, not stepped; the tick flashes as each fires.
+  // Arriving, the furthest wave fires first (Transport, the smallest, ends furthest round); the next fires
+  // when it's 85% of the way to its place; the whole is its natural length (0.43s at FF8's speed
+  // here) to the power 0.3, times 0.85, so about 0.66s. Smooth, not stepped; the tick flashes as each fires.
   const cascade = await page.evaluate(() => {
     const timing = (el) => el.getAnimations()[0]?.effect.getComputedTiming();
     const [groceries, transport] = [...document.querySelectorAll('.ring-chart .wave')].map(timing);
     const flashes = [...document.querySelectorAll('.ring-chart .flash')].map((f) => Math.round(timing(f).delay));
     const easing = document.querySelector('.ring-chart .wave').getAnimations()[0].effect.getKeyframes()[0].easing;
-    const fade = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fade-time')) * 1000;
     return {
-      afterFade: Math.abs(transport.delay - fade) < 2 && fade === 180,
-      order: groceries.delay > transport.delay,
-      handOff: Math.abs(groceries.delay - transport.delay - 0.85 * transport.duration) < 2,
-      total: Math.abs(Math.max(groceries.delay + groceries.duration, transport.delay + transport.duration) - fade - 660) < 10,
+      order: transport.delay === 0 && groceries.delay > 0,
+      handOff: Math.abs(groceries.delay - 0.85 * transport.duration) < 2,
+      total: Math.abs(Math.max(groceries.delay + groceries.duration, transport.delay + transport.duration) - 660) < 10,
       smooth: !easing.startsWith('steps('),
-      flashes: flashes.join(',') === [Math.round(groceries.delay), Math.round(transport.delay)].join(','),
+      flashes: flashes.join(',') === [Math.round(groceries.delay), 0].join(','),
     };
   });
-  check('ring: starts after the fade-in, furthest first, next at 85%, squeezed length, smooth, tick flashes', JSON.stringify(cascade),
-    JSON.stringify({ afterFade: true, order: true, handOff: true, total: true, smooth: true, flashes: true }));
+  check('ring: furthest fires first, next at 85%, length squeezed toward 1s, smooth, tick flashes', JSON.stringify(cascade),
+    JSON.stringify({ order: true, handOff: true, total: true, smooth: true, flashes: true }));
   check('ring: FF8 tick at 12 o\'clock, plain rim under budget', await page.evaluate(() => {
     const ring = document.querySelector('.ring-chart').getBoundingClientRect();
     const tick = document.querySelector('.ring-chart .tick').getBoundingClientRect();

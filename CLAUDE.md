@@ -115,7 +115,7 @@ Read README.md for what the app does; this file covers how to work on it.
   the rim and tick turn FF8's trigger yellow (#d0da00). Opening the summary, the waves fire one at a
   time, the furthest first, each gliding at FF8's measured speed and landing gently; the next fires
   at 85% of the previous one's travel; the tick flashes as each fires; the whole is squeezed smoothly
-  toward 1s (about 0.35-1.3s), starting once the SPENT window has faded in. Not on redraws.
+  toward 1s (about 0.35-1.3s). Not on redraws.
 - A party member (the user's idea; `party.js`): one of FF8's six, random at launch and a different
   one each time you come back to the main screen, wanders along the top of Note and Date: strolls of
   whole steps, pauses, sometimes turns back, mirrored to walk right. Its walk is FFRK's two frames
