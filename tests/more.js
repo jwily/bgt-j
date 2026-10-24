@@ -205,6 +205,27 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('the next real tap still types', (await page.locator('.amount').textContent()) !== amountBefore, true);
   });
 
+  await scenario('currency row', async (open) => {
+    // At launch the row is simply in place; it glides only when the currency changes.
+    const { context, page } = await launch(open);
+    const gliding = () => page.evaluate(() => document.querySelector('.currency-track').classList.contains('gliding'));
+    // Watches the whole launch: did the row ever glide?
+    await context.addInitScript(() => {
+      window.glidedAtLaunch = false;
+      new MutationObserver((changes) => {
+        if (changes.some((c) => c.target.classList?.contains('currency-track') && c.target.classList.contains('gliding'))) window.glidedAtLaunch = true;
+      }).observe(document, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    });
+    await page.reload();
+    await appReady(page);
+    await page.waitForTimeout(300);
+    check('currency row: placed at launch, no glide in', await page.evaluate(() => window.glidedAtLaunch), false);
+    await page.locator('.currency-opts').tap();
+    check('currency row: glides when the currency changes', await gliding(), true);
+    await page.evaluate(() => window.dispatchEvent(new Event('budget:change'))); // a redraw, same currency
+    check('currency row: a redraw doesn\'t glide it', await gliding(), false);
+  });
+
   await scenario('category grid', async (open) => {
     const { page } = await launch(open);
     // Taps on the strip don't open the grid; a long press does. Then pick Health.
