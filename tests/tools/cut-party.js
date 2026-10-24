@@ -1,9 +1,12 @@
 // Cuts the six party members' walk cycles out of the FF Record Keeper sprite sheets in
 // ~/projects/ff8-references (the sheets themselves never go in the app) into app/sprites/party.png:
-// a row per character, in PARTY order, each two 20x26 cells, the sprite's feet on the cell's bottom
-// edge, centered across it. Each walk is two frames, alternating every half second, found by
-// matching every frame of walk.mov (FFRK's title screen, the six walking on the spot) against every
-// sprite on the sheets: frame 0 is the stride, frame 1 feet together (also the standing pose).
+// a row per character, in PARTY order, each three 20x26 cells, the sprite's feet on the cell's bottom
+// edge, centered across it.
+// - Frames 0 and 1, the walk: found by matching every frame of walk.mov (FFRK's title screen, the six
+//   walking on the spot) against every sprite on the sheets. 0 is the stride, 1 feet together (also
+//   the standing pose).
+// - Frame 2, the victory cheer's arm thrown up (it alternates with standing; timing from cheer.mov):
+//   the sprites the user picked on each sheet (Quistis's also matches quistischeer.png exactly).
 // Each frame is its rectangle on the sheet: [x, y, w, h]. Usage: npm run party
 const { webkit } = require('playwright');
 const fs = require('fs');
@@ -14,12 +17,12 @@ const SHEET = (name) => path.join(os.homedir(), 'projects', 'ff8-references', `M
 const OUT = path.join(__dirname, '../../app/sprites/party.png');
 const CELL = { w: 20, h: 26 };
 const PARTY = {
-  Squall: [[228, 119, 15, 23], [180, 73, 15, 24]],
-  Zell: [[202, 59, 15, 23], [203, 34, 15, 24]],
-  Irvine: [[161, 26, 16, 23], [1, 145, 16, 24]],
-  Quistis: [[185, 16, 15, 23], [219, 9, 15, 24]],
-  Rinoa: [[110, 101, 14, 23], [17, 129, 14, 24]],
-  Selphie: [[135, 46, 15, 23], [34, 43, 15, 24]],
+  Squall: [[228, 119, 15, 23], [180, 73, 15, 24], [232, 70, 15, 24]],
+  Zell: [[202, 59, 15, 23], [203, 34, 15, 24], [233, 91, 14, 24]],
+  Irvine: [[161, 26, 16, 23], [1, 145, 16, 24], [1, 170, 16, 24]],
+  Quistis: [[185, 16, 15, 23], [219, 9, 15, 24], [202, 10, 15, 24]],
+  Rinoa: [[110, 101, 14, 23], [17, 129, 14, 24], [1, 136, 14, 24]],
+  Selphie: [[135, 46, 15, 23], [34, 43, 15, 24], [50, 43, 15, 24]],
 };
 
 (async () => {
@@ -29,7 +32,7 @@ const PARTY = {
   const png = await page.evaluate(async ({ sheets, PARTY, CELL }) => {
     const names = Object.keys(PARTY);
     const out = document.createElement('canvas');
-    out.width = CELL.w * 2;
+    out.width = CELL.w * 3;
     out.height = CELL.h * names.length;
     const g = out.getContext('2d');
     g.imageSmoothingEnabled = false;

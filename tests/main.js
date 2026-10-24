@@ -98,6 +98,17 @@ const ringWaves = (page) => page.evaluate(() => {
   check('USD 5-1-0-5-0', await page.locator('.amount').textContent(), '$510.50');
   await page.locator('.add-btn').tap();
   check('spent after $510.50', await spentText(page), '$510.50');
+  // Adding an expense: the party member stops and does FFRK's victory cheer (from cheer.mov):
+  // standing and arm up, alternating, then holds the stance, and wanders on.
+  const cheer = await page.evaluate(() => new Promise((resolve) => {
+    const m = document.querySelector('.party-member'), seen = [];
+    const watch = setInterval(() => {
+      const now = `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
+      if (seen.at(-1) !== now) seen.push(now);
+      if (m.dataset.state !== 'cheer') { clearInterval(watch); resolve(seen.join(' ')); }
+    }, 30);
+  }));
+  check('party member cheers: stand, arm up, stand, arm up, stand, then rests', cheer, 'cheer:1 cheer:2 cheer:1 cheer:2 cheer:1 idle:1');
   check('toast', await page.locator('#help .text').first().textContent(), 'Added $510.50 · Groceries');
 
   // Currency switch: tap the choices
