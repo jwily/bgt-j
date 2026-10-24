@@ -41,6 +41,26 @@ exports.openSummary = (page) => exports.openMenu(page, 'Current Period');
 // Waits until the app has finished starting: built, with a help line, and revealed.
 exports.appReady = (page) => page.waitForFunction(() => document.getElementById('help').textContent && !document.body.classList.contains('starting'));
 
+// Independent scenarios: scenario(name, async (open) => ...) runs one on its own; open(options)
+// makes it a phone-sized browser context, closed afterwards. A crash fails just that scenario (a
+// FAIL line naming it) and the rest still run, so one problem can't hide the checks after it.
+exports.scenarios = (browser) => async (name, run) => {
+  const { devices } = require('playwright');
+  const contexts = [];
+  const open = async (options = {}) => {
+    const context = await browser.newContext({ ...devices['iPhone 13'], ...options });
+    contexts.push(context);
+    return context;
+  };
+  try {
+    await run(open);
+  } catch (error) {
+    console.log(`FAIL  ${name}: CRASHED: ${error.message.split('\n')[0]}`);
+  } finally {
+    for (const context of contexts) await context.close().catch(() => {});
+  }
+};
+
 // One pass/fail line; the runner counts the FAIL lines.
 exports.check = (label, actual, expected) => {
   const ok = actual === expected;
