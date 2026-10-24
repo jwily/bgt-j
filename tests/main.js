@@ -80,7 +80,9 @@ const ringWaves = (page) => page.evaluate(() => {
     window.requestAnimationFrame = (callback) => { count++; return original.call(window, callback); };
     setTimeout(() => { window.requestAnimationFrame = original; resolve(count); }, ms);
   }), ms);
-  await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 9000 });
+  // Measured just after a walk ends: a pause lasts at least 0.8s, so it can't set off mid-measure.
+  await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'walk', null, { timeout: 15000 });
+  await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 15000 });
   check('party member standing: no frames drawn', await framesOver(500), 0);
   const before = await page.locator('.party-member').getAttribute('data-member');
   await openSummary(page);
