@@ -2,7 +2,7 @@
 
 import { state, spentIn } from '../store.js';
 import { formatUsd, formatDiff } from '../money.js';
-import { $, el } from '../ui.js';
+import { el } from '../ui.js';
 import { fill, note, periodDates, periodName, tone, showPage } from '../pages.js';
 
 export function render() {

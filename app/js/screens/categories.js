@@ -1,7 +1,10 @@
 // The Categories screen: renames, additions, removals and restores edit a draft; Save applies it.
 
-import { activeCategories, sortedCategories, saveCategories, categoryIsUsed, paletteColor } from '../store.js';
-import { $, el, toast, colorDot } from '../ui.js';
+import { activeCategories, sortedCategories, saveCategories, categoryIsUsed } from '../store.js';
+import { paletteColor } from '../palette.js';
+import { el } from '../ui.js';
+import { toast } from '../help.js';
+import { colorDot } from '../widgets.js';
 import { fill, panel, note, body, renderPage, currentScreen } from '../pages.js';
 
 let categoryDraft = null;     // the unsaved edits: [{ key, id, name, archived }]

@@ -1,8 +1,36 @@
-// Bottom sheets: editing an expense, and the category grid.
+// Sheets: small windows over the screen for quick edits (editing an expense, the category grid).
 
 import { activeCategories, sortedCategories, updateExpense, deleteExpense } from './store.js';
 import { CURRENCIES, HOME, formatMoney, formatUsd, plainAmount, parseAmount, toUsdCents } from './money.js';
-import { el, openSheet, closeSheet, toast, nudge, categoryChip } from './ui.js';
+import { $, el, nudge } from './ui.js';
+import { toast } from './help.js';
+import { categoryChip } from './widgets.js';
+
+// label: the small tab on the sheet's top edge, like FF8's "HELP" / "STATUS" tabs.
+// anchor: optional element. The sheet then opens with its top edge level with the anchor's top
+// (moving up only as far as it must to stay on screen) instead of at the bottom of the screen.
+export function openSheet(content, { dismissable = true, label = '', anchor = null } = {}) {
+  const sheet = $('sheet');
+  sheet.dataset.label = label;
+  sheet.replaceChildren(content);
+  sheet.scrollTop = 0;
+  sheet.style.top = '';
+  sheet.style.bottom = '';
+  if (anchor) {
+    const margin = 8;
+    const lowestTop = window.innerHeight - sheet.offsetHeight - margin;
+    sheet.style.top = `${Math.max(margin, Math.min(anchor.getBoundingClientRect().top, lowestTop))}px`;
+    sheet.style.bottom = 'auto';
+  }
+  const backdrop = $('sheet-backdrop');
+  backdrop.classList.add('open');
+  backdrop.onclick = dismissable ? (event) => { if (event.target === backdrop) closeSheet(); } : null;
+}
+
+export function closeSheet() {
+  $('sheet-backdrop').classList.remove('open');
+  document.activeElement?.blur();
+}
 
 export function openExpenseSheet(expense) {
   // Expenses entered in another currency are edited in that currency, at the rate saved with them.

@@ -2,7 +2,9 @@
 
 import { currentPeriod, startPeriod, setBudget } from '../store.js';
 import { formatUsd } from '../money.js';
-import { $, el, toast, keypad } from '../ui.js';
+import { el } from '../ui.js';
+import { toast } from '../help.js';
+import { keypad } from '../widgets.js';
 import { formatDate } from '../dates.js';
 import { exportBackup } from '../backup.js';
 import { fill, panel, goBack, closePages, renderPage } from '../pages.js';

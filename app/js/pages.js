@@ -3,7 +3,8 @@
 // with labelled windows, and optionally enter(params), which resets its state when it's opened.
 
 import { currentPeriod, periodNumber } from './store.js';
-import { $, el, setHelp } from './ui.js';
+import { $, el } from './ui.js';
+import { setHelp } from './help.js';
 import { formatDate } from './dates.js';
 import * as summary from './screens/summary.js';
 import * as periods from './screens/periods.js';

@@ -1,4 +1,4 @@
-// Checks the app's category palette (PALETTE in app/js/store.js) for colors that look too alike.
+// Checks the app's category palette (PALETTE in app/js/palette.js) for colors that look too alike.
 // Categories take colors in order, so it reports the closest pair among the first n colors.
 // Distance is OKLab x100; under ~10 starts to look alike. Also checks each accent stands out from
 // its color (15 or more), and that it works as the gem's glint: mixed as style.css mixes it, it

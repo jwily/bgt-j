@@ -4,7 +4,10 @@ import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFo
 import { initParty, celebrate } from './party.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
-import { $, el, keypad, onLongPress, toast, nudge, categoryChip } from './ui.js';
+import { $, el, nudge } from './ui.js';
+import { onLongPress } from './presses.js';
+import { toast } from './help.js';
+import { keypad, categoryChip } from './widgets.js';
 import { openCategoryGrid } from './sheets.js';
 
 let digits = '';

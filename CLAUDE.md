@@ -62,7 +62,7 @@ Read README.md for what the app does; this file covers how to work on it.
   (`sheets.js`) are for small edits only (edit expense, category grid). Add any new file to FILES in
   `sw.js`; a test checks.
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
-  `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
+  `PALETTE` in palette.js (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
   the base is the category's color everywhere; the accent (a second color from the same portrait)
   is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges
   and the ring's waves use the base only, for readability. Check changes with `npm run palette`
@@ -90,7 +90,9 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Dates** all go through `app/js/dates.js`: `todayISO`, `localDay`, `daysBetween`, `formatDate` (year
   only when it isn't this year), `formatMoment`. Never do day arithmetic with milliseconds elsewhere.
 - Build DOM with `el()` from `ui.js`; it skips `false`/`null` children (so `cond && el(...)` is safe).
-- **Presses** all go through `trackPresses` in ui.js: a control activates (its `click()`) when a press
+  Shared pieces live by job: `widgets.js` (chips, gems, gauges, keypad), `help.js` (HELP, `toast`),
+  `sheets.js` (`openSheet` and the sheets), `presses.js`, `keyboard.js`.
+- **Presses** all go through `trackPresses` in presses.js: a control activates (its `click()`) when a press
   lifts over it, the same for touch and mouse; the browser's own click never counts (cancelled at
   touchend on the touched element itself, stopped if it comes: any click with a click count). So
   give controls ordinary `click` listeners and nothing else; mark non-button tappables `.tappable`
@@ -105,7 +107,7 @@ Read README.md for what the app does; this file covers how to work on it.
 - Spacing: one gap, `--gap` (8px), between any two windows or buttons in either direction; keypad
   keys use the tighter `--gap-keys` (6px). Use the variables, not new numbers.
 - Small uppercase label tabs on a window's top-left edge (HELP, CATEGORY...).
-- The main screen's HELP window is a status row while no message shows (`statusRow` in ui.js,
+- The main screen's HELP window is a status row while no message shows (`statusRow` in help.js,
   after `FFVIII_Menu.webp`'s party windows): labelled STATUS, Lv = the period's number, HP = what's left
   with a thin red bar under it for the share left; HP digits yellow under a quarter, red when over.
 - Gauges (the summary's category bars) follow the Status menu's (`FFVIII_Status_Menu_5.webp`):

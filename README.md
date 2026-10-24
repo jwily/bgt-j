@@ -84,9 +84,14 @@ Tools: `npm run palette` checks the category colors are distinct. `npm run icon`
 - `js/input.js`: the main entry screen
 - `js/pages.js`: moving between screens, and what they share
 - `js/screens/`: one file per screen: period summary, list of periods, categories, backup, and the budget screen
-- `js/sheets.js`: pop-up sheets (edit expense, category grid)
+- `js/sheets.js`: pop-up sheets and the two there are (edit expense, category grid)
 - `js/backup.js`: backup export/restore, CSV export, "last backed up" status
-- `js/ui.js`: shared helpers (elements, keypad, gestures, the HELP window, sheets)
+- `js/ui.js`: building elements
+- `js/presses.js`: how taps and long presses on the app's controls are handled
+- `js/help.js`: the HELP window: help lines, the main screen's status row, messages
+- `js/widgets.js`: category chips and gems, gauges, the keypad
+- `js/keyboard.js`: keeping a field above the on-screen keyboard
+- `js/palette.js`: the 16 category colors
 - `js/party.js`: the party member wandering the main screen
 - `js/snapshots.js`: safety snapshots in IndexedDB
 - `js/dates.js`: local dates and date formatting

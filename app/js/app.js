@@ -3,7 +3,10 @@
 import { currentPeriod, periodNumber, spentIn, refreshRate, needsRecovery } from './store.js';
 import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
-import { $, setHelp, keepFieldsAboveKeyboard, trackPresses, toast } from './ui.js';
+import { $ } from './ui.js';
+import { trackPresses } from './presses.js';
+import { keepFieldsAboveKeyboard } from './keyboard.js';
+import { setHelp, toast } from './help.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave } from './pages.js';
 import { backupStatus } from './backup.js';
