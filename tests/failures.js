@@ -24,6 +24,17 @@ const sample = (overrides = {}) => ({
 });
 
 (async () => {
+  // Offline: every file the app runs on is on the service worker's list (sw.js FILES), so a new
+  // one can't quietly break opening offline. Launch images are left out on purpose (iOS fetches
+  // them when the app is installed, not at launch).
+  {
+    const app = path.join(__dirname, '..', 'app');
+    const sw = fs.readFileSync(path.join(app, 'sw.js'), 'utf8');
+    const listed = [...sw.slice(sw.indexOf('const FILES'), sw.indexOf('];', sw.indexOf('const FILES'))).matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.relative(app, path.join(dir, e.name))]));
+    const missing = walk(app).filter((f) => !/^(sw\.js|fonts\/OFL\.txt|icons\/launch-.*)$|\.DS_Store$/.test(f) && !listed.includes(f));
+    check('every app file is available offline', missing.join(', '), '');
+  }
   const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());
   const errors = [];
 

@@ -82,7 +82,8 @@ Tools: `npm run palette` checks the category colors are distinct. `npm run icon`
 - `js/store.js`: the data model, saving, upgrading old data, and the rate download
 - `js/money.js`: the currency table, formatting and conversion to US dollars
 - `js/input.js`: the main entry screen
-- `js/pages.js`: summaries, period list, categories, backup, and the budget screen
+- `js/pages.js`: moving between screens, and what they share
+- `js/screens/`: one file per screen: period summary, list of periods, categories, backup, and the budget screen
 - `js/sheets.js`: pop-up sheets (edit expense, category grid)
 - `js/backup.js`: backup export/restore, CSV export, "last backed up" status
 - `js/ui.js`: shared helpers (elements, keypad, gestures, the HELP window, sheets)

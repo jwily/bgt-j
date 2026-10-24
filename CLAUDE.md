@@ -45,16 +45,20 @@ Read README.md for what the app does; this file covers how to work on it.
   there; nothing else should mention specific currencies. USD is the home currency: all amounts are
   stored as US cents; foreign expenses keep `original: { currency, amount, perUsd }`.
 - **Undo:** store changes that can be undone return an undo function; pass it to `toast(message, undo)`.
-- **Screens:** `pages.js` screens call `fill(title, helpLine, ...windows)`; `panel(label, ...)` makes a
-  labelled window. Navigation is a stack (`showPage`, `goBack`). Sheets (`sheets.js`) are for small
-  edits only (edit expense, category grid).
+- **Screens:** one module each in `js/screens/` (summary, periods, categories, backup, budget), each
+  exporting `render(params)`, which calls `fill(title, helpLine, ...windows)` (`panel(label, ...)` makes
+  a labelled window), and optionally `enter(params)`, which resets its own state when it's opened.
+  Screens keep their own state and reach navigation only through `pages.js`'s exports (`showPage`,
+  `goBack`, `closePages`, `hidePages`, `currentScreen`, `renderPage`). Navigation is a stack. Sheets
+  (`sheets.js`) are for small edits only (edit expense, category grid). Add any new file to FILES in
+  `sw.js`; a test checks.
 - **Category colors** are assigned automatically, never picked: alphabetical order, active first, using
   `PALETTE` (16 colors after FF8's Guardian Forces, in GF-menu order). Each entry is [base, accent]:
   the base is the category's color everywhere; the accent (a second color from the same portrait)
   is only the glint on its gem (`accentFor`; the gem is after FF8's item gem, `gem-ref.png`). Gauges
   and the ring's waves use the base only, for readability. Check changes with `npm run palette`
   (distinct bases, accents that stand out, glints lighter than the stone).
-- **The Categories screen edits a draft** (`categoryDraft` in pages.js): renames, additions,
+- **The Categories screen edits a draft** (`categoryDraft` in screens/categories.js): renames, additions,
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
   undo) and sorts right then. Back with unsaved changes asks first (`confirmLeave`). Colors always
   go by position down the list in GF order (`paletteColor(i)`), in the draft too, so the color
