@@ -253,20 +253,11 @@ export function keepFieldsAboveKeyboard() {
 // status row instead (see statusRow).
 
 let helpLine = { text: '', onTap: null, status: null };
-let pinned = null; // a message HELP shows in place of its usual line (and status row) until relaunch
-
-// Pins a message to HELP for the rest of this launch (as "Update ready"): it replaces the screens'
-// help lines and the status row; a tap still does what the usual line's would; messages still show
-// briefly over it.
-export function pinHelp(text) {
-  pinned = text;
-  if (!toastTimer) showHelpLine();
-}
 let toastTimer = null;
 
 function showHelpLine() {
   const node = $('help');
-  const { text, onTap, status } = pinned ? { ...helpLine, text: pinned, status: null } : helpLine;
+  const { text, onTap, status } = helpLine;
   node.className = `window help${onTap ? ' tappable' : ''}${status ? ' status' : ''}`;
   node.dataset.label = status ? 'Status' : 'Help';
   node.onclick = onTap;

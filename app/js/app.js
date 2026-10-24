@@ -3,7 +3,7 @@
 import { currentPeriod, periodNumber, spentIn, refreshRate, needsRecovery } from './store.js';
 import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
-import { $, setHelp, keepFieldsAboveKeyboard, trackPresses, pinHelp } from './ui.js';
+import { $, setHelp, keepFieldsAboveKeyboard, trackPresses, toast } from './ui.js';
 import { initInput, renderInput } from './input.js';
 import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave } from './pages.js';
 import { backupStatus } from './backup.js';
@@ -136,20 +136,22 @@ moveOldSnapshots();
 navigator.storage?.persist?.().catch(() => {});
 
 // Fetch today's exchange rate on launch, and when the app comes back from the background.
-// Coming back is also when the date, the period's day count and "days since last backup" may tick over.
+// Coming back is also when the date, the period's day count and "days since last backup" may tick
+// over, and when to look for a new version: iOS mostly resumes the app rather than relaunching it.
 refreshRate();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   refreshRate();
   refresh(); // e.g. "Today" may be a new day
+  navigator.serviceWorker?.controller?.postMessage('check-for-update');
 });
 
 // The service worker lets the app open offline. It only registers on HTTPS or localhost.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
-  // A new version has downloaded in the background (sw.js); it runs from the next launch, so HELP
-  // says so until then.
+  // A new version has downloaded in the background (sw.js); it runs from the next launch. HELP says
+  // so briefly, like any message.
   navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data === 'update-ready') pinHelp('Update ready');
+    if (event.data === 'update-ready') toast('Update ready');
   });
 }

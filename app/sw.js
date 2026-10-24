@@ -96,6 +96,11 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// The app asks too when it comes back from the background (iOS resumes it more than it relaunches it).
+self.addEventListener('message', (event) => {
+  if (event.data === 'check-for-update') event.waitUntil(update());
+});
+
 self.addEventListener('fetch', (event) => {
   // Leave other sites (like the exchange-rate API) alone; the app handles those itself.
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;

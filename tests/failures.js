@@ -254,7 +254,7 @@ const sample = (overrides = {}) => ({
     check('deploy: HELP says an update is ready', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready', null, { timeout: 5000 }).then(() => true, () => false), true);
     await page.waitForTimeout(4500); // longer than a message shows for
     const helpText = () => page.evaluate(() => document.querySelector('#help .text')?.textContent ?? '');
-    check('deploy: "Update ready" stays until the next launch', await helpText(), 'Update ready');
+    check('deploy: "Update ready" shows briefly, like any message', await helpText() === 'Update ready', false);
     await page.reload(); // the next launch
     check('deploy: and runs on the launch after', await deployed(), 'new');
     check('deploy: where "Update ready" is gone', await helpText() === 'Update ready', false);
@@ -263,7 +263,10 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(800);
     check('deploy: a launch with nothing new saves nothing', JSON.stringify(await savedVersion('new')), JSON.stringify(before));
     version = 'newer';
-    await page.reload(); // another deploy: the version before last goes
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); // back from the background, no relaunch
+    check('deploy: coming back from the background finds a new version too', (await savedVersion('newer'))?.length, 2);
+    check('deploy: ...and says so', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready', null, { timeout: 5000 }).then(() => true, () => false), true);
+    await page.reload(); // the version before last goes
     check('deploy: only the newest two versions are kept', JSON.stringify((await savedVersion('newer'))?.includes(firstSaved?.[0])), 'false');
     await context.close();
     pages.close();
