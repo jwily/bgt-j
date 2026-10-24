@@ -51,43 +51,10 @@ const ringWaves = (page) => page.evaluate(() => {
   });
   check('party member: one of the six, from the sprite sheet, standing on Note and Date, taps go through',
     PARTY.includes(member.name) && member.sheet && member.through === 'none' && member.standsOnTop, true);
-  const startedAt = await page.locator('.party-member').evaluate((m) => m.style.transform);
-  check('party member wanders', await page.waitForFunction((t) => document.querySelector('.party-member').style.transform.split(')')[0] !== t.split(')')[0], startedAt, { timeout: 9000 }).then(() => true, () => false), true);
-  // Its walk is FFRK's two frames (from walk.mov), so walking it shows both, and only those; standing,
-  // it's on the feet-together frame (1), not mid-stride.
-  check('party member walks on its two frames', await page.evaluate(() => new Promise((resolve) => {
-    const m = document.querySelector('.party-member'), seen = new Set();
-    const watch = setInterval(() => { if (m.dataset.state === 'walk') seen.add(m.style.getPropertyValue('--frame')); }, 50);
-    setTimeout(() => { clearInterval(watch); resolve([...seen].sort().join(',')); }, 9000);
-  })), '0,1');
-  // Every walk is whole steps, so it stops right after its feet-together frame, never mid-stride.
-  check('party member settles before it stops', await page.evaluate(() => new Promise((resolve) => {
-    const m = document.querySelector('.party-member'); let prev = null, stops = 0, abrupt = 0;
-    const watch = setInterval(() => {
-      const now = { state: m.dataset.state, frame: m.style.getPropertyValue('--frame') };
-      if (prev && prev.state === 'walk' && now.state === 'idle') { stops++; if (prev.frame !== '1') abrupt++; }
-      prev = now;
-    }, 16);
-    setTimeout(() => { clearInterval(watch); resolve(`${stops > 0} ${abrupt}`); }, 12000);
-  })), 'true 0');
-  check('party member stands with its feet together', await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 9000 })
-    .then(() => page.locator('.party-member').evaluate((m) => m.style.getPropertyValue('--frame'))), '1');
+  // Its walking, standing and cheering are timed on a fake clock in more.js ('party member').
   // Coming back to the main screen from another, a different party member takes over.
-  // It only draws while walking: standing, and with another screen open, it asks for no frames.
-  const framesOver = (ms) => page.evaluate((ms) => new Promise((resolve) => {
-    const original = window.requestAnimationFrame;
-    let count = 0;
-    window.requestAnimationFrame = (callback) => { count++; return original.call(window, callback); };
-    setTimeout(() => { window.requestAnimationFrame = original; resolve(count); }, ms);
-  }), ms);
-  // Measured just after a walk ends: a pause lasts at least 0.8s, so it can't set off mid-measure.
-  await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'walk', null, { timeout: 15000 });
-  await page.waitForFunction(() => document.querySelector('.party-member').dataset.state === 'idle', null, { timeout: 15000 });
-  check('party member standing: no frames drawn', await framesOver(500), 0);
   const before = await page.locator('.party-member').getAttribute('data-member');
   await openSummary(page);
-  await page.waitForTimeout(1200); // the summary's own animations finish
-  check('another screen open: the party member draws no frames', await framesOver(1500), 0);
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
   const after = await page.locator('.party-member').getAttribute('data-member');
@@ -98,17 +65,6 @@ const ringWaves = (page) => page.evaluate(() => {
   check('USD 5-1-0-5-0', await page.locator('.amount').textContent(), '$510.50');
   await page.locator('.add-btn').tap();
   check('spent after $510.50', await spentText(page), '$510.50');
-  // Adding an expense: the party member does FFRK's victory cheer (from cheer.mov): standing and arm
-  // up, alternating three times, then holds the stance, and wanders on.
-  const cheer = await page.evaluate(() => new Promise((resolve) => {
-    const m = document.querySelector('.party-member'), seen = [];
-    const watch = setInterval(() => {
-      const now = `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
-      if (seen.at(-1) !== now) seen.push(now);
-      if (m.dataset.state !== 'cheer') { clearInterval(watch); resolve(seen.join(' ')); }
-    }, 30);
-  }));
-  check('party member cheers three times: stand, arm up (x3), stand, then rests', cheer, 'cheer:1 cheer:2 cheer:1 cheer:2 cheer:1 cheer:2 cheer:1 idle:1');
   check('toast', await page.locator('#help .text').first().textContent(), 'Added $510.50 · Groceries');
 
   // Currency switch: tap the choices

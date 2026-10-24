@@ -23,12 +23,15 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
 
   // A fresh installed app with rates and the share sheet faked, on the main screen with a period
   // started (budget: the digits typed; null stays on First Budget). hits.rates counts downloads.
-  const launch = async (open, { budget = '150000', options = {} } = {}) => {
+  // clock: run the page on Playwright's fake clock (timers, animation frames, performance.now), which
+  // flows on its own until a test pauses it and steps it exactly.
+  const launch = async (open, { budget = '150000', options = {}, clock = false } = {}) => {
     const context = await open({ acceptDownloads: true, ...options });
     const hits = { rates: 0 };
     await context.route('https://api.frankfurter.dev/**', (r) => { hits.rates++; r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }); });
     await fakeShareSheet(context);
     const page = await newPage(context);
+    if (clock) await page.clock.install();
     await page.goto(URL);
     if (budget) await startFirstPeriod(page, budget);
     const mainKey = (k) => page.locator('#view-input .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
@@ -226,46 +229,100 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('currency row: a redraw doesn\'t glide it', await gliding(), false);
   });
 
-  await scenario('party cheer', async (open) => {
-    const { page } = await launch(open);
-    const celebrate = () => page.evaluate(async () => (await import('./js/party.js')).celebrate());
-    // Watches the member until its cheer ends: the poses it showed, and when the cheer began.
-    const watch = () => page.evaluate(() => new Promise((resolve) => {
-      const m = document.querySelector('.party-member'), seen = [], t0 = performance.now();
-      let began = null;
-      const id = setInterval(() => {
-        const now = `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
-        if (seen.at(-1) !== now) seen.push(now);
-        if (began === null && m.dataset.state === 'cheer') began = performance.now() - t0;
-        if (began !== null && m.dataset.state !== 'cheer') { clearInterval(id); resolve({ seen, began }); }
-      }, 15);
-      window.watching = seen;
-    }));
-    // Caught mid-stride, it finishes that step (one 0.24s frame) and cheers from standing: well under
-    // the 0.48s another whole step would take, with room for a busy machine's timers.
-    await page.waitForFunction(() => { const m = document.querySelector('.party-member'); return m.dataset.state === 'walk' && m.style.getPropertyValue('--frame') === '0'; }, null, { timeout: 15000, polling: 10 });
-    const watching = watch();
+  // The party member, on the fake clock: time stands still between steps and moves exactly as far
+  // as each step says, so its timing is checked to the frame, however busy the machine is.
+  await scenario('party member', async (open) => {
+    const { page, type } = await launch(open, { clock: true });
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+    // The member's pose ("state:frame") at every change, with the time it changed (ms since watch()).
+    // Watched for changes rather than polled: on the fake clock every timer costs real time.
+    await page.evaluate(() => {
+      const m = document.querySelector('.party-member');
+      let t0 = 0;
+      const record = () => {
+        const pose = `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
+        if (window.poses.at(-1)?.pose !== pose) window.poses.push({ pose, at: performance.now() - t0 });
+      };
+      new MutationObserver(record).observe(m, { attributes: true });
+      window.watch = () => {
+        t0 = performance.now();
+        window.poses = [];
+        record();
+      };
+      // Counts the animation frames it asks for.
+      window.frames = 0;
+      const ask = window.requestAnimationFrame;
+      window.requestAnimationFrame = (callback) => { window.frames++; return ask.call(window, callback); };
+    });
+    const poses = () => page.evaluate(() => window.poses);
+    const pose = () => page.locator('.party-member').evaluate((m) => `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`);
+    // 50ms at a time (every pose lasts at least 0.24s, so none is stepped over), up to 30s.
+    const stepUntil = async (wanted) => {
+      for (let i = 0; i < 600 && !wanted(await pose()); i++) await page.clock.runFor(50);
+      return wanted(await pose());
+    };
+    const framesOver = async (ms) => {
+      await page.evaluate(() => { window.frames = 0; });
+      await page.clock.runFor(ms);
+      return page.evaluate(() => window.frames);
+    };
+
+    // Wandering: 25s of it. It walks on FFRK's two frames only, always stops just after feet
+    // together, and stands on feet together.
+    const startedAt = await page.locator('.party-member').evaluate((m) => m.style.transform);
+    await page.evaluate(() => window.watch());
+    await page.clock.runFor(25000);
+    const wandered = (await poses()).map((p) => p.pose);
+    const stops = wandered.flatMap((p, i) => (p.startsWith('idle') && wandered[i - 1]?.startsWith('walk') ? [`${wandered[i - 1]}>${p}`] : []));
+    check('party member wanders', await page.locator('.party-member').evaluate((m) => m.style.transform) !== startedAt, true);
+    check('party member walks on its two frames', [...new Set(wandered.filter((p) => p.startsWith('walk')))].sort().join(','), 'walk:0,walk:1');
+    check('party member settles before it stops, and stands with its feet together', `${stops.length > 0} ${[...new Set(stops)].join(',')}`, 'true walk:1>idle:1');
+
+    // It only draws while walking: standing (a pause lasts at least 0.8s), and with another screen open.
+    check('a walk', await stepUntil((p) => p.startsWith('walk')), true);
+    check('then a pause', await stepUntil((p) => p.startsWith('idle')), true);
+    check('party member standing: no frames drawn', await framesOver(700), 0);
+    await page.clock.resume(); // the menu's own animations, at their own pace
+    await openSummary(page);
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1500)); // the summary's animations finish
+    check('another screen open: the party member draws no frames', await framesOver(1500), 0);
+    await page.clock.resume();
+    await page.locator('#nav-btn').tap();
+    await page.waitForFunction(() => !document.body.classList.contains('page-open'));
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+
+    // Adding an expense: FFRK's victory cheer from standing, stand and arm up alternating every 0.37s
+    // three times, then the stance held 0.8s, then a rest.
+    check('standing again', await stepUntil((p) => p.startsWith('idle')), true);
+    await type('500');
+    await page.evaluate(() => window.watch());
+    await page.locator('.add-btn').tap();
+    await page.clock.runFor(3200);
+    const [standing, ...cheer] = await poses();
+    check('party member cheers three times from standing: stand, arm up (x3), stand, then rests',
+      [standing, ...cheer].map((p) => p.pose).join(' '), 'idle:1 cheer:1 cheer:2 cheer:1 cheer:2 cheer:1 cheer:2 cheer:1 idle:1');
+    check('...each pose for 0.37s, the last stance 0.8s', cheer.slice(1).map((p, i) => Math.round((p.at - cheer[i].at) / 10) * 10).join(' '), '370 370 370 370 370 370 800');
+
+    // Another expense mid-cheer starts it over: two arm-ups, then three more (five in all).
+    await page.evaluate(async () => { window.watch(); (await import('./js/party.js')).celebrate(); });
+    await page.clock.runFor(1600); // past the second arm-up, standing again
+    await page.evaluate(async () => (await import('./js/party.js')).celebrate());
+    await page.clock.runFor(3200);
+    check('an expense mid-cheer starts it over: 2 + 3 arm-ups', (await poses()).filter((p) => p.pose === 'cheer:2').length, 5);
+
+    // Caught mid-stride, it finishes that step (one 0.24s frame) and then cheers from standing.
+    check('a stride', await stepUntil((p) => p === 'walk:0'), true);
+    await page.evaluate(() => window.watch());
     const rightAfter = await page.evaluate(async () => {
       (await import('./js/party.js')).celebrate();
       const m = document.querySelector('.party-member');
       return `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
     });
-    const midStride = await watching;
+    await page.clock.runFor(1000);
+    const midStride = await poses();
+    const began = midStride.find((p) => p.pose.startsWith('cheer'));
     check('cheer caught mid-stride: the stride isn\'t cut short', rightAfter, 'walk:0');
-    check('...then it cheers from standing, before another step', `${midStride.seen.slice(0, 2).join(' ')} ${midStride.began < 400}`, 'walk:0 cheer:1 true');
-    // Another expense mid-cheer starts it over: after two arm-ups, three more (five in all).
-    const again = page.evaluate(() => new Promise((resolve) => {
-      const m = document.querySelector('.party-member'); let ups = 0, last = '';
-      const id = setInterval(() => {
-        const now = `${m.dataset.state}:${m.style.getPropertyValue('--frame')}`;
-        if (now !== last && now === 'cheer:2') ups++;
-        if (ups === 2 && now === 'cheer:1' && !window.restarted) { window.restarted = true; import('./js/party.js').then((p) => p.celebrate()); }
-        if (last.startsWith('cheer') && !now.startsWith('cheer')) { clearInterval(id); resolve(ups); }
-        last = now;
-      }, 15);
-    }));
-    await celebrate();
-    check('an expense mid-cheer starts it over: 2 + 3 arm-ups', await again, 5);
+    check('...then it cheers from standing, once the step is done', `${midStride[0].pose} ${began?.pose} ${began?.at <= 260}`, 'walk:0 cheer:1 true');
   });
 
   await scenario('category strip taps', async (open) => {
