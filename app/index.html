@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <!-- Dark from the first line: until a page paints, iOS shows the web view's default white (even
+       in Dark Mode), which flashed as a grey fade on a cold launch. -->
+  <meta name="color-scheme" content="dark">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -24,16 +27,18 @@
   <link rel="apple-touch-startup-image" href="icons/launch-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="icons/launch-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <link rel="preload" href="fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <!-- Before the stylesheet arrives: black from the very first frame, and nothing shown until
-       app.js has built every screen, then it all appears at once (a short fade). If the app never
-       starts, the page shows anyway after 2.5s rather than staying black. -->
+  <!-- Black from the very first frame, and nothing shown until app.js has built every screen, then
+       it all appears at once (a short fade). If the app never starts, the page shows anyway after
+       2.5s rather than staying black. The stylesheet loads without holding up that first black
+       frame (media="print" until it's in; app.js waits for it): a normal stylesheet blocks all
+       painting, and on a cold launch it comes slowly, leaving the web view's white showing. -->
   <style>
     html, body { background: #000; }
     body { transition: opacity 0.1s ease-out; }
     body.starting { opacity: 0; animation: show-anyway 0s 2.5s forwards; }
     @keyframes show-anyway { to { opacity: 1; } }
   </style>
-  <link rel="stylesheet" href="style.css">
+  <link id="styles" rel="stylesheet" href="style.css" media="print" onload="this.media = 'all'">
 </head>
 <body class="starting">
   <!-- Top of every screen, for reading: the HELP window (which also shows messages) and, on
