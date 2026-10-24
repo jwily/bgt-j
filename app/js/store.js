@@ -14,7 +14,7 @@
 //   lastBackupAt: timestamp of the last exported backup, or null
 //   settings:   { backupReminderDays }                   (the backup nudge's timing, 30 by default)
 
-import { CURRENCIES, CURRENCY_CODES, FOREIGN_CODES, HOME } from './money.js';
+import { CURRENCIES, CURRENCY_CODES, FOREIGN_CODES, HOME, RATE_MARGIN } from './money.js';
 import { todayISO } from './dates.js';
 
 const STORAGE_KEY = 'budget-tracker';
@@ -310,9 +310,13 @@ export function markBackedUp() {
 
 // ---------- exchange rates ----------
 
-// How many units of `code` one US dollar buys: today's downloaded rate, or the currency's
-// fallback until one has been downloaded.
-export const rateFor = (code) => (code === HOME ? 1 : state.rates.perUsd[code] ?? CURRENCIES[code].fallbackRate);
+// How many units of `code` one US dollar buys: today's downloaded rate less RATE_MARGIN, or the
+// currency's fallback until one has been downloaded. The saved rates stay the source's own.
+export const rateFor = (code) => {
+  if (code === HOME) return 1;
+  const downloaded = state.rates.perUsd[code];
+  return downloaded > 0 ? downloaded * (1 - RATE_MARGIN) : CURRENCIES[code].fallbackRate;
+};
 export const rateIsEstimate = (code) => code !== HOME && !(state.rates.perUsd[code] > 0);
 
 // The source publishes new rates once per business day (around 9am in Mexico City), so: download

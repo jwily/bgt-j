@@ -338,7 +338,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const label = await twoExpenses(app);
     check('date label shows backdate', label !== 'Today', true);
     check('date resets to Today', await page.locator('.date-btn span').textContent(), 'Today');
-    check('spent after both', await spentText(page), '$57.50');
+    check('spent after both', await spentText(page), '$57.88');
   });
 
   await scenario('summary: items, editing, deleting', async (open) => {
@@ -353,7 +353,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('MXN item shown', await tacos.locator('.orig').textContent(), 'from MX$300');
     await tacos.tap();
     await page.waitForTimeout(300);
-    check('edit sheet MXN hint', (await page.locator('#sheet .hint').textContent()).startsWith('Entered as MX$300 at 20.00 MXN per USD'), true);
+    check('edit sheet MXN hint', (await page.locator('#sheet .hint').textContent()).startsWith('Entered as MX$300 at 19.50 MXN per USD'), true);
     const funId = await page.locator('#sheet select option', { hasText: 'Fun' }).getAttribute('value');
     await page.locator('#sheet select').selectOption(funId);
     await page.locator('#sheet .primary').tap();
@@ -413,7 +413,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const csv = csvFile.text.split('\n');
     check('CSV header', csv[0], 'period_start,date,category,amount_usd,note,original_currency,original_amount,rate_per_usd');
     check('CSV rows', csv.length, 3);
-    check('CSV peso row', csv.find((l) => l.includes('Tacos'))?.replace(/^"[^"]*","[^"]*",/, ''), '"Fun","15.00","Tacos, ""al pastor""","MXN","300","20"');
+    check('CSV peso row', csv.find((l) => l.includes('Tacos'))?.replace(/^"[^"]*","[^"]*",/, ''), '"Fun","15.38","Tacos, ""al pastor""","MXN","300","19.5"');
     check('CSV export does not count as backup', await page.locator('.backup-status').textContent(), 'Never backed up');
 
     // Restoring a file that isn't a backup
@@ -438,7 +438,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     page.once('dialog', (d) => d.dismiss());
     await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/x-backup-different.json`);
     await page.waitForTimeout(300);
-    check('dismissed restore changes nothing', await spentText(page), '$57.50');
+    check('dismissed restore changes nothing', await spentText(page), '$57.88');
     // A backup with "input": null is rejected instead of crashing the app
     fs.writeFileSync(`${OUT}/null-input.json`, JSON.stringify({ ...backup, input: null }));
     await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/null-input.json`);
@@ -697,7 +697,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await page.locator('.delete-btn').tap();
     await page.waitForTimeout(300);
     check('deleting the current period returns to the main screen', await page.locator('#page').isHidden(), true);
-    check('previous period reopened', await spentText(page), '$57.50');
+    check('previous period reopened', await spentText(page), '$57.88');
     check('reopened period is current', (await saved(page)).periods.map((p) => p.end).join(','), '');
     await page.locator('#undo-btn').tap();
     await page.waitForTimeout(300);

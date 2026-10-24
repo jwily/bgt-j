@@ -134,7 +134,7 @@ const sample = (overrides = {}) => ({
       rate: 'down', status: 503,
     });
     const line = (await page.locator('.amount-sub span').allTextContents())[1];
-    check('old rate: shows its date', /^1 USD = 19\.10 MXN \(rate from [A-Z][a-z]{2} \d+\)$/.test(line), true);
+    check('old rate: shows its date', /^1 USD = 18\.62 MXN \(rate from [A-Z][a-z]{2} \d+\)$/.test(line), true);
     await context.close();
   });
 

@@ -115,7 +115,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.locator('.currency-opts').tap();
   for (const k of '250') await mainKey(k);
   check('MXN 2-5-0', await page.locator('.amount').textContent(), 'MX$250');
-  check('conversion line', (await page.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $12.50 | 1 USD = 20.00 MXN');
+  check('conversion line', (await page.locator('.amount-sub span').allTextContents()).join(' | '), '≈ $12.82 | 1 USD = 19.50 MXN');
   // A tap anywhere in the Amount window (here, on the amount itself) picks the next currency,
   // wrapping around.
   await page.locator('.amount').tap();
@@ -151,7 +151,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.waitForTimeout(700);
   await page.locator('.note').fill('Uber');
   await page.locator('.add-btn').tap();
-  check('spent after MX$250', await spentText(page), '$523.00');
+  check('spent after MX$250', await spentText(page), '$523.32');
   check('currency remembered', await page.locator('.currency-opts .on').textContent(), 'MXN');
   check('note cleared', await page.locator('.note').inputValue(), '');
   await page.screenshot({ path: `${OUT}/${ENGINE}-2-main-mxn.png` });
@@ -160,12 +160,12 @@ const ringWaves = (page) => page.evaluate(() => {
   for (const k of '100') await mainKey(k);
   await page.locator('.add-btn').tap();
   await page.locator('#undo-btn').tap();
-  check('spent after undo', await spentText(page), '$523.00');
+  check('spent after undo', await spentText(page), '$523.32');
   check('undo stays on the main screen', await page.locator('#page').isHidden(), true);
 
   // Empty Add nudges, adds nothing
   await page.locator('.add-btn').tap();
-  check('empty add ignored', await spentText(page), '$523.00');
+  check('empty add ignored', await spentText(page), '$523.32');
 
   // Summary
   await openSummary(page);
@@ -178,7 +178,7 @@ const ringWaves = (page) => page.evaluate(() => {
     getComputedStyle(document.getElementById('page')).overscrollBehaviorY,
   ].join(' '));
   check('main screen hidden behind other screens, no page bounce', bounce, 'hidden none contain');
-  check('ring center', await page.locator('.ring-center strong').textContent(), '$523.00');
+  check('ring center', await page.locator('.ring-center strong').textContent(), '$523.32');
   // The ring is drawn against the budget: $523 of $2,000 fills about a quarter of it, the rest
   // left black for what's unspent. Largest wave first, so the smallest comes last; each rises
   // from black to its color at its clockwise end.
@@ -222,7 +222,7 @@ const ringWaves = (page) => page.evaluate(() => {
     const tip = getComputedStyle(s).backgroundImage.match(/to left, (oklab|color)\(([^)]*)\)/);
     return tip && parseFloat(tip[2].replace(/^oklab /, '')) >= 0.7;
   })), true);
-  check('diff', await page.locator('.stat.diff .value').textContent(), '+$1,477.00');
+  check('diff', await page.locator('.stat.diff .value').textContent(), '+$1,476.68');
   await page.locator('.cat-head', { hasText: 'Transport' }).tap();
   check('ring: a redraw doesn\'t replay the cascade', await page.evaluate(() => [...document.querySelectorAll('.ring-chart .wave')].every((w) => w.getAnimations().length === 0)), true);
   check('itemized MXN line', await page.locator('.item .orig').textContent(), 'from MX$250');
@@ -235,7 +235,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.waitForTimeout(300);
   await page.locator('#sheet input').first().fill('300');
   await page.locator('#sheet .primary').tap();
-  check('edited MXN converts at saved rate', await page.locator('.ring-center strong').textContent(), '$525.50');
+  check('edited MXN converts at saved rate', await page.locator('.ring-center strong').textContent(), '$525.88');
 
   // Edit budget
   await page.locator('.edit-budget').tap();
@@ -244,15 +244,15 @@ const ringWaves = (page) => page.evaluate(() => {
   await sheetKey('⌫');
   await page.locator('#page .primary').tap();
   check('budget edited', await page.locator('.stat .value').first().textContent(), '$200.00');
-  check('over budget shown', await page.locator('.stat.diff .value').textContent(), '−$325.50');
+  check('over budget shown', await page.locator('.stat.diff .value').textContent(), '−$325.88');
   const overRing = await ringWaves(page);
   check('ring full when over budget, in trigger yellow', `${overRing.drawn} ${overRing.over}`, '1.00 true');
   await page.locator('#nav-btn').tap();
-  check('menu shows what\'s spent, in red when over', `${await spentText(page)} ${await page.locator('#stat-spent').evaluate((e) => e.classList.contains('bad'))}`, '$525.50 true');
+  check('menu shows what\'s spent, in red when over', `${await spentText(page)} ${await page.locator('#stat-spent').evaluate((e) => e.classList.contains('bad'))}`, '$525.88 true');
   await page.waitForSelector('#help:not(.message)', { timeout: 8000 });
   check('status row: HP in red and the bar empty when over', await page.evaluate(() => [
     document.querySelector('#help .hp').className, document.querySelector('#help .hp-bar span').style.width, document.querySelector('#help .hp b').textContent].join(' | ')),
-    'stat hp over | 0% | −$325.50');
+    'stat hp over | 0% | −$325.88');
 
   // New Period
   await page.locator('#nav-btn').tap();
@@ -337,7 +337,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.waitForTimeout(400);
   check('restore toast', await page.locator('#help .text').first().textContent(), 'Backup restored');
   check('restored: back to one period with Transport active', await page.locator('.strip .chip', { hasText: 'Transport' }).count(), 1);
-  check('restored spent amount', await spentText(page), '$525.50');
+  check('restored spent amount', await spentText(page), '$525.88');
   await page.locator('#nav-btn').tap();
   await page.waitForTimeout(300);
 
@@ -349,7 +349,7 @@ const ringWaves = (page) => page.evaluate(() => {
   // Reload keeps data
   await page.reload();
   await page.waitForTimeout(300);
-  check('persists after reload', await spentText(page), '$525.50');
+  check('persists after reload', await spentText(page), '$525.88');
   check('no first-budget screen after reload', await page.locator('#page').isHidden(), true);
 
   console.log(errors.length ? `ERRORS:\n${errors.join('\n')}` : 'No console errors');
