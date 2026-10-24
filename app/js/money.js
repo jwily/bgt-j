@@ -15,6 +15,11 @@ export const CURRENCIES = {
   MXN: { decimals: 0, maxDigits: 7, fallbackRate: 18.5 },
 };
 export const HOME = 'USD';
+
+// Downloaded rates are the European Central Bank's mid-market reference; paying through a bank or
+// card (Revolut) gets a little less, more on weekends. So expenses use 2.5% fewer units per dollar
+// than the reference, erring toward counting a bit too much spent rather than too little.
+export const RATE_MARGIN = 0.025;
 export const CURRENCY_CODES = Object.keys(CURRENCIES);
 export const FOREIGN_CODES = CURRENCY_CODES.filter((code) => code !== HOME);
 

@@ -48,6 +48,8 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Currencies:** everything is in `CURRENCIES` in `app/js/money.js`. Adding a currency is one line
   there; nothing else should mention specific currencies. USD is the home currency: all amounts are
   stored as US cents; foreign expenses keep `original: { currency, amount, perUsd }`.
+  Expenses convert at the downloaded rate less `RATE_MARGIN` (2.5%, the user's choice, so card
+  markups never make spending read low); the saved rates stay the source's own.
 - **Undo:** store changes that can be undone return an undo function; pass it to `toast(message, undo)`.
 - **Screens:** one module each in `js/screens/` (summary, periods, categories, backup, budget), each
   exporting `render(params)`, which calls `fill(title, helpLine, ...windows)` (`panel(label, ...)` makes
