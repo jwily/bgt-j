@@ -891,8 +891,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
       const button = document.querySelector('#page .actions .primary').getBoundingClientRect();
       return button.top >= 0 && button.bottom <= document.querySelector('.dock').getBoundingClientRect().top;
     }), true);
-    check('Add/Save are fixed, so scrolling or bouncing the list can\'t carry them', await page.evaluate(() => getComputedStyle(document.querySelector('#page .actions')).position), 'fixed');
-    check('scrolled to the end, the whole list clears Add/Save', await page.evaluate(() => {
+    check('Save is fixed, so scrolling or bouncing the list can\'t carry it', await page.evaluate(() => getComputedStyle(document.querySelector('#page .actions')).position), 'fixed');
+    check('scrolled to the end, the whole list clears Save', await page.evaluate(() => {
       const screen = document.getElementById('page');
       screen.scrollTop = screen.scrollHeight;
       const lastWindow = [...document.querySelectorAll('#page-body > :not(.actions)')].at(-1).getBoundingClientRect();
@@ -912,34 +912,28 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   });
 
   await scenario('categories: adding, removing, leaving unsaved', async (open) => {
-    const { page, save, savedNames } = await categoriesScreen(open);
+    const { page, save, nameField, savedNames } = await categoriesScreen(open);
     const before = await savedNames();
-    // New categories start blank, scrolled into view clear of the bars; one still blank when the
-    // keyboard closes is dropped.
-    const rowCount = (await categoryRows(page)).length;
-    await page.evaluate(() => document.getElementById('page').scrollTo(0, 0)); // from the top of a long list
-    await page.locator('.wide-btn', { hasText: 'Add category' }).tap();
-    await page.waitForTimeout(100);
-    check('Add category: the new field is in view, clear of the top and bottom bars', await page.evaluate(() => {
-      const box = document.activeElement.getBoundingClientRect();
-      return box.top >= document.querySelector('.hud').getBoundingClientRect().bottom && box.bottom <= document.querySelector('#page .actions').getBoundingClientRect().top;
-    }), true);
-    check('Add category: one more row, blank', `${(await categoryRows(page)).length} "${(await categoryRows(page)).at(-1)}"`, `${rowCount + 1} ""`);
-    await page.evaluate(() => document.activeElement.blur()); // the keyboard closes
-    check('left blank when the keyboard closes: dropped', (await categoryRows(page)).length, rowCount);
-    check('and Save is off again', await save.isDisabled(), true);
-    for (const name of ['Snacks', 'Pets']) {
-      await page.locator('.wide-btn', { hasText: 'Add category' }).tap();
+    const slot = (n) => page.locator('.cat-row.slot input').nth(n);
+    // Typing in an empty slot adds a category; typed and cleared again, it's just an empty slot.
+    await slot(0).fill('x');
+    check('typing in an empty slot: Save on', await save.isDisabled(), false);
+    await slot(0).fill('');
+    check('cleared again: Save off, its gem an empty socket again', `${await save.isDisabled()} ${await page.locator('.cat-row.slot .dot.empty').count()}`, 'true 7');
+    for (const [n, name] of [[0, 'Snacks'], [1, 'Pets']]) {
+      await slot(n).tap();
       await page.keyboard.type(name);
       await page.keyboard.press('Enter');
     }
     const rows = await categoryRows(page);
-    check('typed new ones stay, at the bottom until saved', rows.slice(-2).join(','), 'Snacks,Pets');
-    check('colors follow the list in GF order', (await categoryDotColors(page)).join(','), readPalette().map((c) => c.hex).slice(0, rows.length).join(','));
-    await page.locator('.cat-row').last().locator('.mini').tap();
-    check('removing an unsaved one', await page.locator('#help .text').first().textContent(), 'Pets removed');
+    check('typed new ones stay, after the others until saved', rows.slice(-2).join(','), 'Snacks,Pets');
+    check('colors follow the list in GF order, empty slots without', (await categoryDotColors(page)).join(','), readPalette().map((c) => c.hex).slice(0, rows.length).join(','));
+    const otherRow = rows.indexOf('Other');
+    await page.locator('.cat-row').nth(otherRow).locator('.mini').tap();
+    check('removing one', await page.locator('#help .text').first().textContent(), 'Other removed');
+    check('its slot comes free at the bottom, the typed names kept', `${await page.locator('.cat-row.slot').count()} ${(await categoryRows(page)).slice(-2).join(',')}`, '6 Snacks,Pets');
     await page.locator('#undo-btn').tap();
-    check('Undo brings it back', (await categoryRows(page)).at(-1), 'Pets');
+    check('Undo brings it back', (await categoryRows(page)).includes('Other'), true);
     // Back with unsaved changes: Cancel stays, OK leaves without saving.
     page.once('dialog', (d) => d.dismiss());
     await page.locator('#nav-btn').tap();
@@ -952,20 +946,42 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('and the changes are discarded', await savedNames(), before);
   });
 
+  await scenario('categories: all 16 in use', async (open) => {
+    const { page } = await launch(open, { budget: '100000' });
+    // Sixteen active categories and an archived one.
+    await page.evaluate(() => {
+      const data = JSON.parse(localStorage.getItem('budget-tracker'));
+      const names = 'Bills,Books,Coffee,Dining,Fun,Gifts,Groceries,Health,Housing,Kids,Other,Pets,Shopping,Sports,Transport,Travel'.split(',');
+      data.categories = [...names.map((name, i) => ({ id: `c${i}`, name, color: null, archived: false })), { id: 'old', name: 'Games', color: null, archived: true }];
+      data.input.categoryId = 'c0';
+      localStorage.setItem('budget-tracker', JSON.stringify(data));
+    });
+    await page.reload();
+    await appReady(page);
+    await openMenu(page, 'Categories');
+    check('all 16 named: no empty slots', `${await page.locator('.cat-row input').count()} ${await page.locator('.cat-row.slot').count()}`, '16 0');
+    const restore = page.locator('.cat-row button', { hasText: 'Restore' });
+    check('no free slot: Restore is off, and says why', `${await restore.isDisabled()} ${await page.locator('#page .hint').textContent()}`, 'true All 16 slots are in use: remove one to restore a category.');
+    await page.locator('.cat-row').first().locator('.mini').tap(); // Bills
+    check('removing one frees a slot for it', await restore.isDisabled(), false);
+    await restore.tap();
+    check('restored into the free slot', `${(await categoryRows(page)).at(-1)} ${await page.locator('.cat-row.slot').count()}`, 'Games 0');
+  });
+
   await scenario('categories: saving with blanks', async (open) => {
     const { page, save, nameField, savedNames } = await categoriesScreen(open);
-    // A new category left blank is dropped, an existing one cleared is removed, and tapping Save
-    // while a blank new field still has the keyboard up still saves the rest.
+    // An existing category cleared is removed, and tapping Save while an empty slot still has the
+    // keyboard up still saves the rest.
     const names = await categoryRows(page);
     await nameField(names.indexOf('Shopping')).fill('Stuff');
     await nameField(names.indexOf('Health')).fill('');
-    await page.locator('.wide-btn', { hasText: 'Add category' }).tap(); // blank, focused
+    await page.locator('.cat-row.slot input').first().tap(); // an empty slot, focused
     await save.tap();
     await page.waitForTimeout(300);
     const afterSave = (await savedNames()).split(',');
     check('Save with blanks: the rename is saved', afterSave.includes('Stuff') && !afterSave.includes('Shopping'), true);
     check('Save with blanks: a category whose name was cleared is removed', afterSave.includes('Health'), false);
-    check('Save with blanks: the blank new one is dropped, nothing blank saved', `${afterSave.length} ${afterSave.some((n) => !n.trim())}`, `${names.length - 1} false`);
+    check('Save with blanks: nothing blank saved', `${afterSave.length} ${afterSave.some((n) => !n.trim())}`, `${names.length - 1} false`);
   });
 
   await scenario('categories: spaces around names', async (open) => {
@@ -993,14 +1009,14 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
 
   await scenario('categories: adding with the keyboard open', async (open) => {
     const { page } = await categoriesScreen(open);
-    // The new name field ends up above the keyboard, not behind it. (A 300px keyboard is faked by
-    // shrinking the visual viewport, as iOS does.)
+    // The last empty slot, at the bottom of a long list, ends up above the keyboard, not behind it.
+    // (A 300px keyboard is faked by shrinking the visual viewport, as iOS does.)
     await page.evaluate(() => Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => innerHeight - 300 }));
-    await page.locator('.wide-btn', { hasText: 'Add category' }).tap();
+    await page.locator('.cat-row.slot input').last().tap();
     await page.evaluate(() => visualViewport.dispatchEvent(new Event('resize')));
     await page.waitForTimeout(200);
     const field = await page.evaluate(() => ({ value: document.activeElement.value, bottom: document.activeElement.getBoundingClientRect().bottom, keyboardTop: innerHeight - 300 }));
-    check(`new category field is above the keyboard (bottom ${field.bottom}, keyboard at ${field.keyboardTop})`, field.value === '' && field.bottom <= field.keyboardTop, true);
+    check(`an empty slot being typed in is above the keyboard (bottom ${field.bottom}, keyboard at ${field.keyboardTop})`, field.value === '' && field.bottom <= field.keyboardTop, true);
   });
 
   await scenario('rate timing', async (open) => {

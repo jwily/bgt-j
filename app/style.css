@@ -725,6 +725,8 @@ body.page-open #view-input { visibility: hidden; }
   box-shadow: inset 0 0 0 0.75px color-mix(in srgb, var(--c) 35%, black), 2px 2px 2px rgba(0, 0, 0, 0.38);
 }
 .dot { margin: 0 0.5px; }
+/* An empty category slot: the socket a gem would sit in, recessed into the window. */
+.dot.empty { background: rgba(0, 0, 0, 0.32); box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.35), 0.5px 0.5px 0 rgba(255, 255, 255, 0.14); }
 
 /* FF8's gauge (FFVIII_Status_Menu_5), measured at its 18px height: a silver tube wrapped around a
    dark trough, shaded top to bottom (darker at the top and bottom edges, brightest across the
@@ -819,6 +821,7 @@ body.page-open #view-input { visibility: hidden; }
 /* The ✕'s glyph sits mid-button: pull the button 4px in so the field grows and the glyph has equal
    space on both sides (the row's gap plus its own padding was 4px more than the window edge left). */
 .cat-row .mini { margin-left: -4px; }
+.cat-row.slot input::placeholder { color: var(--off); }
 .mini { flex: none; width: 32px; height: 32px; color: var(--soft); }
 
 .wide-btn { display: grid; place-items: center; width: 100%; min-height: 50px; padding: 4px 13px; text-align: center; font-weight: 700; cursor: pointer; } /* as tall as .primary beside or below it */
