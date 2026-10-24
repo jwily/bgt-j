@@ -252,8 +252,12 @@ const sample = (overrides = {}) => ({
     check('deploy: the launch right after a deploy still runs the saved version', await deployed(), 'old');
     check('deploy: the new version is saved in the background, next to the one in use', (await savedVersion('new'))?.length, 2);
     check('deploy: HELP says an update is ready', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready', null, { timeout: 5000 }).then(() => true, () => false), true);
+    await page.waitForTimeout(4500); // longer than a message shows for
+    const helpText = () => page.evaluate(() => document.querySelector('#help .text')?.textContent ?? '');
+    check('deploy: "Update ready" stays until the next launch', await helpText(), 'Update ready');
     await page.reload(); // the next launch
     check('deploy: and runs on the launch after', await deployed(), 'new');
+    check('deploy: where "Update ready" is gone', await helpText() === 'Update ready', false);
     const before = await savedVersion('new');
     await page.reload();
     await page.waitForTimeout(800);
