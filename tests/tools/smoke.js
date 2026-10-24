@@ -38,6 +38,7 @@ const ok = (label, actual, expected) => { if (!check(label, actual, expected)) f
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('budget-tracker')).rates.date, null, { timeout: 15000 });
   const rate = (await stored()).rates.perUsd.MXN;
   ok('real MXN rate downloaded', rate > 5 && rate < 50, true);
+  const used = rate * (1 - 0.025); // expenses use the rate less RATE_MARGIN (money.js)
   await type('1250');
   await page.locator('.add-btn').tap();
   ok('USD expense added', await help(), 'Added $12.50 · Groceries');
@@ -50,7 +51,7 @@ const ok = (label, actual, expected) => { if (!check(label, actual, expected)) f
   await messageGone();
   const expenses = (await stored()).expenses;
   ok('two expenses saved', expenses.length, 2);
-  ok('peso expense keeps its original amount and rate', JSON.stringify(expenses[1].original), JSON.stringify({ currency: 'MXN', amount: 300, perUsd: rate }));
+  ok('peso expense keeps its original amount and rate', JSON.stringify(expenses[1].original), JSON.stringify({ currency: 'MXN', amount: 300, perUsd: used }));
 
   // Category grid by long press.
   await page.locator('.strip .chip.selected').hover();
@@ -71,7 +72,7 @@ const ok = (label, actual, expected) => { if (!check(label, actual, expected)) f
   await page.waitForTimeout(400);
   // Both expenses are in Groceries; the newest (the peso one) is listed first, and is edited in pesos.
   const edited = (await stored()).expenses.find((e) => e.original);
-  ok('peso expense edited in pesos at its saved rate', `${edited.original.amount} ${edited.usdCents}`, `20 ${Math.round((20 / rate) * 100)}`);
+  ok('peso expense edited in pesos at its saved rate', `${edited.original.amount} ${edited.usdCents}`, `20 ${Math.round((20 / used) * 100)}`);
   await page.locator('#nav-btn').tap();
   await page.waitForSelector('#page', { state: 'hidden' });
 
