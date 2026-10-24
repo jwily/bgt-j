@@ -101,7 +101,8 @@ Read README.md for what the app does; this file covers how to work on it.
   with a thin red bar under it for the share left; HP digits yellow under a quarter, red when over.
 - Gauges (the summary's category bars) follow the Status menu's (`FFVIII_Status_Menu_5.webp`):
   silver capsule, dark trough, FF8's measured fill (muted, shaded top to bottom, no sheen) with dark
-  fills lifted to a minimum lightness and a light 3px tip, so every color's end shows. The share sits
+  fills lifted to a minimum lightness and a light 3px tip, so every color's end shows. The share, out
+  of 1000 like FF8's compatibility numbers, sits
   under the bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
 - The summary's spending ring (the user's design, after Squall's Renzokuken bar in `renzo.mov`), in
   the SPENT window: a black channel in a light grey rim with an I-beam tick at 12 o'clock. Each
@@ -177,8 +178,9 @@ Read README.md for what the app does; this file covers how to work on it.
   shows on the launch after (the user chose this over waiting on the network at every launch).
   Each launch stays on one version. Add any new app file to FILES in sw.js.
 - Tried and replaced on the summary: a donut (became the ring), Renzokuken's stepped motion (felt
-  choppy), the reverse wave order, a 0.7-1.3s clamp on the ring's length (now a smooth curve), gauge
-  numbers out of 1000, translucent gauge fills with a glass sheen.
+  choppy), the reverse wave order, a 0.7-1.3s clamp on the ring's length (now a smooth curve),
+  translucent gauge fills with a glass sheen. Gauge numbers went to out of 1000, back to 100, and
+  out of 1000 again (the user's current choice).
 - Tried and replaced elsewhere: FF8's selection arrow beside categories (the hand stays), a party
   member standing on its stride frame (looked like sliding), and a victory pose on adding an expense
   (removed until there's a clear reference clip; it's in git history, d9f95be).
