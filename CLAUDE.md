@@ -77,6 +77,12 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Dates** all go through `app/js/dates.js`: `todayISO`, `localDay`, `daysBetween`, `formatDate` (year
   only when it isn't this year), `formatMoment`. Never do day arithmetic with milliseconds elsewhere.
 - Build DOM with `el()` from `ui.js`; it skips `false`/`null` children (so `cond && el(...)` is safe).
+- **Presses** all go through `trackPresses` in ui.js: a control activates (its `click()`) when a press
+  lifts over it, the same for touch and mouse; the browser's own click never counts (cancelled at
+  touchend on the touched element itself, stopped if it comes: any click with a click count). So
+  give controls ordinary `click` listeners and nothing else; mark non-button tappables `.tappable`
+  or `role=button`; fields and labels are left native. Long presses call `usePresses`. Don't add
+  click-timing workarounds: they're what this replaced (they lost quick retaps of a key).
 
 ## Design rules (measured from the reference screenshots, not guessed)
 

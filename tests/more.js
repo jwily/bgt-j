@@ -81,8 +81,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('the same key pressed again right after a drifted press still counts', await page.locator('.amount').textContent(), '$0.02');
   await mainKey('⌫');
 
-  // Overlapping taps (the next finger lands before the last lifts), with the clicks Safari sends
-  // when each lifts: both count.
+  // Overlapping taps (the next finger lands before the last lifts), with the clicks a browser
+  // sends when each lifts (a click count of 1, which the app ignores): both count, once each.
   await page.evaluate(() => {
     const keyFor = (label) => [...document.querySelectorAll('#view-input .key')].find((k) => k.textContent === label);
     const send = (type, label, id) => {
@@ -92,9 +92,9 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     send('pointerdown', '4', 1);
     send('pointerdown', '5', 2);
     send('pointerup', '4', 1);
-    keyFor('4').click();
+    keyFor('4').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     send('pointerup', '5', 2);
-    keyFor('5').click();
+    keyFor('5').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
   });
   check('overlapping taps both count', await page.locator('.amount').textContent(), '$0.45');
   check('no double-tap zoom anywhere (the whole page opts out, gaps between keys included)', await page.evaluate(() => getComputedStyle(document.documentElement).touchAction), 'manipulation');
@@ -183,21 +183,27 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   await page.locator('.add-btn').tap();
   check('spent after both', await spentText(page), '$57.50');
 
-  // No double-tap zoom: a quick second tap on empty space has its default (the zoom) cancelled; a
-  // quick second tap on a key keeps it (fast typing), and so do two slow taps.
-  const secondTapBlocked = (selector, gap) => page.evaluate(async ([selector, gap]) => {
+  // No double-tap zoom, and no browser click: every touch's end is cancelled except on fields and
+  // labels, which iOS needs for focus and pickers.
+  const touchEndCancelled = (selector) => page.evaluate((selector) => {
     const target = document.querySelector(selector);
-    const tap = () => { const e = new Event('touchend', { bubbles: true, cancelable: true }); target.dispatchEvent(e); return e.defaultPrevented; };
-    tap();
-    await new Promise((r) => setTimeout(r, gap));
-    const blocked = tap();
-    await new Promise((r) => setTimeout(r, 400)); // let the next check start fresh
-    return blocked;
-  }, [selector, gap]);
-  check('double tap on empty space: no zoom; on a key, or slow taps: untouched',
-    [await secondTapBlocked('.strip-window', 120), await secondTapBlocked('#view-input .key', 120), await secondTapBlocked('.strip-window', 600)].join(' '), 'true false false');
-  // A quick tap in the gap between keys is left alone too: iOS gives it to the nearest key.
-  check('double tap in the gap between keys: untouched', await secondTapBlocked('#view-input .keypad', 120), false);
+    target.dispatchEvent(new Event('touchstart', { bubbles: true }));
+    const e = new Event('touchend', { bubbles: true, cancelable: true });
+    target.dispatchEvent(e);
+    return e.defaultPrevented;
+  }, selector);
+  check('touches end cancelled on keys and empty space, not on fields',
+    [await touchEndCancelled('#view-input .key'), await touchEndCancelled('.strip-window'), await touchEndCancelled('.note'), await touchEndCancelled('.date-btn')].join(' '), 'true true false false');
+  // A press in the gap between keys goes to the nearest key, as iOS's own taps do.
+  await page.evaluate(() => {
+    const key = [...document.querySelectorAll('#view-input .key')].find((k) => k.textContent === '6');
+    const box = key.getBoundingClientRect();
+    const at = { clientX: box.left - 2, clientY: box.top + box.height / 2 }; // in the gap, nearer 6 than 5
+    const pad = key.parentElement;
+    for (const type of ['pointerdown', 'pointerup']) pad.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 11, pointerType: 'touch', isPrimary: true, ...at }));
+  });
+  check('a press in the gap between keys types the nearest', (await page.locator('.amount').textContent()).endsWith('6'), true);
+  await mainKey('⌫');
 
   // Summary: backdated item shows its date; edit category; delete with undo
   await openSummary(page);
@@ -348,8 +354,9 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   check('Housing still gone before undo', housingAgain, -1);
   await page.locator('#nav-btn').tap();
 
-  // Presses replay what iOS sends: pointer events where the thumb goes, then a click on the button
-  // the press started on (unless nativeClick is false: iOS sends none once the thumb strays far).
+  // Presses replay what iOS sends: pointer events where the thumb goes, then (unless nativeClick is
+  // false: iOS sends none once the thumb strays far) its own click on the button the press started
+  // on, with a click count of 1, which the app must ignore.
   const press = (selector, text, path, nativeClick = true) => page.evaluate(([sel, txt, steps, nativeClick]) => {
     const start = [...document.querySelectorAll(sel)].find((b) => b.textContent.trim() === txt);
     const box = start.getBoundingClientRect();
@@ -362,7 +369,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
       send(type, x, y);
       if (type === 'pointermove') hovered.push([...document.querySelectorAll('.menu-list button.hover')].map((b) => b.textContent).join());
     }
-    if (nativeClick) start.click();
+    if (nativeClick) start.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     return hovered;
   }, [selector, text, path, nativeClick]);
   await page.waitForSelector('#help:not(.message)');
