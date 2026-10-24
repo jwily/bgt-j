@@ -245,28 +245,32 @@ const sample = (overrides = {}) => ({
       }
       return null;
     }, wanted);
+    const says = (text) => page.waitForFunction((t) => document.querySelector('#help .text')?.textContent === t, text, { timeout: 5000 }).then(() => true, () => false);
+    const helpText = () => page.evaluate(() => document.querySelector('#help .text')?.textContent ?? '');
     check('deploy: the first version loads', await deployed(), 'old');
+    await page.waitForTimeout(800);
+    check('deploy: a fresh install says nothing', await helpText() === 'App updated', false);
     const firstSaved = await savedVersion('old');
     version = 'new';
     await page.reload(); // a launch: served at once from the saved copy; the new version downloads for next time
     check('deploy: the launch right after a deploy still runs the saved version', await deployed(), 'old');
     check('deploy: the new version is saved in the background, next to the one in use', (await savedVersion('new'))?.length, 2);
-    check('deploy: HELP says an update is ready', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready', null, { timeout: 5000 }).then(() => true, () => false), true);
-    await page.waitForTimeout(4500); // longer than a message shows for
-    const helpText = () => page.evaluate(() => document.querySelector('#help .text')?.textContent ?? '');
-    check('deploy: "Update ready" shows briefly, like any message', await helpText() === 'Update ready', false);
+    check('deploy: nothing said while it only downloads', await helpText() === 'App updated', false);
     await page.reload(); // the next launch
     check('deploy: and runs on the launch after', await deployed(), 'new');
-    check('deploy: where "Update ready" is gone', await helpText() === 'Update ready', false);
+    check('deploy: which says the app was updated', await says('App updated'), true);
+    await page.waitForTimeout(4500); // longer than a message shows for
+    check('deploy: briefly, like any message', await helpText() === 'App updated', false);
     const before = await savedVersion('new');
     await page.reload();
     await page.waitForTimeout(800);
     check('deploy: a launch with nothing new saves nothing', JSON.stringify(await savedVersion('new')), JSON.stringify(before));
+    check('deploy: ...and says nothing', await helpText() === 'App updated', false);
     version = 'newer';
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); // back from the background, no relaunch
     check('deploy: coming back from the background finds a new version too', (await savedVersion('newer'))?.length, 2);
-    check('deploy: ...and says so', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready', null, { timeout: 5000 }).then(() => true, () => false), true);
     await page.reload(); // the version before last goes
+    check('deploy: a launch on a new version says so even when it came in from the background', await says('App updated'), true);
     check('deploy: only the newest two versions are kept', JSON.stringify((await savedVersion('newer'))?.includes(firstSaved?.[0])), 'false');
     await context.close();
     pages.close();
