@@ -251,7 +251,7 @@ const sample = (overrides = {}) => ({
     await page.reload(); // a launch: served at once from the saved copy; the new version downloads for next time
     check('deploy: the launch right after a deploy still runs the saved version', await deployed(), 'old');
     check('deploy: the new version is saved in the background, next to the one in use', (await savedVersion('new'))?.length, 2);
-    check('deploy: HELP says an update is ready', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready: reopen the app to use it', null, { timeout: 5000 }).then(() => true, () => false), true);
+    check('deploy: HELP says an update is ready', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready', null, { timeout: 5000 }).then(() => true, () => false), true);
     await page.reload(); // the next launch
     check('deploy: and runs on the launch after', await deployed(), 'new');
     const before = await savedVersion('new');

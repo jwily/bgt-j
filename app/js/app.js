@@ -149,6 +149,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
   // A new version has downloaded in the background (sw.js); it runs from the next launch.
   navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data === 'update-ready') toast('Update ready: reopen the app to use it');
+    if (event.data === 'update-ready') toast('Update ready');
   });
 }
