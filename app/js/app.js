@@ -136,12 +136,14 @@ moveOldSnapshots();
 navigator.storage?.persist?.().catch(() => {});
 
 // Fetch today's exchange rate on launch, and when the app comes back from the background.
-// Coming back is also when the date, the period's day count and "days since last backup" may tick over.
+// Coming back is also when the date, the period's day count and "days since last backup" may tick
+// over, and when to look for a new version: iOS mostly resumes the app rather than relaunching it.
 refreshRate();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   refreshRate();
   refresh(); // e.g. "Today" may be a new day
+  navigator.serviceWorker?.controller?.postMessage('check-for-update');
 });
 
 // The service worker lets the app open offline. It only registers on HTTPS or localhost.

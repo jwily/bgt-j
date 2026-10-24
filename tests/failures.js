@@ -263,7 +263,10 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(800);
     check('deploy: a launch with nothing new saves nothing', JSON.stringify(await savedVersion('new')), JSON.stringify(before));
     version = 'newer';
-    await page.reload(); // another deploy: the version before last goes
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); // back from the background, no relaunch
+    check('deploy: coming back from the background finds a new version too', (await savedVersion('newer'))?.length, 2);
+    check('deploy: ...and says so', await page.waitForFunction(() => document.querySelector('#help .text')?.textContent === 'Update ready', null, { timeout: 5000 }).then(() => true, () => false), true);
+    await page.reload(); // the version before last goes
     check('deploy: only the newest two versions are kept', JSON.stringify((await savedVersion('newer'))?.includes(firstSaved?.[0])), 'false');
     await context.close();
     pages.close();
