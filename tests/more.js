@@ -701,6 +701,10 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await startFirstPeriod(page, '100000');
     await openMenu(page, 'Backup');
     check('snapshots: listed on the Backup screen', await page.locator('.snapshot-row').count(), 2);
+    check('snapshots: lines only between rows, the note 10px below the list', await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.snapshot-row')];
+      return [rows.map((r) => getComputedStyle(r).borderTopWidth).join(','), getComputedStyle(rows.at(-1)).borderBottomWidth, getComputedStyle(document.querySelector('.snapshot-list + .hint')).marginTop].join(' ');
+    }), '0px,1px 0px 10px');
     page.once('dialog', (d) => d.accept());
     await page.locator('.snapshot-row', { hasText: 'before deleting' }).locator('.link').tap();
     await page.waitForTimeout(300);

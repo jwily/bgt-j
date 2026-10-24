@@ -677,7 +677,9 @@ body.page-open #view-input { visibility: hidden; }
 
 .stats { display: grid; gap: 8px; }
 .stat { display: flex; justify-content: space-between; align-items: baseline; }
-.stat.diff { padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.18); font-weight: 800; }
+/* The line sits midway to the eye: 4px more above it, since Spent's descenders reach down toward
+   it while Under budget's capitals leave room at the top (measured: 7 and 10.7 to the ink). */
+.stat.diff { margin-top: 4px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.18); font-weight: 800; }
 
 .cat-list, .items { list-style: none; margin: 0; padding: 0; }
 .cat-list > li + li { border-top: 1px solid rgba(255, 255, 255, 0.14); }
@@ -687,7 +689,7 @@ body.page-open #view-input { visibility: hidden; }
   gap: 6px 14px;
   align-items: center;
   width: 100%;
-  padding: 10px 0 10px 4px;
+  padding: 12px 0 8px 4px; /* more on top: the gauge's number already overhangs below, so lines sit midway */
   text-align: left;
 }
 .open > .cat-head .name { color: var(--yellow); }
@@ -826,7 +828,8 @@ body.page-open #view-input { visibility: hidden; }
 .reminder { display: grid; gap: 8px; margin: 4px 0 14px; }
 .reminder-row { display: flex; align-items: baseline; gap: 18px; padding-left: 36px; } /* room for the hand */
 .reminder-row .options { gap: 40px; }
-.snapshot-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+.snapshot-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.snapshot-row + .snapshot-row { border-top: 1px solid rgba(255, 255, 255, 0.14); } /* lines between rows, like the categories' */
 .snapshot-row .grow { flex: 1; min-width: 0; }
 .snapshot-row small { display: block; color: var(--soft); font-size: 0.85rem; }
-.snapshot-row + .hint { margin: 10px 0 0; }
+.snapshot-list + .hint { margin: 10px 0 0; }
