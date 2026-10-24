@@ -11,6 +11,7 @@ let digits = '';
 let pickedDate = null; // a date chosen with the date button; null means "today" (whenever Add is tapped)
 let stripKey = ''; // which categories the strip was last built from
 let recentering = false; // true while the app (not the person) is moving the strip
+let shownCurrency = null; // the currency the row was last centered on (it glides only when that changes)
 // The phone held sideways: the app is hidden then (style.css), and the strip's width changes, which
 // can shift it; that mustn't change the chosen category. Same query as in style.css.
 const SIDEWAYS = matchMedia('(orientation: landscape) and (max-height: 500px)');
@@ -91,7 +92,8 @@ export function renderInput() {
   const amount = Number(digits || '0');
 
   parts.currencies.forEach((span, i) => span.classList.toggle('on', CURRENCY_CODES[i] === currency));
-  centerCurrency(true);
+  centerCurrency(shownCurrency !== null && currency !== shownCurrency); // placed at launch, glides on a switch
+  shownCurrency = currency;
   parts.amount.textContent = formatMoney(amount, currency);
   parts.amount.classList.toggle('empty', !amount);
   parts.sub.replaceChildren(...(currency === HOME ? [] : [
