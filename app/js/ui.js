@@ -54,7 +54,8 @@ export function nudge(node) {
 
 // ---------- gestures ----------
 
-// Press and hold: ⌫ to clear, the category strip for its grid.
+// Press and hold: ⌫ to clear, the category strip for its grid. The press is then used up, so its
+// lift doesn't also tap.
 export function onLongPress(node, handler, ms = 450) {
   let timer = null;
   let start = null;
@@ -66,7 +67,7 @@ export function onLongPress(node, handler, ms = 450) {
     start = { x: event.clientX, y: event.clientY };
     timer = setTimeout(() => {
       timer = null;
-      dropClickOn(node); // the click that follows the hold isn't also a tap
+      usePresses(node);
       handler();
     }, ms);
   });
@@ -78,95 +79,70 @@ export function onLongPress(node, handler, ms = 450) {
   node.addEventListener('contextmenu', (event) => event.preventDefault());
 }
 
-// Watches the clicks that follow a press for `ms`, until `onClick(event)` returns true; then, if it
-// never did, calls `onTimeout`. Returns a function that stops watching early.
-function watchClicks(ms, onClick, onTimeout = () => {}) {
-  let done = false;
-  const finish = () => {
-    done = true;
-    document.removeEventListener('click', listener, { capture: true });
-  };
-  const listener = (event) => { if (onClick(event)) finish(); };
-  document.addEventListener('click', listener, { capture: true });
-  setTimeout(() => {
-    if (done) return;
-    finish();
-    onTimeout();
-  }, ms);
-  return finish;
-}
-const stopClick = (event) => {
-  event.stopPropagation();
-  event.preventDefault();
-};
+// ---------- presses ----------
+// Every tap on the app's own controls is handled here, the same way for touch, pen and mouse: a
+// press activates what it started on (by calling its click()) when it lifts still over it; in the
+// menu, whichever command is under the thumb when it lifts, so a press can slide between them.
+// The browser's own click for a press never counts: iOS decides by itself whether and where to send
+// one (none once the thumb has strayed far, a late one after a gesture, the first command after a
+// slide), so it's cancelled at the source (touchend, which also stops double-tap zoom) and stopped
+// if it comes anyway; clicks from the keyboard or from code carry no click count, and go through.
+// Fields and labels (NATIVE) are left to the browser: iOS needs its own tap to focus them and open
+// their pickers. Each finger is tracked on its own, so overlapping taps (fast typing) each count. A
+// drag the page takes over as a scroll cancels its press.
+const PRESSABLE = 'button, [role=button], .tappable';
+const NATIVE = 'input, textarea, select, label';
+// Gaps between controls: a press landing in one goes to the nearest control within REACH, as iOS
+// does for its own taps.
+const GAPS = '.keypad, .dock, .actions, .details, .grid, .menu-list';
+const REACH = 12; // px
 
-// Ignores the click the browser may send to `button` right after a press we cancelled or a gesture
-// we already handled; only that button's, so another finger's tap is never caught.
-// A new press on the button ends the wait: the browser sends a press's click straight after it
-// lifts, so by then none is coming (iOS sends none for a press that strayed far), and the new
-// press's own click must count.
-function dropClickOn(button) {
-  const stop = watchClicks(400, (event) => {
-    if (!button.contains(event.target)) return false;
-    stopClick(event);
-    return true;
-  });
-  button.addEventListener('pointerdown', stop, { once: true, capture: true });
+const presses = new Map(); // pointerId -> { target, menu, used }
+
+// A press held for a gesture (a long press) is used up: its lift doesn't also tap.
+function usePresses(node) {
+  for (const press of presses.values()) if (node.contains(press.target)) press.used = true;
 }
 
-// Opens the menu command under the thumb when a press lifts (none if it lifted off the commands).
-// The browser's own click goes to the command the press started on, or to nothing: iOS sends none
-// once the thumb has strayed far enough, even if it came back. So wait for it briefly: let it
-// through if it's on the right command, otherwise stop it and click the right one ourselves.
-function openOnRelease(menu, command) {
-  watchClicks(100, (event) => {
-    if (!menu.contains(event.target)) return false;
-    if (!command?.contains(event.target)) {
-      stopClick(event);
-      command?.click();
+// What a press at (x, y) landing on `hit` is for: the control it's on, else in a gap the nearest
+// control within REACH, else what it landed on (a sheet's backdrop, say).
+function pressTarget(hit, x, y) {
+  const own = hit.closest(PRESSABLE);
+  if (own || !hit.matches(GAPS)) return own ?? hit;
+  let nearest = null;
+  let best = REACH;
+  for (const control of hit.querySelectorAll(PRESSABLE)) {
+    const box = control.getBoundingClientRect();
+    const distance = Math.hypot(Math.max(box.left - x, 0, x - box.right), Math.max(box.top - y, 0, y - box.bottom));
+    if (distance <= best) {
+      nearest = control;
+      best = distance;
     }
-    return true;
-  }, () => command?.click());
+  }
+  return nearest ?? hit;
 }
 
-// Things you press (see trackPresses).
-const PRESSABLE = 'button, [role=button], .date-btn, label.wide-btn';
-
-// No double-tap zoom: iOS doesn't always honour the page's touch-action (style.css), and still zooms
-// on a double tap of text or a window's empty space. So a second tap within DOUBLE_TAP of the last
-// has its default (the zoom) cancelled, except on things you press, type in or scroll, which keep
-// their taps: fast typing on the keypad, a quick second tap on a chip. Also except in the gaps
-// between pressable things (GAPS), where iOS gives a tap to the nearest one. Pinch zoom still works.
-const GAPS = '.keypad, .dock, .actions, .details, .grid';
-const DOUBLE_TAP = 350; // ms
-export function blockDoubleTapZoom() {
-  let lastTap = -Infinity;
-  document.addEventListener('touchend', (event) => {
-    if (event.touches?.length) return; // another finger is still down: not a tap
-    const now = performance.now();
-    const quick = now - lastTap < DOUBLE_TAP;
-    lastTap = now;
-    if (quick && !event.target.closest?.(`${PRESSABLE}, input, textarea, select, .strip, .tappable`) && !event.target.matches?.(GAPS)) event.preventDefault();
-  }, { passive: false });
+// As a native tap would: a field being typed in loses focus (closing the keyboard) when a control
+// is pressed.
+function activate(target) {
+  if (!target || target.disabled) return;
+  const field = document.activeElement;
+  if (target.matches(PRESSABLE) && field?.matches('input, textarea') && !target.contains(field)) field.blur();
+  target.click();
 }
-
-// Presses, app-wide: a press that slides off its button before lifting doesn't count (iOS would
-// otherwise still tap it). In the menu, a press can slide between commands: the hand follows the
-// thumb, and lifting opens the command under it. Each finger is tracked on its own, so overlapping
-// taps (the next finger landing before the last lifts, as in fast typing) don't cancel each other.
 
 export function trackPresses() {
-  const presses = new Map(); // pointerId -> { target, menu }
+  const native = (node) => node?.closest?.(NATIVE);
   const commandAt = (event) => document.elementFromPoint(event.clientX, event.clientY)?.closest('.menu-list button') ?? null;
   const pointAt = (command) => {
     for (const button of document.querySelectorAll('.menu-list button')) button.classList.toggle('hover', button === command);
   };
   document.addEventListener('pointerdown', (event) => {
-    const target = event.target.closest?.(PRESSABLE);
-    if (!target || target.disabled) return;
+    if (event.button !== 0 || native(event.target)) return;
+    const target = pressTarget(event.target, event.clientX, event.clientY);
     const menu = target.closest('.menu-list');
-    presses.set(event.pointerId, { target, menu });
-    if (menu) pointAt(target);
+    presses.set(event.pointerId, { target, menu, used: false });
+    if (menu) pointAt(target.closest('.menu-list button'));
   }, { capture: true });
   document.addEventListener('pointermove', (event) => {
     if (presses.get(event.pointerId)?.menu) pointAt(commandAt(event));
@@ -175,17 +151,34 @@ export function trackPresses() {
     const press = presses.get(event.pointerId);
     if (!press) return;
     presses.delete(event.pointerId);
-    const { target, menu } = press;
-    if (menu) {
-      pointAt(null);
-      openOnRelease(menu, commandAt(event));
+    if (press.menu) pointAt(null);
+    if (press.used) return;
+    if (press.menu) {
+      activate(commandAt(event));
       return;
     }
-    if (!target.contains(document.elementFromPoint(event.clientX, event.clientY))) dropClickOn(target);
+    const over = document.elementFromPoint(event.clientX, event.clientY);
+    if (over && pressTarget(over, event.clientX, event.clientY) === press.target) activate(press.target);
   }, { capture: true });
   document.addEventListener('pointercancel', (event) => {
+    if (presses.get(event.pointerId)?.menu) pointAt(null);
     presses.delete(event.pointerId);
-    pointAt(null);
+  }, { capture: true });
+  // The browser's own click for a press: cancelled at the source, and stopped if it comes anyway.
+  // A touch's end goes to the element it started on even if a tap has since redrawn it away, when
+  // it no longer reaches the document, so it's cancelled on that element itself.
+  const cancelling = new WeakSet();
+  const cancelTouch = (event) => { if (event.cancelable) event.preventDefault(); };
+  document.addEventListener('touchstart', (event) => {
+    if (native(event.target) || cancelling.has(event.target)) return;
+    cancelling.add(event.target);
+    event.target.addEventListener('touchend', cancelTouch, { passive: false });
+  }, { capture: true, passive: true });
+  document.addEventListener('click', (event) => {
+    if (event.detail > 0 && !native(event.target)) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
   }, { capture: true });
 }
 
