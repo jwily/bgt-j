@@ -141,8 +141,9 @@ exports.startFirstPeriod = async (page, digits = '100000') => {
 };
 
 // The Categories screen's rows, top to bottom: names and the colors of their dots.
-exports.categoryRows = (page) => page.locator('.cat-row input').evaluateAll((ns) => ns.map((n) => n.value));
-exports.categoryDotColors = (page) => page.locator('.cat-row .dot').evaluateAll((ds) => ds.map((d) => d.style.getPropertyValue('--c')));
+// (Empty slots left empty don't count; their gems are empty sockets.)
+exports.categoryRows = (page) => page.locator('.cat-row input').evaluateAll((ns) => ns.filter((n) => n.value || !n.closest('.slot')).map((n) => n.value));
+exports.categoryDotColors = (page) => page.locator('.cat-row .dot:not(.empty)').evaluateAll((ds) => ds.map((d) => d.style.getPropertyValue('--c')));
 
 // Waits until a message (like "Added ...") has left the HELP window, so it can be tapped again.
 exports.messageCleared = (page) => page.waitForSelector('#help:not(.message)', { timeout: 8000 });

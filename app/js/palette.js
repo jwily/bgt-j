@@ -27,6 +27,9 @@ const PALETTE = [
 ];
 
 // The color for the category in position i (alphabetical, active first), wrapping after 16.
+// One category per color: the Categories screen has this many slots.
+export const CATEGORY_SLOTS = PALETTE.length;
+
 export const paletteColor = (i) => PALETTE[i % PALETTE.length][0];
 
 // The accent that goes with a palette color (the color itself for any other color).

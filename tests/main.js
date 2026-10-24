@@ -256,9 +256,10 @@ const ringWaves = (page) => page.evaluate(() => {
   check('no reorder arrows', await page.locator('.mini', { hasText: '↑' }).count(), 0);
   const saveButton = page.locator('#page .actions .primary', { hasText: 'Save' });
   check('Save is off until something changes', await saveButton.isDisabled(), true);
-  await page.locator('.wide-btn', { hasText: 'Add category' }).tap();
-  check('category added', await page.locator('.cat-row input').count(), 10);
-  check('a new category starts blank and ready to type', await page.evaluate(() => `${document.activeElement.value}|${document.activeElement.placeholder}`), '|New category');
+  // A slot for each of the 16 colors: the nine named, then seven empty ones (no gem yet) to fill in.
+  check('16 slots: 9 named, 7 empty', `${await page.locator('.cat-row').count()} ${await page.locator('.cat-row.slot').count()} ${await page.locator('.cat-row.slot .dot.empty').count()}`, '16 7 7');
+  check('an empty slot says so', await page.locator('.cat-row.slot input').first().getAttribute('placeholder'), 'Empty');
+  await page.locator('.cat-row.slot input').first().tap();
   await page.keyboard.type('Coffee');
   await page.keyboard.press('Enter');
   check('unsaved: new one stays at the bottom', (await categoryRows(page)).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport,Coffee');
@@ -272,7 +273,7 @@ const ringWaves = (page) => page.evaluate(() => {
   check('saved message', await page.locator('#help .text').first().textContent(), 'Categories saved');
   check('Save sorts them right away', (await categoryRows(page)).join(','), 'Bills,Coffee,Dining,Fun,Groceries,Health,Housing,Other,Shopping');
   check('colors in GF order after saving', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
-  check('each gem has its GF\'s accent as its glint', (await page.locator('.cat-row .dot').evaluateAll((ds) => ds.map((d) => d.style.getPropertyValue('--c2')))).join(','),
+  check('each gem has its GF\'s accent as its glint', (await page.locator('.cat-row .dot:not(.empty)').evaluateAll((ds) => ds.map((d) => d.style.getPropertyValue('--c2')))).join(','),
     readPalette().map((c) => c.accent).slice(0, 10).join(','));
   await page.screenshot({ path: `${OUT}/${ENGINE}-4-categories.png`, fullPage: true });
   await page.locator('#nav-btn').tap();

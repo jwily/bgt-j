@@ -71,10 +71,13 @@ Read README.md for what the app does; this file covers how to work on it.
   removals and restores change only the draft; **Save** applies it with `saveCategories()` (one
   undo) and sorts right then. Back with unsaved changes asks first (`confirmLeave`). Colors always
   go by position down the list in GF order (`paletteColor(i)`), in the draft too, so the color
-  order never breaks. Names must be unique ignoring case. New categories start blank (scrolled into
-  view); one still blank when the keyboard closes is dropped, and on Save any blank one is removed
-  (an existing one like ✕: archived if it has expenses).
-  (Tried and replaced: instant saving with an instant re-sort, then re-sorting on leaving.)
+  order never breaks. Names must be unique ignoring case. The screen shows a slot for each of the
+  16 colors (`CATEGORY_SLOTS`, so at most 16 active): named ones, then empty ones (placeholder
+  "Empty", a recessed socket instead of a gem) that become categories when typed in (the user's
+  idea; it replaced an Add category button). On Save any blank one is removed (an existing one like
+  ✕: archived if it has expenses). Restoring an archived one needs a free slot.
+  (Tried and replaced: instant saving with an instant re-sort, then re-sorting on leaving; an Add
+  category button.)
 - Buttons that must stay reachable on a long screen use `.actions.pinned` (fixed above the bar; a
   sticky row bounced with the list).
 - **Saving can fail** (storage full): `save()` fires `budget:save-failed` and app.js alerts. Unreadable

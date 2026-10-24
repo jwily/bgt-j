@@ -76,18 +76,18 @@ const ok = (label, actual, expected) => { if (!check(label, actual, expected)) f
   await page.locator('#nav-btn').tap();
   await page.waitForSelector('#page', { state: 'hidden' });
 
-  // Categories: rename, add, save.
+  // Categories: rename, name an empty slot, save.
   await openMenu(page, 'Categories');
   const rows = page.locator('.cat-row input');
   const fun = (await rows.evaluateAll((ns) => ns.map((n) => n.value))).indexOf('Fun');
   await rows.nth(fun).fill('Travel');
-  await page.locator('.wide-btn', { hasText: 'Add category' }).tap();
+  await page.locator('.cat-row.slot input').first().tap();
   await page.keyboard.type('Coffee');
   await page.keyboard.press('Enter');
   await page.locator('#page .actions .primary').tap();
   await page.waitForTimeout(400);
   const names = (await stored()).categories.filter((c) => !c.archived).map((c) => c.name);
-  ok('categories saved and sorted', JSON.stringify(names.slice().sort((a, b) => a.localeCompare(b))) === JSON.stringify(await rows.evaluateAll((ns) => ns.map((n) => n.value))) && names.includes('Travel') && names.includes('Coffee'), true);
+  ok('categories saved and sorted', JSON.stringify(names.slice().sort((a, b) => a.localeCompare(b))) === JSON.stringify(await page.locator('.cat-row:not(.slot) input').evaluateAll((ns) => ns.map((n) => n.value))) && names.includes('Travel') && names.includes('Coffee'), true);
   await page.locator('#nav-btn').tap();
   await page.waitForSelector('#page', { state: 'hidden' });
 

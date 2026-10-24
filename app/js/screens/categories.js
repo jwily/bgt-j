@@ -1,14 +1,15 @@
-// The Categories screen: renames, additions, removals and restores edit a draft; Save applies it.
+// The Categories screen: a slot for each of the 16 colors, named ones first and then empty ones to
+// fill in. Renames, additions, removals and restores edit a draft; Save applies it.
 
 import { activeCategories, sortedCategories, saveCategories, categoryIsUsed } from '../store.js';
-import { paletteColor } from '../palette.js';
+import { paletteColor, CATEGORY_SLOTS } from '../palette.js';
 import { el } from '../ui.js';
 import { toast } from '../help.js';
 import { colorDot } from '../widgets.js';
-import { fill, panel, note, body, renderPage, currentScreen } from '../pages.js';
+import { fill, panel, note, renderPage, currentScreen } from '../pages.js';
 
 let categoryDraft = null;     // the unsaved edits: [{ key, id, name, archived }]
-let newCategoryKeys = 0;      // row keys for categories added in the draft (they have no id yet)
+let newCategoryKeys = 0;      // keys for categories named in empty slots (they have no id yet)
 
 export function enter() {
   categoryDraft = null;
@@ -21,7 +22,9 @@ const categoriesFromState = () => [...activeCategories(), ...sortedCategories().
   .map(({ id, name, archived }) => ({ key: id, id, name, archived }));
 const sameCategories = (a, b) => JSON.stringify(a.map((c) => [c.id, c.name.trim(), c.archived]))
   === JSON.stringify(b.map((c) => [c.id, c.name.trim(), c.archived]));
-const categoryDraftChanged = () => Boolean(categoryDraft) && !sameCategories(categoryDraft, categoriesFromState());
+// A category in the draft, or a slot typed into and cleared again (which is just an empty slot).
+const holdsCategory = (c) => Boolean(c.id || c.name.trim());
+const categoryDraftChanged = () => Boolean(categoryDraft) && !sameCategories(categoryDraft.filter(holdsCategory), categoriesFromState());
 
 // Back from the Categories screen with unsaved changes asks first. Returns whether to leave.
 export function confirmLeave() {
@@ -48,9 +51,10 @@ function categoryDraftProblem() {
 export function render() {
   if (!categoryDraftChanged()) categoryDraft = categoriesFromState();
   const draft = categoryDraft;
+  draft.splice(0, draft.length, ...draft.filter(holdsCategory));
   const active = draft.filter((c) => !c.archived);
   const archived = draft.filter((c) => c.archived);
-  const dot = (category) => colorDot(paletteColor([...active, ...archived].indexOf(category)));
+  const full = active.length >= CATEGORY_SLOTS;
   const editDraft = (change) => {
     const before = draft.map((c) => ({ ...c }));
     const message = change();
@@ -79,31 +83,40 @@ export function render() {
     toast('Categories saved', undo);
   });
 
-  // Diamonds go by position down the screen; after a row is dropped in place, repaint them.
-  const repaintDots = () => body.querySelectorAll('.cat-row .dot').forEach((old, i) => old.replaceWith(colorDot(paletteColor(i))));
-
-  const list = panel('Categories', ...active.map((category) => {
-    const name = el('input', { type: 'text', value: category.name, placeholder: 'New category', enterKeyHint: 'done', 'aria-label': 'Category name' });
-    name.dataset.key = category.key;
+  // Gems go by position down the screen, counting only rows that hold a category; an empty slot
+  // has an empty socket until it's named. Repainted as names come and go.
+  const rows = []; // { row, holds }, top to bottom
+  const repaintDots = () => {
+    let i = 0;
+    for (const { row, holds } of rows) row.querySelector('.dot').replaceWith(holds() ? colorDot(paletteColor(i++)) : el('span', { className: 'dot empty' }));
+  };
+  const edited = () => {
+    repaintDots();
+    saveButton.disabled = !categoryDraftChanged();
+  };
+  const addRow = (row, holds) => {
+    row.prepend(el('span', { className: 'dot' }));
+    rows.push({ row, holds });
+    return row;
+  };
+  const nameField = (value, label) => {
+    const name = el('input', { type: 'text', value, placeholder: 'Empty', enterKeyHint: 'done', 'aria-label': label });
     name.addEventListener('keydown', (event) => { if (event.key === 'Enter') name.blur(); });
+    return name;
+  };
+  // Spaces at either end go when you finish typing the name (and are never saved).
+  const trimOnChange = (name, entry) => name.addEventListener('change', () => {
+    name.value = name.value.trim();
+    if (entry()) entry().name = name.value;
+  });
+
+  const named = active.map((category) => {
+    const name = nameField(category.name, 'Category name');
     name.addEventListener('input', () => {
       category.name = name.value;
-      saveButton.disabled = !categoryDraftChanged();
+      edited();
     });
-    // Spaces at either end go when you finish typing the name (and are never saved).
-    name.addEventListener('change', () => {
-      name.value = name.value.trim();
-      category.name = name.value;
-    });
-    // A new category still blank when the keyboard closes is dropped. Just its row goes, not the
-    // whole screen redrawn, so a tap on Save that closed the keyboard still lands on Save.
-    name.addEventListener('blur', () => {
-      if (category.id || name.value.trim()) return;
-      draft.splice(draft.indexOf(category), 1);
-      name.closest('.cat-row').remove();
-      repaintDots();
-      saveButton.disabled = !categoryDraftChanged();
-    });
+    trimOnChange(name, () => category);
 
     const remove = el('button', { className: 'mini', textContent: '✕', 'aria-label': `Remove ${category.name}` });
     remove.addEventListener('click', () => {
@@ -122,34 +135,39 @@ export function render() {
       });
     });
 
-    return el('div', { className: 'cat-row' }, dot(category), name, remove);
-  }));
+    return addRow(el('div', { className: 'cat-row' }, name, remove), () => holdsCategory(category));
+  });
 
-  const addButton = el('button', { className: 'wide-btn', textContent: 'Add category' });
-  addButton.addEventListener('click', () => {
-    const key = `new-${++newCategoryKeys}`;
-    // New ones start blank and go after the other active categories, until Save sorts them.
-    draft.splice(draft.filter((c) => !c.archived).length, 0, { key, id: null, name: '', archived: false });
-    renderPage();
-    // Bring the new row into view (a long list puts it below the buttons pinned at the bottom), then
-    // type into it. Scrolling it ourselves rather than leaving it to focus(), which iOS doesn't do
-    // reliably inside a scrolling screen.
-    const field = body.querySelector(`.cat-row input[data-key="${key}"]`);
-    field?.closest('.cat-row').scrollIntoView({ block: 'center' });
-    field?.focus({ preventScroll: true });
+  // Typing in an empty slot adds a category to the draft (after the others, until Save sorts them).
+  const empty = Array.from({ length: Math.max(0, CATEGORY_SLOTS - active.length) }, () => {
+    let category = null;
+    const name = nameField('', 'New category name');
+    name.addEventListener('input', () => {
+      if (!category) {
+        category = { key: `new-${++newCategoryKeys}`, id: null, name: '', archived: false };
+        draft.splice(draft.filter((c) => !c.archived).length, 0, category);
+      }
+      category.name = name.value;
+      edited();
+    });
+    trimOnChange(name, () => category);
+    const spacer = el('span', { className: 'mini', 'aria-hidden': 'true' }); // lines the field up with the named rows'
+    return addRow(el('div', { className: 'cat-row slot' }, name, spacer), () => Boolean(category?.name.trim()));
   });
 
   const archivedPanel = archived.length > 0 && panel('Archived',
     ...archived.map((category) => {
-      const restore = el('button', { className: 'link', textContent: 'Restore' });
+      const restore = el('button', { className: 'link', textContent: 'Restore', disabled: full });
       restore.addEventListener('click', () => editDraft(() => {
         draft.splice(draft.indexOf(category), 1);
         draft.splice(draft.filter((c) => !c.archived).length, 0, { ...category, archived: false });
       }));
-      return el('div', { className: 'cat-row' }, dot(category), el('span', { className: 'grow', textContent: category.name }), restore);
-    }));
+      return addRow(el('div', { className: 'cat-row' }, el('span', { className: 'grow', textContent: category.name }), restore), () => true);
+    }),
+    full && el('p', { className: 'hint', textContent: `All ${CATEGORY_SLOTS} slots are in use: remove one to restore a category.` }));
+  repaintDots();
 
-  fill('Categories', 'Rename, add or remove, then save.', list, archivedPanel,
-    note('Saving sorts categories alphabetically, and colors follow that order. Removing a category that has expenses archives it, so past summaries stay intact.'),
-    el('div', { className: 'actions pinned' }, addButton, saveButton));
+  fill('Categories', 'Rename, add or remove, then save.', panel('Categories', ...named, ...empty), archivedPanel,
+    note(`One category for each of the ${CATEGORY_SLOTS} colors. Saving sorts them alphabetically, and colors follow that order. Removing a category that has expenses archives it, so past summaries stay intact.`),
+    el('div', { className: 'actions pinned' }, saveButton));
 }
