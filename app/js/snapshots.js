@@ -87,8 +87,7 @@ export function takeSnapshot(reason) {
   return keep([{ at: nextAt(), reason, data: JSON.stringify(state) }]);
 }
 
-// Stores snapshots ({ at, reason, data }), then drops all but LIMIT: the latest day's and the
-// newest others.
+// Stores snapshots ({ at, reason, data }), then trims to LIMIT.
 async function keep(snapshots) {
   try {
     await run('readwrite', (listed, copies) => {
@@ -97,6 +96,17 @@ async function keep(snapshots) {
         copies.put({ at, data });
       }
     }, [STORE, DATA]);
+    await trim();
+  } catch {
+    // No snapshot this time.
+  }
+}
+
+// Drops all but LIMIT: the latest day's and the newest others. Also run when no new snapshot is
+// taken (see takeDailySnapshot), so a lower limit, or snapshots left by an older version, take
+// effect straight away rather than at the next snapshot.
+async function trim() {
+  try {
     const all = await readSnapshots();
     const daily = all.find((s) => s.reason === DAILY);
     const kept = new Set([daily, ...all.filter((s) => s !== daily).slice(0, daily ? LIMIT - 1 : LIMIT)]);
@@ -110,14 +120,17 @@ async function keep(snapshots) {
       }, [STORE, DATA]);
     }
   } catch {
-    // No snapshot this time.
+    // Try again next time.
   }
 }
 
 export async function takeDailySnapshot() {
   const data = JSON.stringify(state); // as it is right now, before today's changes
   const last = (await readSnapshots()).find((s) => s.reason === DAILY);
-  if (last && localDay(last.at) === todayISO()) return;
+  if (last && localDay(last.at) === todayISO()) {
+    await trim();
+    return;
+  }
   await keep([{ at: nextAt(), reason: DAILY, data }]);
 }
 

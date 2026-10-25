@@ -933,6 +933,32 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('an old-style snapshot, after the upgrade: going back to it works', (await page.locator('#help .text').first().textContent()).startsWith('Back to'), true);
   });
 
+  await scenario('more snapshots than kept, from an older version', async (open) => {
+    // Seven, as the previous version kept, today's daily one among them: the first launch keeps
+    // three straight away, today's and the two newest others, without waiting for a new one.
+    const context = await open();
+    await context.addInitScript(() => {
+      if (sessionStorage.getItem('seeded')) return;
+      sessionStorage.setItem('seeded', '1');
+      const data = { version: 3, categories: [{ id: 'c1', name: 'Food', color: null, archived: false }], periods: [{ id: 'p1', budgetCents: 5000, start: '2026-01-01', end: null }], expenses: [], rates: { perUsd: {}, date: null, checkedAt: 0 }, input: { currency: 'USD', categoryId: 'c1' }, lastBackupAt: null, settings: { backupReminderDays: 30 } };
+      localStorage.setItem('budget-tracker', JSON.stringify(data));
+      const now = Date.now(), text = JSON.stringify(data);
+      const request = indexedDB.open('budget-tracker', 1);
+      request.onupgradeneeded = () => {
+        const store = request.result.createObjectStore('snapshots', { keyPath: 'at' });
+        store.put({ at: now - 60000, reason: 'start of the day', data: text });
+        for (let i = 1; i <= 6; i++) store.put({ at: now - 60000 + i * 1000, reason: `before deleting Period ${i}`, data: text });
+      };
+      request.onsuccess = () => request.result.close();
+    });
+    await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+    const page = await newPage(context);
+    await page.goto(URL);
+    await appReady(page);
+    await page.waitForTimeout(500);
+    check('trimmed to three on launch: the newest two, and today\'s', (await snapshotReasons(page)).join(' | '), 'before deleting Period 6 | before deleting Period 5 | start of the day');
+  });
+
   await scenario('daily snapshot on resume', async (open) => {
     // iOS mostly resumes the app rather than relaunching it: coming back on a new day takes that
     // day's snapshot too.
