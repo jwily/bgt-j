@@ -7,6 +7,7 @@ const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, a
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
 // FF8's six party members, one of whom wanders the main screen.
+const localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const PARTY = ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'];
 
 // The summary's spending ring: each wave's color and start and end angles (clockwise from 12
@@ -29,7 +30,7 @@ const ringWaves = (page) => page.evaluate(() => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await mockRates(page, '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}');
+  await mockRates(page, JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates: { MXN: 20 } })); // today's, so no "rate from" date
   await page.goto('http://localhost:8765/');
 
   const sheetKey = (k) => page.locator('#page .key', { hasText: new RegExp(`^${k === '⌫' ? '⌫' : k}$`) }).first().tap();
@@ -181,6 +182,7 @@ const ringWaves = (page) => page.evaluate(() => {
   })), true);
   check('diff', await page.locator('.stat.diff .value').textContent(), '+$1,476.68');
   await page.locator('.cat-head', { hasText: 'Transport' }).tap();
+  await page.evaluate(() => window.dispatchEvent(new Event('budget:change'))); // a redraw (as when a save elsewhere lands)
   check('ring: a redraw doesn\'t replay the cascade', await page.evaluate(() => [...document.querySelectorAll('.ring-chart .wave')].every((w) => w.getAnimations().length === 0)), true);
   check('itemized MXN line', await page.locator('.item .orig').textContent(), 'from MX$250');
   check('itemized note', await page.locator('.item .what').first().textContent(), 'Uber');

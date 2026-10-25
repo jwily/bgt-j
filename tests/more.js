@@ -993,6 +993,19 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('...without redrawing the rest of the screen', await page.evaluate(() => window.layoutReads), 0);
   });
 
+  await scenario('summary: opening a category redraws only its row', async (open) => {
+    const { page, type } = await launch(open);
+    await type('500');
+    await page.locator('.add-btn').tap();
+    await openSummary(page);
+    await page.evaluate(() => { window.ring = document.querySelector('.ring-chart'); });
+    await page.locator('.cat-head').first().tap();
+    check('opened: its expenses show', `${await page.locator('.cat-list li.open .item').count()} ${await page.locator('.cat-head').first().getAttribute('aria-expanded')}`, '1 true');
+    check('...and the ring wasn\'t rebuilt (it would replay)', await page.evaluate(() => window.ring.isConnected), true);
+    await page.locator('.cat-head').first().tap();
+    check('closed again', `${await page.locator('.cat-list .item').count()} ${await page.locator('.cat-head').first().getAttribute('aria-expanded')}`, '0 false');
+  });
+
   await scenario('undo after deleting the only period', async (open) => {
     const { page } = await launch(open);
     await openMenu(page, 'Current Period');

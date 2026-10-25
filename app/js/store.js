@@ -174,6 +174,7 @@ function write() {
 // than at every change while storage stays full); the screen still redraws so it shows what you did.
 let failing = false;
 export function save() {
+  byPeriod = null;
   tidy(state);
   const saved = write();
   if (!saved && !failing) window.dispatchEvent(new Event('budget:save-failed'));
@@ -194,9 +195,26 @@ export const periodNumber = (period) => state.periods.indexOf(period) + 1;
 export const getCategory = (id) => state.categories.find((c) => c.id === id);
 export const sortedCategories = () => [...state.categories].sort(byName);
 export const activeCategories = () => sortedCategories().filter((c) => !c.archived);
-export const periodExpenses = (periodId) => state.expenses.filter((e) => e.periodId === periodId);
 export const totalUsd = (expenses) => expenses.reduce((sum, e) => sum + e.usdCents, 0);
-export const spentIn = (periodId) => totalUsd(periodExpenses(periodId));
+
+// Expenses grouped by period, with each period's total: worked out once after each change (every
+// change goes through save()) rather than by scanning every expense at each use (the menu, the
+// status row, Past Periods' every row).
+let byPeriod = null; // Map: period id -> { expenses, spent }
+function grouped() {
+  if (!byPeriod) {
+    byPeriod = new Map();
+    for (const expense of state.expenses) {
+      const group = byPeriod.get(expense.periodId) ?? byPeriod.set(expense.periodId, { expenses: [], spent: 0 }).get(expense.periodId);
+      group.expenses.push(expense);
+      group.spent += expense.usdCents;
+    }
+  }
+  return byPeriod;
+}
+// (Shared: don't change the list returned.)
+export const periodExpenses = (periodId) => grouped().get(periodId)?.expenses ?? [];
+export const spentIn = (periodId) => grouped().get(periodId)?.spent ?? 0;
 
 // ---------- periods ----------
 
