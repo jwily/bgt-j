@@ -15,6 +15,7 @@ Read README.md for what the app does; this file covers how to work on it.
   engine writes to its own `tests/output/<engine>/` so runs can overlap. First time: `npm install && npm run setup`.
 - Four passes: `main` (core flow), `more` (edge cases), `layout` (spacing/fit on four iPhones),
   `failures` (storage full/corrupt, rate server down, bad backups, offline, overnight, big data).
+- `ONLY=<part of a scenario name> node run.js <engine> <pass>` runs just the matching scenarios.
 - Shared test helpers live in `tests/helpers.js` (`check`, `openMenu`, `appReady`, `mockRates`,
   `startFirstPeriod`, `messageCleared`, `asInstalledApp`, ...). Prefer waiting for a condition over
   fixed `waitForTimeout` sleeps.
@@ -54,6 +55,8 @@ Read README.md for what the app does; this file covers how to work on it.
   Expenses convert at the downloaded rate less `RATE_MARGIN` (2.5%, the user's choice, so card
   markups never make spending read low); the saved rates stay the source's own.
 - **Undo:** store changes that can be undone return an undo function; pass it to `toast(message, undo)`.
+  A message about the screen showing (an unsaved draft's edit) passes `{ screen: true }`: leaving the
+  screen ends it and its Undo. Saved changes' messages keep their Undo across screens.
 - **Screens:** one module each in `js/screens/` (summary, periods, categories, backup, budget), each
   exporting `render(params)`, which calls `fill(title, helpLine, ...windows)` (`panel(label, ...)` makes
   a labelled window), and optionally `enter(params)`, which resets its own state when it's opened.
@@ -84,7 +87,8 @@ Read README.md for what the app does; this file covers how to work on it.
   sticky row bounced with the list).
 - **Saving can fail** (storage full): `save()` fires `budget:save-failed` and app.js alerts. Unreadable
   saved data is kept under `budget-tracker-unreadable` and app.js recovers from the newest snapshot.
-- **Snapshots** (`snapshots.js`, in IndexedDB, async): taken once a day and before anything drastic; call
+- **Snapshots** (`snapshots.js`, in IndexedDB, async): taken once a day and before anything drastic;
+  three kept (the latest day's plus the two newest others; the user chose three); call
   `takeSnapshot(reason)` before any new destructive action (it captures the data immediately). Never in
   backups. Older versions kept them in localStorage; `moveOldSnapshots()` moves them at startup.
 - **Settings** live in `state.settings` (currently `backupReminderDays`, default 30); data is version 3.

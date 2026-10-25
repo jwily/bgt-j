@@ -4,7 +4,7 @@
 
 import { currentPeriod, periodNumber } from './store.js';
 import { $, el } from './ui.js';
-import { setHelp } from './help.js';
+import { setHelp, leftScreen } from './help.js';
 import { formatDate } from './dates.js';
 import * as summary from './screens/summary.js';
 import * as periods from './screens/periods.js';
@@ -51,6 +51,7 @@ export const canGoBack = () => !(stack.at(-1)?.name === 'budget' && !currentPeri
 
 // push: keep the current screen underneath (Back returns to it).
 export function showPage(name, params = {}, { push = false } = {}) {
+  leftScreen();
   stack = push ? [...stack, { name, params }] : [{ name, params }];
   SCREENS[name].enter?.(params);
   page.hidden = false;
@@ -60,6 +61,7 @@ export function showPage(name, params = {}, { push = false } = {}) {
 }
 
 export function goBack() {
+  leftScreen();
   stack.pop();
   if (stack.length) arrive();
   else page.hidden = true;
@@ -75,6 +77,7 @@ export function closePages() {
 // The same during a redraw, which then carries on (a screen whose subject has gone, as after a
 // restore).
 export function hidePages() {
+  leftScreen();
   stack = [];
   page.hidden = true;
 }

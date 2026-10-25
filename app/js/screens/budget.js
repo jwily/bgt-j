@@ -1,7 +1,7 @@
 // The budget screen: first budget, New Period, and edit budget.
 
 import { currentPeriod, startPeriod, setBudget } from '../store.js';
-import { formatUsd } from '../money.js';
+import { CURRENCIES, HOME, formatUsd } from '../money.js';
 import { el } from '../ui.js';
 import { toast } from '../help.js';
 import { keypad } from '../widgets.js';
@@ -59,7 +59,7 @@ export function render({ mode }) {
   const pad = keypad(() => budgetDigits, (next) => {
     budgetDigits = next;
     showDigits();
-  }, () => 8);
+  }, () => CURRENCIES[HOME].maxDigits); // budgets are in dollars
 
   confirmButton.addEventListener('click', () => {
     const cents = Number(budgetDigits || '0');

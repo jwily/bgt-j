@@ -20,11 +20,14 @@ const STRIDE_FRAME = 0, STAND = 1, ARM_UP = 2;
 // [frame, seconds].
 const CHEER = [...Array(3).fill([[STAND, 0.37], [ARM_UP, 0.37]]).flat(), [STAND, 0.8]];
 const STEP = 0.24; // seconds each walk frame is held
-const PX = 4 / 3; // one sprite pixel: 4 screen pixels on a 3x iPhone (keep in sync with style.css)
+// One sprite pixel on screen (style.css's --px: 4 screen pixels on a 3x iPhone), measured from the
+// member as drawn, so it's set in one place: a cell is 20 sprite pixels wide.
+const CELL = 20;
+let PX = 0;
 // Ground speed to match the feet, so they don't slide: in the stride frame the feet are about 6
 // sprite pixels apart, and a step (stride, then feet together) takes two frames.
 const STRIDE = 6; // sprite pixels
-const SPEED = (STRIDE * PX) / (2 * STEP); // px a second
+let SPEED = 0; // px a second (set once PX is known)
 
 let member, area;
 let x = 0, face = 1, from = 0, target = 0, walkTime = 0, mode = 'idle', until = 0, step = 0;
@@ -36,6 +39,13 @@ export function initParty(container) {
   area = container;
   member = el('span', { className: 'party-member', 'aria-hidden': 'true' });
   area.append(member);
+  // Measured once style.css has surely applied (at startup it may not have yet, and an unstyled
+  // member measures 0, which would leave it, and a new period's party, walking on the spot).
+  window.addEventListener('load', () => {
+    PX = member.getBoundingClientRect().width / CELL;
+    SPEED = (STRIDE * PX) / (2 * STEP);
+    EXIT_SPEED = (STRIDE * PX) / (2 * EXIT_STEP);
+  }, { once: true });
   // Runs only on the main screen with the app in view: another screen opening (body.page-open)
   // or the app going to the background stops it; coming back resumes it.
   new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
@@ -133,6 +143,10 @@ function rest(now) {
 // settled onto the standing frame instead of stopping mid-stride. Near an edge, as many whole steps
 // as fit, or it turns back.
 function setOff(now) {
+  if (!SPEED) {
+    rest(now); // not measured yet (still starting up): stand a while longer
+    return;
+  }
   const span = room();
   const pace = SPEED * 2 * STEP; // ground covered by one step
   const fits = (dir) => Math.floor((dir > 0 ? span - x : x) / pace + 1e-6);
@@ -187,10 +201,10 @@ const CHEER_LENGTH = CHEER.reduce((sum, [, t]) => sum + t, 0);
 // Leaving, they walk off a bit quicker than a stroll (the user's choice): quicker steps, the ground
 // speed matched to them as ever so the feet don't slide.
 const EXIT_STEP = 0.15;
-const EXIT_SPEED = (STRIDE * PX) / (2 * EXIT_STEP);
+let EXIT_SPEED = 0;
 
 export function assemble() {
-  if (!member) return;
+  if (!member || !EXIT_SPEED) return;
   endScene();
   const order = [...PARTY].sort(() => Math.random() - 0.5);
   const stays = 2 + Math.floor(Math.random() * 2); // the third or fourth

@@ -87,10 +87,13 @@ export function setHelp(text, { onTap = null, status = null } = {}) {
   if (!toastTimer && !unchanged) showHelpLine();
 }
 
+let toastScreen = false; // whether the message showing is about the screen it was shown on
+
 // The message showing ends: the help line comes back, and Undo goes.
 function endToast() {
   clearTimeout(toastTimer);
   toastTimer = null;
+  toastScreen = false;
   const undoButton = $('undo-btn');
   undoButton.hidden = true;
   undoButton.onclick = null;
@@ -101,8 +104,9 @@ function endToast() {
 document.addEventListener('visibilitychange', () => { if (document.hidden && toastTimer) endToast(); });
 
 // Pass an undo function (as returned by the store's changes) to show an Undo button. The message
-// shows in the HELP window; Undo appears at the bottom, beside the Menu/Back button.
-export function toast(message, undo) {
+// shows in the HELP window; Undo appears at the bottom, beside the Menu/Back button. screen: the
+// message is about the screen showing (an unsaved draft's edit, say), so leaving it ends the message.
+export function toast(message, undo, { screen = false } = {}) {
   const node = $('help');
   const undoButton = $('undo-btn');
   undoButton.hidden = !undo;
@@ -117,4 +121,11 @@ export function toast(message, undo) {
   const pass = showHelpText(message);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(endToast, Math.max(4000, pass + 500)); // long enough to read a long message once
+  toastScreen = screen;
+}
+
+// Leaving a screen ends a message about it, and its Undo: "Fun removed" from the Categories screen's
+// draft means nothing once you've left without saving it.
+export function leftScreen() {
+  if (toastScreen) endToast();
 }

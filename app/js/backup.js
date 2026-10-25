@@ -7,7 +7,6 @@ import { takeSnapshot } from './snapshots.js';
 import { el } from './ui.js';
 import { HOME, plainAmount } from './money.js';
 
-export const REMINDER_CHOICES = [7, 14, 30, 60]; // days; the user picks one on the Backup screen
 
 // Returns true if the file was saved (or at least not cancelled).
 export async function exportBackup() {
@@ -34,10 +33,12 @@ export async function readBackup(file) {
   return isValid(data) ? { data } : { error: "That file isn't a budget backup." };
 }
 
-// The restored data is, by definition, backed up, so the reminder clock restarts.
+// The restored data is, by definition, backed up, so the reminder clock restarts. Resolves once the
+// snapshot of what it replaced is stored.
 export function restoreBackup(data) {
-  takeSnapshot('before restoring a backup');
+  const taken = takeSnapshot('before restoring a backup');
   replaceState({ ...data, lastBackupAt: Date.now() });
+  return taken;
 }
 
 // { short, label, stale }: short is "today" / "3 days ago" / "never" for tight spaces,

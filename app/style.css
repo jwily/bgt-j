@@ -80,8 +80,8 @@ body {
 
 /* Sideways: the app is made for holding the phone upright, and iOS doesn't let a home-screen app
    lock that, so a sideways phone (landscape and short: not a tablet or desktop) shows only this.
-   Everything else stays laid out underneath, just hidden, so nothing is lost. Keep the query in
-   sync with SIDEWAYS in input.js. */
+   Everything else stays laid out underneath, just hidden, so nothing is lost. input.js reads this
+   rule's query (SIDEWAYS), so it's written only here. */
 .turn-upright { display: none; }
 @media (orientation: landscape) and (max-height: 500px) {
   body > :not(.turn-upright) { visibility: hidden; }
@@ -409,7 +409,7 @@ input, select { font: inherit; font-size: 16px; color: var(--text); text-shadow:
 .details { position: relative; display: flex; gap: var(--gap); }
 /* The party member wandering along the top of Note and Date (party.js): a cell of
    sprites/party.png (rows: characters, --row; columns: frames, --frame), each sprite pixel drawn as
-   --px (4 screen pixels on a 3x iPhone, so the pixel art stays crisp; keep in sync with party.js),
+   --px (4 screen pixels on a 3x iPhone, so the pixel art stays crisp; party.js measures it),
    feet just on the windows' top edge. Taps go through it. */
 .party-member {
   --px: calc(4px / 3);

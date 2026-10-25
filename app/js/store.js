@@ -20,7 +20,14 @@ import { paletteColor } from './palette.js';
 
 const STORAGE_KEY = 'budget-tracker';
 const UNREADABLE_KEY = 'budget-tracker-unreadable'; // saved data that couldn't be read, kept just in case
+// The main screen's last choices (currency, category), saved on their own: they change at every
+// swipe of the category strip, and rewriting the whole history for each would be wasteful.
+const INPUT_KEY = 'budget-tracker-input';
 export const VERSION = 3;
+// Settings: the backup reminder's choices (days, offered on the Backup screen) and the defaults.
+// (Up here: load() below uses them.)
+export const REMINDER_CHOICES = [7, 14, 30, 60];
+const DEFAULT_SETTINGS = { backupReminderDays: 30 };
 const RATES_URL = `https://api.frankfurter.dev/v1/latest?base=${HOME}&symbols=${FOREIGN_CODES.join(',')}`;
 
 const DEFAULT_CATEGORIES = ['Groceries', 'Dining', 'Transport', 'Housing', 'Bills', 'Shopping', 'Health', 'Fun', 'Other'];
@@ -48,7 +55,7 @@ function freshState() {
     rates: { perUsd: {}, date: null, checkedAt: 0 },
     input: { currency: HOME, categoryId: categories[0].id },
     lastBackupAt: null,
-    settings: { backupReminderDays: 30 },
+    settings: { ...DEFAULT_SETTINGS },
   };
 }
 
@@ -70,7 +77,7 @@ export function migrate(data) {
   }
   // Version 2 had no settings.
   if (data?.version === 2) {
-    data.settings = { backupReminderDays: 30 };
+    data.settings = { ...DEFAULT_SETTINGS };
     data.version = 3;
   }
   return data;
@@ -122,14 +129,22 @@ function load() {
     }
   }
   loaded ??= freshState();
-  tidy(loaded);
+  try {
+    const input = JSON.parse(localStorage.getItem(INPUT_KEY));
+    if (input && typeof input === 'object') Object.assign(loaded.input, input); // newer than the copy in the data
+  } catch {
+    // Unreadable: the data's own copy of the choices will do.
+  }
+  tidy(loaded); // also puts right a choice that no longer exists
   return loaded;
 }
 
-// Run on every load and save: category names without stray spaces at either end, a valid chosen
-// category and currency on the main screen, and colors in alphabetical order.
+// Run on every load and save: category names without stray spaces at either end, a reminder setting
+// the Backup screen offers, a valid chosen category and currency on the main screen, and colors in
+// alphabetical order.
 function tidy(data) {
   for (const category of data.categories) category.name = category.name.trim();
+  if (!REMINDER_CHOICES.includes(data.settings.backupReminderDays)) data.settings.backupReminderDays = DEFAULT_SETTINGS.backupReminderDays; // e.g. from a hand-edited backup
   keepInputCategoryActive(data);
   assignColors(data);
 }
@@ -165,6 +180,7 @@ function write() {
 // than at every change while storage stays full); the screen still redraws so it shows what you did.
 let failing = false;
 export function save() {
+  byPeriod = null;
   tidy(state);
   const saved = write();
   if (!saved && !failing) window.dispatchEvent(new Event('budget:save-failed'));
@@ -185,9 +201,26 @@ export const periodNumber = (period) => state.periods.indexOf(period) + 1;
 export const getCategory = (id) => state.categories.find((c) => c.id === id);
 export const sortedCategories = () => [...state.categories].sort(byName);
 export const activeCategories = () => sortedCategories().filter((c) => !c.archived);
-export const periodExpenses = (periodId) => state.expenses.filter((e) => e.periodId === periodId);
 export const totalUsd = (expenses) => expenses.reduce((sum, e) => sum + e.usdCents, 0);
-export const spentIn = (periodId) => totalUsd(periodExpenses(periodId));
+
+// Expenses grouped by period, with each period's total: worked out once after each change (every
+// change goes through save()) rather than by scanning every expense at each use (the menu, the
+// status row, Past Periods' every row).
+let byPeriod = null; // Map: period id -> { expenses, spent }
+function grouped() {
+  if (!byPeriod) {
+    byPeriod = new Map();
+    for (const expense of state.expenses) {
+      const group = byPeriod.get(expense.periodId) ?? byPeriod.set(expense.periodId, { expenses: [], spent: 0 }).get(expense.periodId);
+      group.expenses.push(expense);
+      group.spent += expense.usdCents;
+    }
+  }
+  return byPeriod;
+}
+// (Shared: don't change the list returned.)
+export const periodExpenses = (periodId) => grouped().get(periodId)?.expenses ?? [];
+export const spentIn = (periodId) => grouped().get(periodId)?.spent ?? 0;
 
 // ---------- periods ----------
 
@@ -274,9 +307,16 @@ export function saveCategories(draft) {
   };
 }
 
+// The main screen's choices: saved on their own (INPUT_KEY), and only the main screen redraws
+// ("budget:input"). The full data keeps a copy, updated at its next save.
 export function setInputPrefs(prefs) {
   Object.assign(state.input, prefs);
-  save();
+  try {
+    localStorage.setItem(INPUT_KEY, JSON.stringify(state.input));
+  } catch {
+    // Storage full: the choice still applies now; the next full save warns about the space.
+  }
+  window.dispatchEvent(new Event('budget:input'));
 }
 
 export function setBackupReminder(days) {

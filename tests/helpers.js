@@ -45,6 +45,7 @@ exports.appReady = (page) => page.waitForFunction(() => document.getElementById(
 // makes it a phone-sized browser context, closed afterwards. A crash fails just that scenario (a
 // FAIL line naming it) and the rest still run, so one problem can't hide the checks after it.
 exports.scenarios = (browser) => async (name, run) => {
+  if (process.env.ONLY && !name.includes(process.env.ONLY)) return; // ONLY=<part of a name>: run just those
   const { devices } = require('playwright');
   const contexts = [];
   const open = async (options = {}) => {
@@ -108,8 +109,8 @@ exports.readPalette = () => {
 
 // The app's safety snapshots (in IndexedDB), newest first: their reasons.
 exports.snapshotReasons = (page) => page.evaluate(() => new Promise((resolve) => {
-  const open = indexedDB.open('budget-tracker', 1);
-  open.onupgradeneeded = () => open.result.createObjectStore('snapshots', { keyPath: 'at' });
+  const open = indexedDB.open('budget-tracker'); // whatever version the app has made it
+  open.onupgradeneeded = () => open.result.createObjectStore('snapshots', { keyPath: 'at' }); // not made yet: an empty list
   open.onsuccess = () => {
     const request = open.result.transaction('snapshots').objectStore('snapshots').getAll();
     request.onsuccess = () => resolve(request.result.sort((a, b) => b.at - a.at).map((s) => s.reason));

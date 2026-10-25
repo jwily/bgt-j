@@ -1,12 +1,31 @@
 // The Backup screen: export a backup or CSV, restore one, the reminder, and safety snapshots.
 
-import { state, setBackupReminder } from '../store.js';
+import { state, setBackupReminder, REMINDER_CHOICES } from '../store.js';
 import { el } from '../ui.js';
 import { toast } from '../help.js';
 import { formatMoment } from '../dates.js';
-import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, REMINDER_CHOICES } from '../backup.js';
+import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus } from '../backup.js';
 import { readSnapshots, restoreSnapshot } from '../snapshots.js';
-import { fill, panel, note } from '../pages.js';
+import { fill, panel, note, renderPage, currentScreen } from '../pages.js';
+
+// The snapshots listed: read when the screen opens and after going back to one or restoring a backup
+// (each takes a new one), not at every redraw.
+let snapshots = [];
+let storageNote = ''; // whether the browser protects the app's storage, asked once per visit
+export function enter() {
+  snapshots = [];
+  listSnapshots();
+  navigator.storage?.persisted?.().then((protectedStorage) => {
+    storageNote = protectedStorage
+      ? 'Storage: protected from automatic cleanup.'
+      : 'Storage: standard. iOS may clear it if the phone runs very low on space.';
+    if (currentScreen() === 'backup') renderPage();
+  }).catch(() => {});
+}
+async function listSnapshots() {
+  snapshots = await readSnapshots();
+  if (currentScreen() === 'backup') renderPage();
+}
 
 export function render() {
   const status = backupStatus();
@@ -28,32 +47,27 @@ export function render() {
       return;
     }
     if (!confirm(`Replace everything in the app with this backup (${data.periods.length} periods, ${data.expenses.length} expenses)?`)) return;
-    restoreBackup(data);
+    restoreBackup(data).then(listSnapshots);
     toast('Backup restored');
   });
   const restore = el('label', { className: 'wide-btn' }, 'Restore from backup', file);
 
   // Whether the browser agreed to protect this app's storage from automatic cleanup.
-  const storage = note(''); // filled in once the browser answers
-  navigator.storage?.persisted?.().then((protectedStorage) => {
-    storage.textContent = protectedStorage
-      ? 'Storage: protected from automatic cleanup.'
-      : 'Storage: standard. iOS may clear it if the phone runs very low on space.';
-  }).catch(() => {});
+  const storage = note(storageNote);
 
-  // Fills in once IndexedDB answers.
-  const snapshotList = el('div', { className: 'snapshot-list' });
-  readSnapshots().then((list) => snapshotList.replaceChildren(...list.map((snapshot) => {
+  const snapshotList = el('div', { className: 'snapshot-list' }, ...snapshots.map((snapshot) => {
     const when = formatMoment(snapshot.at);
     const goBackButton = el('button', { className: 'link', textContent: 'Go back' });
     goBackButton.addEventListener('click', async () => {
       if (!confirm(`Go back to how everything was ${when} (${snapshot.reason})? Your current data is snapshotted first, so you can undo this.`)) return;
-      if (await restoreSnapshot(snapshot.at)) toast(`Back to ${when}`);
+      if (!(await restoreSnapshot(snapshot.at))) return;
+      toast(`Back to ${when}`);
+      listSnapshots();
     });
     return el('div', { className: 'snapshot-row' },
       el('span', { className: 'grow' }, el('span', { textContent: when }), el('small', { textContent: snapshot.reason })),
       goBackButton);
-  })));
+  }));
 
   fill('Backup', 'Keep a copy of your data somewhere safe.',
     panel('Status',

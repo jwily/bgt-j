@@ -9,7 +9,7 @@ import { colorDot, gauge } from '../widgets.js';
 import { formatDate } from '../dates.js';
 import { openExpenseSheet } from '../sheets.js';
 import { takeSnapshot } from '../snapshots.js';
-import { fill, panel, note, periodDates, periodName, tone, showPage, goBack, renderPage, hidePages } from '../pages.js';
+import { fill, panel, note, periodDates, periodName, tone, showPage, goBack, hidePages } from '../pages.js';
 
 const expanded = new Set(); // category ids opened on this screen
 
@@ -49,22 +49,32 @@ export function render({ periodId }) {
       el('span', { className: 'value', textContent: formatDiff(diff) })),
   );
 
+  // Tapping a category opens or closes just its list of expenses (its own row, not the whole screen,
+  // so the ring doesn't redraw).
   const list = el('ul', { className: 'cat-list' });
   for (const row of rows) {
-    const isOpen = expanded.has(row.category.id);
-    const head = el('button', { className: 'cat-head', 'aria-expanded': String(isOpen) },
+    const { id } = row.category;
+    const head = el('button', { className: 'cat-head' },
       colorDot(row.category.color),
       el('span', { className: 'name', textContent: row.category.name }),
       el('span', { className: 'value', textContent: formatUsd(row.cents) }),
       el('span', { className: 'chev', textContent: '›' }),
       gauge(row.cents / spent, row.category.color));
+    const item = el('li', {}, head);
+    let expenses = null; // built the first time it's opened
+    const show = (open) => {
+      item.classList.toggle('open', open);
+      head.setAttribute('aria-expanded', String(open));
+      if (open) item.append(expenses ??= el('ul', { className: 'items' }, ...row.items.map(itemRow)));
+      else expenses?.remove();
+    };
+    show(expanded.has(id));
     head.addEventListener('click', () => {
-      if (isOpen) expanded.delete(row.category.id);
-      else expanded.add(row.category.id);
-      renderPage();
+      if (expanded.has(id)) expanded.delete(id);
+      else expanded.add(id);
+      show(expanded.has(id));
     });
-    list.append(el('li', { className: isOpen ? 'open' : '' }, head,
-      isOpen && el('ul', { className: 'items' }, ...row.items.map(itemRow))));
+    list.append(item);
   }
 
   // The screen's actions sit at the bottom, under the thumb; the safer one on the right, nearer it.

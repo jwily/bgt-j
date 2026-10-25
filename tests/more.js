@@ -880,6 +880,41 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await page.locator('.snapshot-row', { hasText: 'start of the day' }).locator('.link').tap();
     await page.waitForTimeout(300);
     check('going back to before the first budget: First Budget', await titleText(page), 'First Budget');
+    check('three kept: the day\'s, and the two newest others', (await snaps()).join(' | '), 'before going back to a snapshot | before going back to a snapshot | start of the day');
+    // The list holds only times and reasons; the copies are kept apart, read only to go back to one.
+    check('listed snapshots carry no copy of the data', await page.evaluate(() => new Promise((resolve) => {
+      const request = indexedDB.open('budget-tracker');
+      request.onsuccess = () => {
+        const all = request.result.transaction('snapshots').objectStore('snapshots').getAll();
+        all.onsuccess = () => resolve(all.result.every((s) => !('data' in s)));
+      };
+    })), true);
+  });
+
+  await scenario('snapshots saved by the previous version', async (open) => {
+    // Version 1 of the snapshot store kept each copy with its time and reason: they're split on the
+    // first launch of this version, and going back to one still works.
+    const context = await open();
+    await context.addInitScript(() => {
+      if (sessionStorage.getItem('seeded')) return;
+      sessionStorage.setItem('seeded', '1');
+      const data = { version: 3, categories: [{ id: 'c1', name: 'Old', color: null, archived: false }], periods: [{ id: 'p1', budgetCents: 5000, start: '2026-01-01', end: null }], expenses: [], rates: { perUsd: {}, date: null, checkedAt: 0 }, input: { currency: 'USD', categoryId: 'c1' }, lastBackupAt: null, settings: { backupReminderDays: 30 } };
+      localStorage.setItem('budget-tracker', JSON.stringify(data));
+      const request = indexedDB.open('budget-tracker', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('snapshots', { keyPath: 'at' }).put({ at: Date.now() - 1000, reason: 'before deleting Period 2', data: JSON.stringify(data) });
+    });
+    await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+    const page = await newPage(context);
+    await page.goto(URL);
+    await page.waitForTimeout(300);
+    await page.reload(); // the seeding above runs before the app's first open; now the app upgrades it
+    await appReady(page);
+    await openMenu(page, 'Backup');
+    await page.waitForSelector('.snapshot-row');
+    page.once('dialog', (d) => d.accept());
+    await page.locator('.snapshot-row', { hasText: 'before deleting Period 2' }).locator('.link').tap();
+    await page.waitForTimeout(300);
+    check('an old-style snapshot, after the upgrade: going back to it works', (await page.locator('#help .text').first().textContent()).startsWith('Back to'), true);
   });
 
   await scenario('daily snapshot on resume', async (open) => {
@@ -888,14 +923,15 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const { page } = await launch(open);
     await page.waitForTimeout(300);
     await page.evaluate(() => new Promise((resolve) => { // make today's snapshot yesterday's
-      const request = indexedDB.open('budget-tracker', 1);
+      const request = indexedDB.open('budget-tracker');
       request.onsuccess = () => {
-        const store = request.result.transaction('snapshots', 'readwrite').objectStore('snapshots');
-        const all = store.getAll();
-        all.onsuccess = () => {
-          for (const s of all.result) { store.delete(s.at); store.put({ ...s, at: s.at - 86400000 }); }
-          store.transaction.oncomplete = resolve;
-        };
+        const transaction = request.result.transaction(['snapshots', 'snapshot-data'], 'readwrite');
+        for (const name of ['snapshots', 'snapshot-data']) {
+          const store = transaction.objectStore(name);
+          const all = store.getAll();
+          all.onsuccess = () => { for (const s of all.result) { store.delete(s.at); store.put({ ...s, at: s.at - 86400000 }); } };
+        }
+        transaction.oncomplete = resolve;
       };
     }));
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -933,6 +969,41 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const body = await page.locator('#page-body').boundingBox();
     await tapAt(body, 2, 4); // between the screen's edge and its first window
     check('Categories: after touching between windows, a name still takes focus', await focuses(page.locator('.cat-row input').first()), true);
+  });
+
+  await scenario('main screen: work in proportion to the change', async (open) => {
+    const { page, type } = await launch(open);
+    // A currency or category choice is saved on its own, not by rewriting the whole history, and
+    // still comes back after a reload.
+    const before = await page.evaluate(() => localStorage.getItem('budget-tracker'));
+    await page.locator('.currency-opts').tap();
+    check('a currency choice leaves the saved history untouched', await page.evaluate((b) => localStorage.getItem('budget-tracker') === b, before), true);
+    await page.reload();
+    await appReady(page);
+    check('...and is still the choice after a reload', await page.locator('.currency-track .on').textContent(), 'MXN');
+    // A keypad digit redraws the amount, not the whole main screen (whose currency row measures
+    // the layout to center itself).
+    await page.evaluate(() => {
+      window.layoutReads = 0;
+      const read = window.getComputedStyle;
+      window.getComputedStyle = (...args) => { window.layoutReads++; return read(...args); };
+    });
+    await type('5');
+    check('a digit: the amount shows it', await page.locator('.amount').textContent(), 'MX$5');
+    check('...without redrawing the rest of the screen', await page.evaluate(() => window.layoutReads), 0);
+  });
+
+  await scenario('summary: opening a category redraws only its row', async (open) => {
+    const { page, type } = await launch(open);
+    await type('500');
+    await page.locator('.add-btn').tap();
+    await openSummary(page);
+    await page.evaluate(() => { window.ring = document.querySelector('.ring-chart'); });
+    await page.locator('.cat-head').first().tap();
+    check('opened: its expenses show', `${await page.locator('.cat-list li.open .item').count()} ${await page.locator('.cat-head').first().getAttribute('aria-expanded')}`, '1 true');
+    check('...and the ring wasn\'t rebuilt (it would replay)', await page.evaluate(() => window.ring.isConnected), true);
+    await page.locator('.cat-head').first().tap();
+    check('closed again', `${await page.locator('.cat-list .item').count()} ${await page.locator('.cat-head').first().getAttribute('aria-expanded')}`, '0 false');
   });
 
   await scenario('undo after deleting the only period', async (open) => {
@@ -1145,6 +1216,24 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await nameField(0).press('End');
     await page.keyboard.type('s');
     check('typing in a named row leaves every gem as it was', await page.evaluate(() => window.gems.every((g) => g.isConnected)), true);
+  });
+
+  await scenario('categories: messages about the draft end when you leave', async (open) => {
+    const { page, save } = await categoriesScreen(open);
+    const otherRow = (await categoryRows(page)).indexOf('Other');
+    await page.locator('.cat-row').nth(otherRow).locator('.mini').tap();
+    check('removing one: a message with Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Other removed true');
+    page.once('dialog', (d) => d.accept()); // discard the unsaved change
+    await page.locator('#nav-btn').tap();
+    await page.waitForTimeout(300);
+    check('left without saving: the message and its Undo are gone (nothing was removed)', `${await page.locator('#undo-btn').isVisible()} ${await page.locator('#help').getAttribute('data-label')}`, 'false Status');
+    // A saved change is different: its Undo still applies after leaving.
+    await openMenu(page, 'Categories');
+    await page.locator('.cat-row').nth(otherRow).locator('.mini').tap();
+    await save.tap();
+    await page.locator('#nav-btn').tap();
+    await page.waitForTimeout(300);
+    check('saved, then left: "Categories saved" keeps its Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Categories saved true');
   });
 
   await scenario('categories: saving with blanks', async (open) => {
