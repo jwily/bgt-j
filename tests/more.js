@@ -903,6 +903,38 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('back from the background on a new day: that day\'s snapshot', (await snapshotReasons(page)).filter((r) => r === 'start of the day').length, 2);
   });
 
+  await scenario('fields keep working after touching around them', async (open) => {
+    // A touch that lands on a window's edge or between windows (not on a control) used to leave a
+    // listener on that element that cancelled the end of every later touch inside it, so fields
+    // there stopped taking focus until the app was restarted (buttons still worked).
+    const { page, type } = await launch(open);
+    const tapAt = async (box, dx, dy) => { await page.touchscreen.tap(box.x + dx, box.y + dy); await page.waitForTimeout(150); };
+    const focuses = async (field) => {
+      const box = await field.boundingBox();
+      await tapAt(box, 20, box.height / 2);
+      const focused = await field.evaluate((f) => document.activeElement === f);
+      await page.evaluate(() => document.activeElement?.blur());
+      return focused;
+    };
+    await type('500');
+    await page.locator('.add-btn').tap();
+    await openSummary(page);
+    await page.locator('.cat-head').first().tap();
+    await page.locator('.item').first().tap();
+    await page.waitForTimeout(400);
+    const note = page.locator('#sheet input[type=text]').last();
+    const sheet = await page.locator('#sheet').boundingBox();
+    await tapAt(sheet, 6, sheet.height / 2); // the sheet's own edge
+    await tapAt(sheet, 6, sheet.height / 2);
+    check('Edit Expense: after touching the sheet\'s edge, Note still takes focus', await focuses(note), true);
+    await page.locator('#sheet-backdrop').evaluate((b) => b.classList.remove('open'));
+    await page.locator('#nav-btn').tap();
+    await openMenu(page, 'Categories');
+    const body = await page.locator('#page-body').boundingBox();
+    await tapAt(body, 2, 4); // between the screen's edge and its first window
+    check('Categories: after touching between windows, a name still takes focus', await focuses(page.locator('.cat-row input').first()), true);
+  });
+
   await scenario('undo after deleting the only period', async (open) => {
     const { page } = await launch(open);
     await openMenu(page, 'Current Period');

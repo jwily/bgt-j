@@ -111,13 +111,24 @@ export function trackPresses() {
   }, { capture: true });
   // The browser's own click for a press: cancelled at the source, and stopped if it comes anyway.
   // A touch's end goes to the element it started on even if a tap has since redrawn it away, when
-  // it no longer reaches the document, so it's cancelled on that element itself.
-  const cancelling = new WeakSet();
-  const cancelTouch = (event) => { if (event.cancelable) event.preventDefault(); };
+  // it no longer reaches the document, so it's cancelled on that element itself: that touch's end
+  // only, then the listener goes. (It once stayed, and caught every later touch bubbling up through
+  // that element: touch a sheet's edge once and every field in it stopped taking focus until the
+  // app was restarted.)
   document.addEventListener('touchstart', (event) => {
-    if (native(event.target) || cancelling.has(event.target)) return;
-    cancelling.add(event.target);
-    event.target.addEventListener('touchend', cancelTouch, { passive: false });
+    const touched = event.target;
+    if (native(touched)) return;
+    const done = () => {
+      touched.removeEventListener('touchend', cancel);
+      touched.removeEventListener('touchcancel', done);
+    };
+    const cancel = (end) => {
+      if (end.target !== touched) return; // another touch, inside it, bubbling up
+      if (end.cancelable) end.preventDefault();
+      done();
+    };
+    touched.addEventListener('touchend', cancel, { passive: false });
+    touched.addEventListener('touchcancel', done);
   }, { capture: true, passive: true });
   document.addEventListener('click', (event) => {
     if (event.detail > 0 && !native(event.target)) {
