@@ -32,7 +32,7 @@ let SPEED = 0; // px a second (set once PX is known)
 let member, area;
 let x = 0, face = 1, from = 0, target = 0, walkTime = 0, mode = 'idle', until = 0, step = 0;
 let last = 0, away = false, running = false, frame = 0, wake = 0, cheer = 0, cheerNext = false;
-let scene = null; // while the party is assembled: { cast: [{ node, x, dir }], time, offLeft, offRight }
+let scene = null; // while the party is assembled: { cast: [{ node, x, dir }], time, width, edge }
 const seconds = () => performance.now() / 1000;
 
 export function initParty(container) {
@@ -195,8 +195,9 @@ function draw() {
 
 // ---------- a new period: the party assembles ----------
 // All six line up along the windows in a random order, facing left, and do the victory cheer
-// together; then everyone but the third or fourth walks off, those left of it off the left of the
-// screen and those right of it off the right, and the one left stays on to wander.
+// together; then everyone but the third or fourth walks off, those left of it out past the left end
+// of the windows and those right of it past the right end, vanishing into the edge as if stepping
+// behind it, and the one left stays on to wander.
 const CHEER_LENGTH = CHEER.reduce((sum, [, t]) => sum + t, 0);
 // Leaving, they walk off a bit quicker than a stroll (the user's choice): quicker steps, the ground
 // speed matched to them as ever so the feet don't slide.
@@ -217,8 +218,7 @@ export function assemble() {
     node.style.setProperty('--row', PARTY.indexOf(name));
     return { node, x: i * spacing + (spacing - width) / 2, dir: Math.sign(i - stays) };
   });
-  const left = area.getBoundingClientRect().left;
-  scene = { cast, time: 0, offLeft: -left - width, offRight: window.innerWidth - left };
+  scene = { cast, time: 0, width, edge: area.clientWidth }; // edge: the windows' right end (their left is 0)
   x = cast[stays].x;
   face = 1;
   mode = 'idle';
@@ -245,8 +245,11 @@ function perform(nowMs) {
       if (!actor.dir) pose(actor.node, 'idle', STAND, actor.x, 1);
       else {
         const at = actor.x + actor.dir * EXIT_SPEED * t;
-        if (at < scene.offLeft || at > scene.offRight) offstage++;
-        pose(actor.node, 'walk', cell, at, -actor.dir); // facing left is 1; walking right mirrors
+        // How much of it is past the windows' end, cut off there (its own left side either way: walking
+        // right it's mirrored).
+        const past = Math.min(scene.width, Math.max(0, -at, at + scene.width - scene.edge));
+        if (past >= scene.width) offstage++;
+        pose(actor.node, 'walk', cell, at, -actor.dir, past); // facing left is 1; walking right mirrors
       }
     }
     if (offstage === cast.length - 1) {
@@ -258,10 +261,11 @@ function perform(nowMs) {
   schedule();
 }
 
-function pose(node, state, cell, at, facing) {
+function pose(node, state, cell, at, facing, hidden = 0) {
   node.dataset.state = state;
   node.style.setProperty('--frame', cell);
   node.style.transform = `translate(${at}px, 0) scaleX(${facing})`;
+  node.style.clipPath = hidden ? `inset(0 0 0 ${hidden}px)` : '';
 }
 
 // The ones who walked off (or, cut short by leaving the screen, are still there) go.
