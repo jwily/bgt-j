@@ -357,6 +357,22 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('those left of it walk off left, those right of it off right', leaving.map((m, i) => (i === stays ? 'stays' : `${m.state}:${m.facing}`)).join(' '),
       leaving.map((m, i) => (i < stays ? 'walk:1' : i > stays ? 'walk:-1' : 'stays')).join(' '));
     const stayer = leaving[stays].name;
+    // Leaving, they vanish into the windows' ends: no walker's visible part is ever past them.
+    let strays = 0;
+    for (let t = 0; t < 12000; t += 250) {
+      strays += await page.evaluate(() => {
+        const area = document.querySelector('.details'), edge = area.clientWidth;
+        return [...area.querySelectorAll('.party-member[data-state=walk]')].filter((m) => {
+          const [, x, facing] = m.style.transform.match(/translate\(([-\d.]+)px(?:, 0px)?\) scaleX\(([-\d]+)\)/).map(Number);
+          const hidden = parseFloat(m.style.clipPath.match(/inset\(0px 0px 0px ([\d.]+)px\)/)?.[1] ?? 0);
+          const width = m.offsetWidth;
+          if (hidden >= width - 0.5) return false; // wholly gone into the edge
+          return facing === 1 ? x + hidden < -0.5 : x + width - hidden > edge + 0.5; // left walkers face left; right ones are mirrored
+        }).length;
+      });
+      await page.clock.runFor(250);
+    }
+    check('leaving, they vanish into the windows\' ends, never past them', strays, 0);
     await page.clock.runFor(20000);
     const after = await cast();
     check('...and once they\'re off the screen, only the one who stayed is left', `${after.length} ${after[0].name}`, `1 ${stayer}`);

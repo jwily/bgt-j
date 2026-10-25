@@ -145,9 +145,10 @@ Read README.md for what the app does; this file covers how to work on it.
   caught mid-stride it finishes the step first, so it always cheers from standing; the arm-up frames are the user's picks, listed in `cut-party.js`.
   Starting a period (first or New Period) assembles the whole party (`assemble`, the user's idea):
   all six in a random order along Note and Date, facing left, cheer together three times; then all
-  but the third or fourth (random) walk off, those left of it off the left of the screen and those
-  right of it off the right, a bit quicker than a stroll (0.15s steps, feet still planted), and the
-  one left wanders on. Opening another screen mid-scene ends it.
+  but the third or fourth (random) walk off, those left of it out past the left end of the windows
+  and those right of it past the right end, vanishing into the windows' edge (clipped as they cross
+  it; the user's choice over walking on off the screen), a bit quicker than a stroll (0.15s steps,
+  feet still planted), and the one left wanders on. Opening another screen mid-scene ends it.
 - Some content floats on the black with no window, as on FF8's GF screen (`compatibility.png`): the
   main screen's amount area (no heading; the user had one removed).
 - White text with a hard dark shadow. **Yellow** marks the selected thing; **grey** marks unchosen
