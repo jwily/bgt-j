@@ -72,7 +72,7 @@ function draw(saved = categoriesFromState()) {
     const before = draft.map((c) => ({ ...c }));
     const message = change();
     draw();
-    if (message) toast(message, () => { categoryDraft = before; draw(); });
+    if (message) toast(message, () => { categoryDraft = before; draw(); }, { screen: true }); // about the draft: gone if you leave
   };
 
   const saveButton = el('button', { className: 'primary', textContent: 'Save', disabled: !draftDiffers(saved) });
@@ -82,12 +82,12 @@ function draw(saved = categoriesFromState()) {
     // stays as it is until the save goes through, so a refused one leaves every row as it was.
     const kept = draft.filter((c) => c.name.trim());
     if (!kept.some((c) => !c.archived)) {
-      toast('You need at least one category.');
+      toast('You need at least one category.', null, { screen: true });
       return;
     }
     const problem = categoryDraftProblem(kept);
     if (problem) {
-      toast(problem);
+      toast(problem, null, { screen: true });
       return;
     }
     categoryDraft = null; // first: saving redraws the screen, from the saved categories
@@ -148,7 +148,7 @@ function draw(saved = categoriesFromState()) {
     const remove = el('button', { className: 'mini', textContent: '✕', 'aria-label': `Remove ${category.name}` });
     remove.addEventListener('click', () => {
       if (draft.filter((c) => !c.archived && holdsCategory(c)).length === 1) {
-        toast('You need at least one category.');
+        toast('You need at least one category.', null, { screen: true });
         return;
       }
       editDraft(() => {

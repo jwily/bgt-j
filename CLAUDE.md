@@ -55,6 +55,8 @@ Read README.md for what the app does; this file covers how to work on it.
   Expenses convert at the downloaded rate less `RATE_MARGIN` (2.5%, the user's choice, so card
   markups never make spending read low); the saved rates stay the source's own.
 - **Undo:** store changes that can be undone return an undo function; pass it to `toast(message, undo)`.
+  A message about the screen showing (an unsaved draft's edit) passes `{ screen: true }`: leaving the
+  screen ends it and its Undo. Saved changes' messages keep their Undo across screens.
 - **Screens:** one module each in `js/screens/` (summary, periods, categories, backup, budget), each
   exporting `render(params)`, which calls `fill(title, helpLine, ...windows)` (`panel(label, ...)` makes
   a labelled window), and optionally `enter(params)`, which resets its own state when it's opened.

@@ -1218,6 +1218,24 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('typing in a named row leaves every gem as it was', await page.evaluate(() => window.gems.every((g) => g.isConnected)), true);
   });
 
+  await scenario('categories: messages about the draft end when you leave', async (open) => {
+    const { page, save } = await categoriesScreen(open);
+    const otherRow = (await categoryRows(page)).indexOf('Other');
+    await page.locator('.cat-row').nth(otherRow).locator('.mini').tap();
+    check('removing one: a message with Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Other removed true');
+    page.once('dialog', (d) => d.accept()); // discard the unsaved change
+    await page.locator('#nav-btn').tap();
+    await page.waitForTimeout(300);
+    check('left without saving: the message and its Undo are gone (nothing was removed)', `${await page.locator('#undo-btn').isVisible()} ${await page.locator('#help').getAttribute('data-label')}`, 'false Status');
+    // A saved change is different: its Undo still applies after leaving.
+    await openMenu(page, 'Categories');
+    await page.locator('.cat-row').nth(otherRow).locator('.mini').tap();
+    await save.tap();
+    await page.locator('#nav-btn').tap();
+    await page.waitForTimeout(300);
+    check('saved, then left: "Categories saved" keeps its Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Categories saved true');
+  });
+
   await scenario('categories: saving with blanks', async (open) => {
     const { page, save, nameField, savedNames } = await categoriesScreen(open);
     // An existing category cleared is removed, and tapping Save while an empty slot still has the
