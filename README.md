@@ -52,7 +52,7 @@ Data is stored on the phone in `localStorage`, tied to the URL you installed fro
 Two safeguards:
 
 - **Persistent storage.** On launch the app asks the browser not to clear its data when the phone is low on space. The browser decides silently; the Backup screen shows whether it was granted.
-- **Safety snapshots.** The app keeps copies of all your data on the phone (in IndexedDB, which has far more room than localStorage): one a day and one before anything drastic (restoring a backup, deleting a period, going back to a snapshot). Three are kept (the latest day's and the two newest others), listed under **Menu → Backup → Snapshots** with **Go back**. They undo mistakes; they're lost with the phone, unlike exported backups.
+- **Safety snapshots.** The app keeps copies of all your data on the phone (in IndexedDB, which has far more room than localStorage): one a day and one before anything drastic (restoring a backup, deleting a period, going back to a snapshot). The newest 7 are listed under **Menu → Backup → Snapshots** with **Go back**. They undo mistakes; they're lost with the phone, unlike exported backups.
 - **Backup reminders.** The menu shows when you last backed up. After the reminder period (30 days by default; change it on the Backup screen to 7, 14, 30 or 60), or if you've never backed up and have expenses, that line turns red and a dot appears on Menu. Starting a New Period also offers **Back up first**.
 
 ## Tests

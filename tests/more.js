@@ -896,7 +896,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await page.locator('.snapshot-row', { hasText: 'start of the day' }).locator('.link').tap();
     await page.waitForTimeout(300);
     check('going back to before the first budget: First Budget', await titleText(page), 'First Budget');
-    check('three kept: the day\'s, and the two newest others', (await snaps()).join(' | '), 'before going back to a snapshot | before going back to a snapshot | start of the day');
+    check('all kept while under seven', (await snaps()).length, 4);
     // The list holds only times and reasons; the copies are kept apart, read only to go back to one.
     check('listed snapshots carry no copy of the data', await page.evaluate(() => new Promise((resolve) => {
       const request = indexedDB.open('budget-tracker');
@@ -934,8 +934,8 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
   });
 
   await scenario('more snapshots than kept, from an older version', async (open) => {
-    // Seven, as the previous version kept, today's daily one among them: the first launch keeps
-    // three straight away, today's and the two newest others, without waiting for a new one.
+    // Nine, more than kept (as when the limit was lowered), today's daily one the oldest: the first
+    // launch keeps the newest seven straight away, without waiting for a new one.
     const context = await open();
     await context.addInitScript(() => {
       if (sessionStorage.getItem('seeded')) return;
@@ -947,7 +947,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
       request.onupgradeneeded = () => {
         const store = request.result.createObjectStore('snapshots', { keyPath: 'at' });
         store.put({ at: now - 60000, reason: 'start of the day', data: text });
-        for (let i = 1; i <= 6; i++) store.put({ at: now - 60000 + i * 1000, reason: `before deleting Period ${i}`, data: text });
+        for (let i = 1; i <= 8; i++) store.put({ at: now - 60000 + i * 1000, reason: `before deleting Period ${i}`, data: text });
       };
       request.onsuccess = () => request.result.close();
     });
@@ -956,7 +956,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await page.goto(URL);
     await appReady(page);
     await page.waitForTimeout(500);
-    check('trimmed to three on launch: the newest two, and today\'s', (await snapshotReasons(page)).join(' | '), 'before deleting Period 6 | before deleting Period 5 | start of the day');
+    check('trimmed to the newest seven on launch', (await snapshotReasons(page)).join(' | '), [8, 7, 6, 5, 4, 3, 2].map((i) => `before deleting Period ${i}`).join(' | '));
   });
 
   await scenario('daily snapshot on resume', async (open) => {

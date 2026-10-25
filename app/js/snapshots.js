@@ -1,7 +1,6 @@
 // Safety snapshots: copies of all the data, kept on the phone in IndexedDB (which has far more room
 // than localStorage): one a day (as the data was when the app was first opened that day) and one
-// before anything drastic. Three are kept: the latest day's, and the newest two others (the user's
-// choice of three; the day's is kept so a burst of drastic actions can't push it out). They undo mistakes; they don't protect against
+// before anything drastic. The newest 7 are kept (three were tried and found too few). They undo mistakes; they don't protect against
 // losing the phone (exported backups do), and they're never included in backups.
 //
 // IndexedDB answers asynchronously, but a snapshot's data is captured the moment takeSnapshot() is
@@ -12,7 +11,7 @@ import { localDay, todayISO } from './dates.js';
 
 const STORE = 'snapshots';     // { at, reason }: what the Backup screen lists, small
 const DATA = 'snapshot-data';  // { at, data }: the copy itself (the saved JSON text), read only to use it
-const LIMIT = 3;
+const LIMIT = 7;
 const DAILY = 'start of the day';
 const LEGACY_KEY = 'budget-tracker-snapshots'; // where snapshots lived before IndexedDB
 
@@ -102,15 +101,12 @@ async function keep(snapshots) {
   }
 }
 
-// Drops all but LIMIT: the latest day's and the newest others. Also run when no new snapshot is
+// Drops all but the newest LIMIT. Also run when no new snapshot is
 // taken (see takeDailySnapshot), so a lower limit, or snapshots left by an older version, take
 // effect straight away rather than at the next snapshot.
 async function trim() {
   try {
-    const all = await readSnapshots();
-    const daily = all.find((s) => s.reason === DAILY);
-    const kept = new Set([daily, ...all.filter((s) => s !== daily).slice(0, daily ? LIMIT - 1 : LIMIT)]);
-    const extra = all.filter((s) => !kept.has(s));
+    const extra = (await readSnapshots()).slice(LIMIT);
     if (extra.length) {
       await run('readwrite', (listed, copies) => {
         for (const { at } of extra) {
