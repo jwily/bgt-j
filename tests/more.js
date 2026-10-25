@@ -936,6 +936,28 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('Categories: after touching between windows, a name still takes focus', await focuses(page.locator('.cat-row input').first()), true);
   });
 
+  await scenario('main screen: work in proportion to the change', async (open) => {
+    const { page, type } = await launch(open);
+    // A currency or category choice is saved on its own, not by rewriting the whole history, and
+    // still comes back after a reload.
+    const before = await page.evaluate(() => localStorage.getItem('budget-tracker'));
+    await page.locator('.currency-opts').tap();
+    check('a currency choice leaves the saved history untouched', await page.evaluate((b) => localStorage.getItem('budget-tracker') === b, before), true);
+    await page.reload();
+    await appReady(page);
+    check('...and is still the choice after a reload', await page.locator('.currency-track .on').textContent(), 'MXN');
+    // A keypad digit redraws the amount, not the whole main screen (whose currency row measures
+    // the layout to center itself).
+    await page.evaluate(() => {
+      window.layoutReads = 0;
+      const read = window.getComputedStyle;
+      window.getComputedStyle = (...args) => { window.layoutReads++; return read(...args); };
+    });
+    await type('5');
+    check('a digit: the amount shows it', await page.locator('.amount').textContent(), 'MX$5');
+    check('...without redrawing the rest of the screen', await page.evaluate(() => window.layoutReads), 0);
+  });
+
   await scenario('undo after deleting the only period', async (open) => {
     const { page } = await launch(open);
     await openMenu(page, 'Current Period');

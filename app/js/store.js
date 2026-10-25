@@ -20,6 +20,9 @@ import { paletteColor } from './palette.js';
 
 const STORAGE_KEY = 'budget-tracker';
 const UNREADABLE_KEY = 'budget-tracker-unreadable'; // saved data that couldn't be read, kept just in case
+// The main screen's last choices (currency, category), saved on their own: they change at every
+// swipe of the category strip, and rewriting the whole history for each would be wasteful.
+const INPUT_KEY = 'budget-tracker-input';
 export const VERSION = 3;
 const RATES_URL = `https://api.frankfurter.dev/v1/latest?base=${HOME}&symbols=${FOREIGN_CODES.join(',')}`;
 
@@ -122,7 +125,13 @@ function load() {
     }
   }
   loaded ??= freshState();
-  tidy(loaded);
+  try {
+    const input = JSON.parse(localStorage.getItem(INPUT_KEY));
+    if (input && typeof input === 'object') Object.assign(loaded.input, input); // newer than the copy in the data
+  } catch {
+    // Unreadable: the data's own copy of the choices will do.
+  }
+  tidy(loaded); // also puts right a choice that no longer exists
   return loaded;
 }
 
@@ -274,9 +283,16 @@ export function saveCategories(draft) {
   };
 }
 
+// The main screen's choices: saved on their own (INPUT_KEY), and only the main screen redraws
+// ("budget:input"). The full data keeps a copy, updated at its next save.
 export function setInputPrefs(prefs) {
   Object.assign(state.input, prefs);
-  save();
+  try {
+    localStorage.setItem(INPUT_KEY, JSON.stringify(state.input));
+  } catch {
+    // Storage full: the choice still applies now; the next full save warns about the space.
+  }
+  window.dispatchEvent(new Event('budget:input'));
 }
 
 export function setBackupReminder(days) {

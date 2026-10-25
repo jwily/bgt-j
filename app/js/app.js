@@ -130,6 +130,7 @@ initInput();
 initPages({ onNavigate: refresh });
 refresh();
 window.addEventListener('budget:change', refresh);
+window.addEventListener('budget:input', renderInput); // a currency or category choice: only the main screen shows it
 
 // Everything is built: show it all at once (style.css hides the page until now), once the font has
 // loaded so text doesn't swap fonts in front of you; waiting a second at most.

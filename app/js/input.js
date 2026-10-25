@@ -67,7 +67,7 @@ export function initInput() {
 
   const pad = keypad(() => digits, (next) => {
     digits = next;
-    renderInput();
+    renderAmount();
   }, () => CURRENCIES[state.input.currency].maxDigits);
   // Add sits in the bottom bar, left of Undo and the Menu button, under a right thumb.
   parts.add = el('button', { className: 'add-btn', textContent: 'Add' });
@@ -93,23 +93,28 @@ export function initInput() {
 export function renderInput() {
   if (!parts.amount) return;
   const { currency } = state.input;
-  const amount = Number(digits || '0');
-
   parts.currencies.forEach((span, i) => span.classList.toggle('on', CURRENCY_CODES[i] === currency));
   centerCurrency(shownCurrency !== null && currency !== shownCurrency); // placed at launch, glides on a switch
   shownCurrency = currency;
-  parts.amount.textContent = formatMoney(amount, currency);
-  parts.amount.classList.toggle('empty', !amount);
-  parts.sub.replaceChildren(...(currency === HOME ? [] : [
-    el('span', { className: 'converted', textContent: `≈ ${formatUsd(toUsdCents(amount, currency, rateFor(currency)))}` }),
-    el('span', { textContent: rateText(currency) }),
-  ]));
+  renderAmount();
 
   renderStrip();
   parts.add.style.setProperty('--c', getCategory(state.input.categoryId).color);
 
   parts.dateLabel.textContent = pickedDate ? formatDate(pickedDate) : 'Today';
   parts.dateInput.value = pickedDate ?? todayISO();
+}
+
+// The amount and, in another currency, what it is in dollars: all a keypad digit changes.
+function renderAmount() {
+  const { currency } = state.input;
+  const amount = Number(digits || '0');
+  parts.amount.textContent = formatMoney(amount, currency);
+  parts.amount.classList.toggle('empty', !amount);
+  parts.sub.replaceChildren(...(currency === HOME ? [] : [
+    el('span', { className: 'converted', textContent: `≈ ${formatUsd(toUsdCents(amount, currency, rateFor(currency)))}` }),
+    el('span', { textContent: rateText(currency) }),
+  ]));
 }
 
 // "1 USD = 18.52 MXN", with the rate's date if it's more than 4 days old (offline, or the source
