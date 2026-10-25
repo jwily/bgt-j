@@ -100,7 +100,8 @@ Read README.md for what the app does; this file covers how to work on it.
 - **Presses** all go through `trackPresses` in presses.js: a control activates (its `click()`) when a press
   lifts over it, the same for touch and mouse; the browser's own click never counts (cancelled at
   touchend on the touched element itself, stopped if it comes: any click with a click count). So
-  give controls ordinary `click` listeners and nothing else; mark non-button tappables `.tappable`
+  give controls ordinary `click` listeners and nothing else (the touchend cancel is per touch, on its own
+  element only: a lingering one once made every field under it ignore taps until a restart); mark non-button tappables `.tappable`
   or `role=button`; fields and labels are left native. Long presses call `usePresses`. Don't add
   click-timing workarounds: they're what this replaced (they lost quick retaps of a key).
 
@@ -214,6 +215,8 @@ Read README.md for what the app does; this file covers how to work on it.
   choppy), the reverse wave order, a 0.7-1.3s clamp on the ring's length (now a smooth curve),
   translucent gauge fills with a glass sheen. Gauge numbers went to out of 1000, back to 100, and
   out of 1000 again (the user's current choice).
+- Undo stays a temporary button, shown only while a message offers it (an always-there greyed Undo,
+  so ADD wouldn't shrink under the thumb, was proposed and declined).
 - Tried and replaced elsewhere: FF8's selection arrow beside categories (the hand stays), a party
   member standing on its stride frame (looked like sliding), and a first victory pose picked by eye
   (d9f95be; replaced by the cheer measured from cheer.mov).

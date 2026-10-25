@@ -60,8 +60,15 @@ async function checkForUpdate() {
     const next = await caches.open(name);
     await Promise.all(downloads.map(([file, response]) => next.put(file, response)));
     await next.put(COMPLETE, new Response('ok'));
-    // Keep the version just replaced (an open launch may still be using it); drop older ones.
-    for (const other of await caches.keys()) if (other !== name && other !== savedName) await caches.delete(other);
+    // Keep the version just replaced and any an open launch is still using (a resumed one can stay
+    // open for days, across deploys); drop the rest, and forget launches that have closed. Only
+    // this app's caches: other pages on the same site have their own.
+    const inUse = new Set([name, savedName]);
+    for (const [client, version] of versionOf) {
+      if (await self.clients.get(client)) inUse.add(version);
+      else versionOf.delete(client);
+    }
+    for (const other of await caches.keys()) if (other.startsWith(PREFIX) && !inUse.has(other)) await caches.delete(other);
   } catch {
     // Offline or a download failed: keep the saved version; try again next launch.
   }
@@ -109,6 +116,7 @@ self.addEventListener('fetch', (event) => {
   const launching = event.request.mode === 'navigate';
   event.respondWith((async () => {
     let name = launching ? null : versionOf.get(event.clientId);
+    if (name && !(await caches.has(name))) name = null; // gone after all: opening it would make an empty one
     if (!name) {
       name = await currentVersion();
       if (launching && name) versionOf.set(event.resultingClientId, name);

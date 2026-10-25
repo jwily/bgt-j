@@ -34,6 +34,7 @@ async function run(mode, work) {
     const request = work(transaction.objectStore(STORE));
     transaction.oncomplete = () => resolve(request?.result);
     transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error); // e.g. out of space, which fires no error
   });
 }
 

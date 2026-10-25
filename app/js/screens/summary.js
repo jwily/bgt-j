@@ -1,7 +1,7 @@
 // The period summary: the spending ring, the budget against what's spent, and each category's
 // spending with its expenses (tap a category to open it).
 
-import { state, currentPeriod, getPeriod, periodExpenses, spentIn, totalUsd, getCategory, deletePeriod } from '../store.js';
+import { state, getPeriod, periodExpenses, spentIn, totalUsd, getCategory, deletePeriod } from '../store.js';
 import { HOME, formatMoney, formatUsd, formatDiff } from '../money.js';
 import { el } from '../ui.js';
 import { toast } from '../help.js';
@@ -94,7 +94,6 @@ function removePeriod(period) {
   takeSnapshot(`before deleting ${name}`);
   goBack(); // leave this summary first; it can't be shown once its period is gone
   const undo = deletePeriod(period.id);
-  if (!currentPeriod()) showPage('budget', { mode: 'first' }); // that was the only period
   toast(`${name} deleted`, undo);
 }
 

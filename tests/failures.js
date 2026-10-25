@@ -85,6 +85,10 @@ const sample = (overrides = {}) => ({
     await page.locator('.add-btn').tap();
     await page.waitForTimeout(300);
     check('storage full: warns', dialogs.some((m) => m.startsWith("Couldn't save: this phone's storage for the app is full")), true);
+    // More changes while it stays full (each currency tap saves) don't each raise another.
+    await page.locator('.currency-opts').tap();
+    await page.locator('.currency-opts').tap();
+    check('storage full: warns once, not at every change', dialogs.filter((m) => m.startsWith("Couldn't save")).length, 1);
     check('storage full: the screen still shows what you did', await page.locator('#help .text').textContent(), 'Added $5.00 · Food');
     await context.close();
   });
@@ -108,7 +112,7 @@ const sample = (overrides = {}) => ({
   await scenario('corrupted data, no snapshot', async () => {
     const { context, page, dialogs, stored } = await open({ saved: 'not json at all' });
     check('corrupted, no snapshot: starts fresh', await page.locator('#title').textContent(), 'First Budget');
-    check('corrupted, no snapshot: no recovery message', dialogs.length, 0);
+    check('corrupted, no snapshot: says so, and that the data was kept', dialogs.join(' | '), "Your saved data couldn't be read, and there's no snapshot to go back to. It's been kept aside, not deleted: restore a backup from Menu → Backup if you have one.");
     check('corrupted, no snapshot: unreadable copy kept', await stored('budget-tracker-unreadable'), 'not json at all');
     await context.close();
   });
@@ -147,6 +151,20 @@ const sample = (overrides = {}) => ({
     await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'newer-backup.json'));
     await page.waitForTimeout(300);
     check('newer backup: says so', await page.locator('#help .text').first().textContent(), 'That backup is from a newer version of the app. Reopen the app to update it, then try again.');
+
+    // Backups the app couldn't run on are refused, not restored.
+    const malformed = [
+      ['a category with no name', sample({ categories: [{ id: 'c1', name: 'Food', color: null, archived: false }, { id: 'c2', color: null, archived: false }] })],
+      ['every category archived', sample({ categories: [{ id: 'c1', name: 'Food', color: null, archived: true }] })],
+      ['two open periods', (() => { const d = sample(); d.periods.push({ ...d.periods[0], id: 'p2' }); return d; })()],
+      ['an expense with no amount', (() => { const d = sample(); delete d.expenses[0].usdCents; return d; })()],
+    ];
+    for (const [label, data] of malformed) {
+      fs.writeFileSync(path.join(OUT, 'malformed-backup.json'), JSON.stringify(data));
+      await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'malformed-backup.json'));
+      await page.waitForTimeout(300);
+      check(`backup with ${label}: refused`, await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
+    }
 
     const broken = sample({
       expenses: [
@@ -251,10 +269,12 @@ const sample = (overrides = {}) => ({
     await page.waitForTimeout(800);
     check('deploy: a fresh install says nothing', await helpText() === 'App updated', false);
     const firstSaved = await savedVersion('old');
+    await page.evaluate(() => caches.open('another-app-on-this-site').then((c) => c.put('x', new Response('y'))));
     version = 'new';
     await page.reload(); // a launch: served at once from the saved copy; the new version downloads for next time
     check('deploy: the launch right after a deploy still runs the saved version', await deployed(), 'old');
     check('deploy: the new version is saved in the background, next to the one in use', (await savedVersion('new'))?.length, 2);
+    check('deploy: other caches on the site are left alone', await page.evaluate(() => caches.has('another-app-on-this-site')), true);
     check('deploy: nothing said while it only downloads', await helpText() === 'App updated', false);
     await page.reload(); // the next launch
     check('deploy: and runs on the launch after', await deployed(), 'new');
@@ -272,6 +292,23 @@ const sample = (overrides = {}) => ({
     await page.reload(); // the version before last goes
     check('deploy: a launch on a new version says so even when it came in from the background', await says('App updated'), true);
     check('deploy: only the newest two versions are kept', JSON.stringify((await savedVersion('newer'))?.includes(firstSaved?.[0])), 'false');
+    // A launch left open across deploys (iOS keeps the app resumed for days) keeps its version: its
+    // files still come from it two deploys later.
+    const lingering = await context.newPage();
+    await lingering.goto('http://localhost:8766/'); // runs "newer"
+    for (const next of ['newest', 'final']) {
+      version = next;
+      await page.reload();
+      await page.evaluate((want) => new Promise((resolve) => {
+        const look = async () => {
+          const names = (await caches.keys()).filter((n) => n.startsWith('bgt-j-')).sort();
+          const file = await (await caches.open(names.at(-1))).match('js/money.js');
+          if (file && (await file.text()).includes(`deploy: ${want}`)) resolve(); else setTimeout(look, 100);
+        };
+        look();
+      }), next);
+    }
+    check('deploy: a launch still open two deploys later keeps its version', await lingering.evaluate(() => fetch('js/money.js').then((r) => r.text()).then((t) => t.match(/deploy: (\w+)/)?.[1])), 'newer');
     await context.close();
     pages.close();
   });

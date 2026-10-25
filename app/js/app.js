@@ -8,7 +8,7 @@ import { trackPresses } from './presses.js';
 import { keepFieldsAboveKeyboard } from './keyboard.js';
 import { setHelp, toast } from './help.js';
 import { initInput, renderInput } from './input.js';
-import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave } from './pages.js';
+import { initPages, showPage, renderPage, isPageOpen, pageTitle, canGoBack, goBack, confirmLeave, currentScreen } from './pages.js';
 import { backupStatus } from './backup.js';
 import { moveOldSnapshots, recoverFromSnapshot, takeDailySnapshot } from './snapshots.js';
 
@@ -93,8 +93,14 @@ function renderChrome() {
   }
 }
 
-// Every save, and every change of screen, redraws whatever is showing.
+// Every save, and every change of screen, redraws whatever is showing. Without a period (a fresh
+// start, the only one deleted, going back to data from before the first) the app can only set a
+// first budget, whatever led there.
 function refresh() {
+  if (!currentPeriod() && currentScreen() !== 'budget') {
+    showPage('budget', { mode: 'first' }); // which redraws
+    return;
+  }
   renderInput();
   renderPage();
   renderChrome();
@@ -110,6 +116,7 @@ if (needsRecovery) {
   await moveOldSnapshots(); // recovery may need snapshots an older version kept in localStorage
   const recoveredFrom = await recoverFromSnapshot();
   if (recoveredFrom) alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
+  else alert("Your saved data couldn't be read, and there's no snapshot to go back to. It's been kept aside, not deleted: restore a backup from Menu → Backup if you have one.");
 }
 
 // iPhone Safari only shows a button's pressed look (:active) when something listens for touches,
@@ -123,8 +130,6 @@ initInput();
 initPages({ onNavigate: refresh });
 refresh();
 window.addEventListener('budget:change', refresh);
-
-if (!currentPeriod()) showPage('budget', { mode: 'first' });
 
 // Everything is built: show it all at once (style.css hides the page until now), once the font has
 // loaded so text doesn't swap fonts in front of you; waiting a second at most.
@@ -146,6 +151,7 @@ refreshRate();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   refreshRate();
+  takeDailySnapshot(); // iOS mostly resumes the app rather than relaunching it (once a day at most)
   refresh(); // e.g. "Today" may be a new day
   navigator.serviceWorker?.controller?.postMessage('check-for-update');
 });
