@@ -880,6 +880,7 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await page.locator('.snapshot-row', { hasText: 'start of the day' }).locator('.link').tap();
     await page.waitForTimeout(300);
     check('going back to before the first budget: First Budget', await titleText(page), 'First Budget');
+    check('three kept: the day\'s, and the two newest others', (await snaps()).join(' | '), 'before going back to a snapshot | before going back to a snapshot | start of the day');
   });
 
   await scenario('daily snapshot on resume', async (open) => {

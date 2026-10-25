@@ -84,7 +84,8 @@ Read README.md for what the app does; this file covers how to work on it.
   sticky row bounced with the list).
 - **Saving can fail** (storage full): `save()` fires `budget:save-failed` and app.js alerts. Unreadable
   saved data is kept under `budget-tracker-unreadable` and app.js recovers from the newest snapshot.
-- **Snapshots** (`snapshots.js`, in IndexedDB, async): taken once a day and before anything drastic; call
+- **Snapshots** (`snapshots.js`, in IndexedDB, async): taken once a day and before anything drastic;
+  three kept (the latest day's plus the two newest others; the user chose three); call
   `takeSnapshot(reason)` before any new destructive action (it captures the data immediately). Never in
   backups. Older versions kept them in localStorage; `moveOldSnapshots()` moves them at startup.
 - **Settings** live in `state.settings` (currently `backupReminderDays`, default 30); data is version 3.

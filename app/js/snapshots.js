@@ -1,6 +1,7 @@
 // Safety snapshots: copies of all the data, kept on the phone in IndexedDB (which has far more room
 // than localStorage): one a day (as the data was when the app was first opened that day) and one
-// before anything drastic. The newest 7 are kept. They undo mistakes; they don't protect against
+// before anything drastic. Three are kept: the latest day's, and the newest two others (the user's
+// choice of three; the day's is kept so a burst of drastic actions can't push it out). They undo mistakes; they don't protect against
 // losing the phone (exported backups do), and they're never included in backups.
 //
 // IndexedDB answers asynchronously, but a snapshot's data is captured the moment takeSnapshot() is
@@ -10,7 +11,7 @@ import { state, parse, replaceState } from './store.js';
 import { localDay, todayISO } from './dates.js';
 
 const STORE = 'snapshots';
-const LIMIT = 7;
+const LIMIT = 3;
 const DAILY = 'start of the day';
 const LEGACY_KEY = 'budget-tracker-snapshots'; // where snapshots lived before IndexedDB
 
@@ -58,7 +59,10 @@ export function takeSnapshot(reason) {
 async function keep(snapshots) {
   try {
     await run('readwrite', (store) => { snapshots.forEach((s) => store.put(s)); });
-    const extra = (await readSnapshots()).slice(LIMIT);
+    const all = await readSnapshots();
+    const daily = all.find((s) => s.reason === DAILY);
+    const kept = new Set([daily, ...all.filter((s) => s !== daily).slice(0, daily ? LIMIT - 1 : LIMIT)]);
+    const extra = all.filter((s) => !kept.has(s));
     if (extra.length) await run('readwrite', (store) => { extra.forEach((s) => store.delete(s.at)); });
   } catch {
     // No snapshot this time.
