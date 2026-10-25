@@ -1,10 +1,10 @@
 // The Backup screen: export a backup or CSV, restore one, the reminder, and safety snapshots.
 
-import { state, setBackupReminder } from '../store.js';
+import { state, setBackupReminder, REMINDER_CHOICES } from '../store.js';
 import { el } from '../ui.js';
 import { toast } from '../help.js';
 import { formatMoment } from '../dates.js';
-import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus, REMINDER_CHOICES } from '../backup.js';
+import { exportBackup, exportCsv, readBackup, restoreBackup, backupStatus } from '../backup.js';
 import { readSnapshots, restoreSnapshot } from '../snapshots.js';
 import { fill, panel, note, renderPage, currentScreen } from '../pages.js';
 

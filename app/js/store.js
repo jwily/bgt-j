@@ -24,6 +24,10 @@ const UNREADABLE_KEY = 'budget-tracker-unreadable'; // saved data that couldn't 
 // swipe of the category strip, and rewriting the whole history for each would be wasteful.
 const INPUT_KEY = 'budget-tracker-input';
 export const VERSION = 3;
+// Settings: the backup reminder's choices (days, offered on the Backup screen) and the defaults.
+// (Up here: load() below uses them.)
+export const REMINDER_CHOICES = [7, 14, 30, 60];
+const DEFAULT_SETTINGS = { backupReminderDays: 30 };
 const RATES_URL = `https://api.frankfurter.dev/v1/latest?base=${HOME}&symbols=${FOREIGN_CODES.join(',')}`;
 
 const DEFAULT_CATEGORIES = ['Groceries', 'Dining', 'Transport', 'Housing', 'Bills', 'Shopping', 'Health', 'Fun', 'Other'];
@@ -51,7 +55,7 @@ function freshState() {
     rates: { perUsd: {}, date: null, checkedAt: 0 },
     input: { currency: HOME, categoryId: categories[0].id },
     lastBackupAt: null,
-    settings: { backupReminderDays: 30 },
+    settings: { ...DEFAULT_SETTINGS },
   };
 }
 
@@ -73,7 +77,7 @@ export function migrate(data) {
   }
   // Version 2 had no settings.
   if (data?.version === 2) {
-    data.settings = { backupReminderDays: 30 };
+    data.settings = { ...DEFAULT_SETTINGS };
     data.version = 3;
   }
   return data;
@@ -135,10 +139,12 @@ function load() {
   return loaded;
 }
 
-// Run on every load and save: category names without stray spaces at either end, a valid chosen
-// category and currency on the main screen, and colors in alphabetical order.
+// Run on every load and save: category names without stray spaces at either end, a reminder setting
+// the Backup screen offers, a valid chosen category and currency on the main screen, and colors in
+// alphabetical order.
 function tidy(data) {
   for (const category of data.categories) category.name = category.name.trim();
+  if (!REMINDER_CHOICES.includes(data.settings.backupReminderDays)) data.settings.backupReminderDays = DEFAULT_SETTINGS.backupReminderDays; // e.g. from a hand-edited backup
   keepInputCategoryActive(data);
   assignColors(data);
 }

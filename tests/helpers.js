@@ -45,6 +45,7 @@ exports.appReady = (page) => page.waitForFunction(() => document.getElementById(
 // makes it a phone-sized browser context, closed afterwards. A crash fails just that scenario (a
 // FAIL line naming it) and the rest still run, so one problem can't hide the checks after it.
 exports.scenarios = (browser) => async (name, run) => {
+  if (process.env.ONLY && !name.includes(process.env.ONLY)) return; // ONLY=<part of a name>: run just those
   const { devices } = require('playwright');
   const contexts = [];
   const open = async (options = {}) => {

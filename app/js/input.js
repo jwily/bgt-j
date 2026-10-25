@@ -15,9 +15,16 @@ let pickedDate = null; // a date chosen with the date button; null means "today"
 let stripKey = ''; // which categories the strip was last built from
 let recentering = false; // true while the app (not the person) is moving the strip
 let shownCurrency = null; // the currency the row was last centered on (it glides only when that changes)
-// The phone held sideways: the app is hidden then (style.css), and the strip's width changes, which
-// can shift it; that mustn't change the chosen category. Same query as in style.css.
-const SIDEWAYS = matchMedia('(orientation: landscape) and (max-height: 500px)');
+// The phone held sideways: the app is hidden then, and the strip's width changes, which can shift
+// it; that mustn't change the chosen category. The query is style.css's own (the media rule that
+// shows .turn-upright), read from there once it has loaded, so it's written in one place.
+let SIDEWAYS = null; // set on load
+function sidewaysQuery() {
+  for (const sheet of document.styleSheets) {
+    for (const rule of sheet.cssRules) if (rule instanceof CSSMediaRule && rule.cssText.includes('.turn-upright')) return rule.media.mediaText;
+  }
+  return 'not all';
+}
 const parts = {};
 
 export function initInput() {
@@ -87,7 +94,10 @@ export function initInput() {
   initParty(details); // a party member wanders along the top of Note and Date
   renderInput();
   document.fonts?.ready.then(recenter);
-  SIDEWAYS.addEventListener('change', () => { if (!SIDEWAYS.matches) recenter(); });
+  window.addEventListener('load', () => {
+    SIDEWAYS = matchMedia(sidewaysQuery());
+    SIDEWAYS.addEventListener('change', () => { if (!SIDEWAYS.matches) recenter(); });
+  }, { once: true });
 }
 
 export function renderInput() {
@@ -211,7 +221,7 @@ function stopGlide() {
 }
 
 function pickCenteredChip() {
-  if (recentering || glide || SIDEWAYS.matches) return;
+  if (recentering || glide || SIDEWAYS?.matches) return;
   const middle = parts.strip.scrollLeft + parts.strip.clientWidth / 2;
   let best = null;
   let bestDistance = Infinity;

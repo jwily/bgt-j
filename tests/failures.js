@@ -166,6 +166,12 @@ const sample = (overrides = {}) => ({
       check(`backup with ${label}: refused`, await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
     }
 
+    // A reminder setting the Backup screen doesn't offer (a hand-edited backup) becomes the default.
+    fs.writeFileSync(path.join(OUT, 'odd-reminder.json'), JSON.stringify(sample({ settings: { backupReminderDays: 45 } })));
+    await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'odd-reminder.json'));
+    await page.waitForTimeout(300);
+    check('a reminder setting not offered: the default, shown chosen', await page.locator('.reminder .options .on').textContent(), '30');
+
     const broken = sample({
       expenses: [
         { id: 'e1', periodId: 'p1', categoryId: 'gone', usdCents: 700, date: localToday(), note: 'category deleted elsewhere', original: null, createdAt: 1 },

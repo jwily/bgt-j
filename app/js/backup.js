@@ -7,7 +7,6 @@ import { takeSnapshot } from './snapshots.js';
 import { el } from './ui.js';
 import { HOME, plainAmount } from './money.js';
 
-export const REMINDER_CHOICES = [7, 14, 30, 60]; // days; the user picks one on the Backup screen
 
 // Returns true if the file was saved (or at least not cancelled).
 export async function exportBackup() {

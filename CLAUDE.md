@@ -15,6 +15,7 @@ Read README.md for what the app does; this file covers how to work on it.
   engine writes to its own `tests/output/<engine>/` so runs can overlap. First time: `npm install && npm run setup`.
 - Four passes: `main` (core flow), `more` (edge cases), `layout` (spacing/fit on four iPhones),
   `failures` (storage full/corrupt, rate server down, bad backups, offline, overnight, big data).
+- `ONLY=<part of a scenario name> node run.js <engine> <pass>` runs just the matching scenarios.
 - Shared test helpers live in `tests/helpers.js` (`check`, `openMenu`, `appReady`, `mockRates`,
   `startFirstPeriod`, `messageCleared`, `asInstalledApp`, ...). Prefer waiting for a condition over
   fixed `waitForTimeout` sleeps.
