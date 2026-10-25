@@ -108,8 +108,8 @@ exports.readPalette = () => {
 
 // The app's safety snapshots (in IndexedDB), newest first: their reasons.
 exports.snapshotReasons = (page) => page.evaluate(() => new Promise((resolve) => {
-  const open = indexedDB.open('budget-tracker', 1);
-  open.onupgradeneeded = () => open.result.createObjectStore('snapshots', { keyPath: 'at' });
+  const open = indexedDB.open('budget-tracker'); // whatever version the app has made it
+  open.onupgradeneeded = () => open.result.createObjectStore('snapshots', { keyPath: 'at' }); // not made yet: an empty list
   open.onsuccess = () => {
     const request = open.result.transaction('snapshots').objectStore('snapshots').getAll();
     request.onsuccess = () => resolve(request.result.sort((a, b) => b.at - a.at).map((s) => s.reason));

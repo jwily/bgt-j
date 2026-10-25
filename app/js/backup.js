@@ -34,10 +34,12 @@ export async function readBackup(file) {
   return isValid(data) ? { data } : { error: "That file isn't a budget backup." };
 }
 
-// The restored data is, by definition, backed up, so the reminder clock restarts.
+// The restored data is, by definition, backed up, so the reminder clock restarts. Resolves once the
+// snapshot of what it replaced is stored.
 export function restoreBackup(data) {
-  takeSnapshot('before restoring a backup');
+  const taken = takeSnapshot('before restoring a backup');
   replaceState({ ...data, lastBackupAt: Date.now() });
+  return taken;
 }
 
 // { short, label, stale }: short is "today" / "3 days ago" / "never" for tight spaces,

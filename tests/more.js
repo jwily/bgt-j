@@ -881,6 +881,40 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await page.waitForTimeout(300);
     check('going back to before the first budget: First Budget', await titleText(page), 'First Budget');
     check('three kept: the day\'s, and the two newest others', (await snaps()).join(' | '), 'before going back to a snapshot | before going back to a snapshot | start of the day');
+    // The list holds only times and reasons; the copies are kept apart, read only to go back to one.
+    check('listed snapshots carry no copy of the data', await page.evaluate(() => new Promise((resolve) => {
+      const request = indexedDB.open('budget-tracker');
+      request.onsuccess = () => {
+        const all = request.result.transaction('snapshots').objectStore('snapshots').getAll();
+        all.onsuccess = () => resolve(all.result.every((s) => !('data' in s)));
+      };
+    })), true);
+  });
+
+  await scenario('snapshots saved by the previous version', async (open) => {
+    // Version 1 of the snapshot store kept each copy with its time and reason: they're split on the
+    // first launch of this version, and going back to one still works.
+    const context = await open();
+    await context.addInitScript(() => {
+      if (sessionStorage.getItem('seeded')) return;
+      sessionStorage.setItem('seeded', '1');
+      const data = { version: 3, categories: [{ id: 'c1', name: 'Old', color: null, archived: false }], periods: [{ id: 'p1', budgetCents: 5000, start: '2026-01-01', end: null }], expenses: [], rates: { perUsd: {}, date: null, checkedAt: 0 }, input: { currency: 'USD', categoryId: 'c1' }, lastBackupAt: null, settings: { backupReminderDays: 30 } };
+      localStorage.setItem('budget-tracker', JSON.stringify(data));
+      const request = indexedDB.open('budget-tracker', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('snapshots', { keyPath: 'at' }).put({ at: Date.now() - 1000, reason: 'before deleting Period 2', data: JSON.stringify(data) });
+    });
+    await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
+    const page = await newPage(context);
+    await page.goto(URL);
+    await page.waitForTimeout(300);
+    await page.reload(); // the seeding above runs before the app's first open; now the app upgrades it
+    await appReady(page);
+    await openMenu(page, 'Backup');
+    await page.waitForSelector('.snapshot-row');
+    page.once('dialog', (d) => d.accept());
+    await page.locator('.snapshot-row', { hasText: 'before deleting Period 2' }).locator('.link').tap();
+    await page.waitForTimeout(300);
+    check('an old-style snapshot, after the upgrade: going back to it works', (await page.locator('#help .text').first().textContent()).startsWith('Back to'), true);
   });
 
   await scenario('daily snapshot on resume', async (open) => {
@@ -889,14 +923,15 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     const { page } = await launch(open);
     await page.waitForTimeout(300);
     await page.evaluate(() => new Promise((resolve) => { // make today's snapshot yesterday's
-      const request = indexedDB.open('budget-tracker', 1);
+      const request = indexedDB.open('budget-tracker');
       request.onsuccess = () => {
-        const store = request.result.transaction('snapshots', 'readwrite').objectStore('snapshots');
-        const all = store.getAll();
-        all.onsuccess = () => {
-          for (const s of all.result) { store.delete(s.at); store.put({ ...s, at: s.at - 86400000 }); }
-          store.transaction.oncomplete = resolve;
-        };
+        const transaction = request.result.transaction(['snapshots', 'snapshot-data'], 'readwrite');
+        for (const name of ['snapshots', 'snapshot-data']) {
+          const store = transaction.objectStore(name);
+          const all = store.getAll();
+          all.onsuccess = () => { for (const s of all.result) { store.delete(s.at); store.put({ ...s, at: s.at - 86400000 }); } };
+        }
+        transaction.oncomplete = resolve;
       };
     }));
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
