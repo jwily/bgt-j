@@ -117,6 +117,35 @@ const sample = (overrides = {}) => ({
     await context.close();
   });
 
+  // --- Corrupted data and no room to set it aside: it's the only copy, so nothing is saved over it.
+  await scenario('corrupted data, no room to set it aside', async () => {
+    const context = await browser.newContext({ ...devices['iPhone 13'], serviceWorkers: 'block' });
+    await mockRates(context, RATE());
+    await context.addInitScript(() => {
+      if (!sessionStorage.getItem('seeded')) {
+        sessionStorage.setItem('seeded', '1');
+        localStorage.setItem('budget-tracker', 'not json at all');
+      }
+      const real = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k, v) {
+        if (k === 'budget-tracker-unreadable') throw new DOMException('full', 'QuotaExceededError');
+        return real.call(this, k, v);
+      };
+    });
+    const page = await context.newPage();
+    const dialogs = [];
+    page.on('dialog', (d) => { dialogs.push(d.message()); d.accept(); });
+    await page.goto(APP_URL);
+    await page.waitForTimeout(500);
+    check('no room to set it aside: says nothing will be saved', dialogs.join(' | '), "Your saved data couldn't be read, and there's no room on the phone to set it aside, so the app won't save over it: nothing you do now will be kept. Free up some space on the phone, then reopen the app.");
+    for (const k of '100000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+    await page.locator('#page .primary').tap();
+    await page.waitForTimeout(300);
+    check('...and doesn\'t: the unreadable data is still there, untouched', await page.evaluate(() => localStorage.getItem('budget-tracker')), 'not json at all');
+    check('...without a storage-full alert on top', dialogs.length, 1);
+    await context.close();
+  });
+
   // --- Rate server failures on first launch: no crash, an honest estimate line.
   await scenario('rate server failures', async () => {
     for (const [label, rate, status] of [['HTTP 500', 'oops', 500], ['not JSON', '<html>', 200], ['no MXN', RATE(localToday(), {}), 200], ['negative', RATE(localToday(), { MXN: -3 }), 200]]) {
@@ -158,6 +187,8 @@ const sample = (overrides = {}) => ({
       ['every category archived', sample({ categories: [{ id: 'c1', name: 'Food', color: null, archived: true }] })],
       ['two open periods', (() => { const d = sample(); d.periods.push({ ...d.periods[0], id: 'p2' }); return d; })()],
       ['an expense with no amount', (() => { const d = sample(); delete d.expenses[0].usdCents; return d; })()],
+      ['an expense in a currency the app doesn\'t know', (() => { const d = sample(); d.expenses[0].original = { currency: 'EUR', amount: 5, perUsd: 0.9 }; return d; })()],
+      ['a foreign expense with no rate', (() => { const d = sample(); d.expenses[0].original = { currency: 'MXN', amount: 100 }; return d; })()],
     ];
     for (const [label, data] of malformed) {
       fs.writeFileSync(path.join(OUT, 'malformed-backup.json'), JSON.stringify(data));
