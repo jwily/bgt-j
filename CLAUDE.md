@@ -212,7 +212,8 @@ Read README.md for what the app does; this file covers how to work on it.
 - Backups are whole-history JSON; CSV export is for spreadsheets only.
 - Launches are instant from a saved version (app/sw.js); a deploy downloads in the background and
   shows on the launch after (the user chose this over waiting on the network at every launch).
-  Each launch stays on one version. It also checks when the app comes back from the background
+  Each launch stays on one version (sw.js keeps which launch runs which in a cache, `launches-bgt-j`,
+  as iOS stops idle service workers). It also checks when the app comes back from the background
   (iOS mostly resumes rather than relaunches); the first launch running a new version says
   "App updated" briefly in HELP (app.js asks sw.js which version it runs).
   Add any new app file to FILES in sw.js.

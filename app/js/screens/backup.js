@@ -22,6 +22,8 @@ export function enter() {
     if (currentScreen() === 'backup') renderPage();
   }).catch(() => {});
 }
+// A day's snapshot taken on coming back to the app (which may also drop the oldest).
+window.addEventListener('budget:snapshots', () => { if (currentScreen() === 'backup') listSnapshots(); });
 async function listSnapshots() {
   snapshots = await readSnapshots();
   if (currentScreen() === 'backup') renderPage();
@@ -60,7 +62,11 @@ export function render() {
     const goBackButton = el('button', { className: 'link', textContent: 'Go back' });
     goBackButton.addEventListener('click', async () => {
       if (!confirm(`Go back to how everything was ${when} (${snapshot.reason})? Your current data is snapshotted first, so you can undo this.`)) return;
-      if (!(await restoreSnapshot(snapshot.at))) return;
+      if (!(await restoreSnapshot(snapshot.at))) {
+        toast('That snapshot is no longer there.');
+        listSnapshots();
+        return;
+      }
       toast(`Back to ${when}`);
       listSnapshots();
     });

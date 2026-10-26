@@ -25,8 +25,28 @@ async function currentVersion() {
   return null;
 }
 
-// Which version each open launch (page) started with, so all of its files come from that one.
-const versionOf = new Map();
+// Which version each open launch (page) started with, so all of its files come from that one. Kept
+// in a cache as well (iOS stops an idle service worker, and its memory goes with it), and read back
+// the first time it's needed after a restart.
+const LAUNCHES = 'launches-bgt-j'; // not PREFIX: it's not a version, and version clean-up skips it
+let loadingLaunches = null;
+// (Never fails: every file is served through it, so a problem here means starting with no record.)
+const launches = () => (loadingLaunches ??= (async () => {
+  try {
+    const saved = await (await caches.open(LAUNCHES)).match('launches');
+    return new Map(saved ? Object.entries(await saved.json()) : []);
+  } catch {
+    return new Map();
+  }
+})());
+async function rememberLaunches() {
+  try {
+    const versionOf = await launches();
+    await (await caches.open(LAUNCHES)).put('launches', new Response(JSON.stringify(Object.fromEntries(versionOf))));
+  } catch {
+    // Kept in memory still; written next time.
+  }
+}
 
 const sameBytes = (a, b) => {
   if (a.byteLength !== b.byteLength) return false;
@@ -64,10 +84,12 @@ async function checkForUpdate() {
     // open for days, across deploys); drop the rest, and forget launches that have closed. Only
     // this app's caches: other pages on the same site have their own.
     const inUse = new Set([name, savedName]);
+    const versionOf = await launches();
     for (const [client, version] of versionOf) {
       if (await self.clients.get(client)) inUse.add(version);
       else versionOf.delete(client);
     }
+    await rememberLaunches();
     for (const other of await caches.keys()) if (other.startsWith(PREFIX) && !inUse.has(other)) await caches.delete(other);
   } catch {
     // Offline or a download failed: keep the saved version; try again next launch.
@@ -107,7 +129,9 @@ self.addEventListener('activate', (event) => {
 // changes).
 self.addEventListener('message', (event) => {
   if (event.data === 'check-for-update') event.waitUntil(update());
-  if (event.data === 'which-version') event.source.postMessage({ version: versionOf.get(event.source.id) ?? null });
+  if (event.data === 'which-version') {
+    event.waitUntil(launches().then((versionOf) => event.source.postMessage({ version: versionOf.get(event.source.id) ?? null })));
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -115,11 +139,20 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
   const launching = event.request.mode === 'navigate';
   event.respondWith((async () => {
+    const versionOf = await launches();
     let name = launching ? null : versionOf.get(event.clientId);
     if (name && !(await caches.has(name))) name = null; // gone after all: opening it would make an empty one
     if (!name) {
       name = await currentVersion();
-      if (launching && name) versionOf.set(event.resultingClientId, name);
+      if (launching && name) {
+        versionOf.set(event.resultingClientId, name);
+        const remembering = rememberLaunches(); // written in the background: the launch doesn't wait for it
+        try {
+          event.waitUntil(remembering);
+        } catch {
+          // The event can no longer be extended; the write goes ahead regardless.
+        }
+      }
     }
     const saved = name && await caches.open(name);
     return (await saved?.match(event.request, { ignoreSearch: true })) ?? fetch(event.request);

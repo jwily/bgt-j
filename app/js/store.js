@@ -36,6 +36,9 @@ const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 
 
 // True when the saved data couldn't be read (app.js then recovers from a snapshot; see snapshots.js).
 export let needsRecovery = false;
+// False when that unreadable data couldn't be set aside either (no room): then it's the only copy,
+// and the app never saves over it.
+export let unreadableKept = true;
 export let state = load();
 
 // ---------- basics ----------
@@ -84,7 +87,8 @@ export function migrate(data) {
 }
 
 // Everything the app reads without checking: at least one active category, at most one open
-// period, and the fields every category, period and expense needs.
+// period, and the fields every category, period and expense needs (a foreign amount in a currency
+// the app knows, with its rate).
 // (Function declarations: load() runs near the top of this file, before a const here would exist.)
 function isText(value) {
   return typeof value === 'string';
@@ -99,7 +103,8 @@ export function isValid(data) {
     && Array.isArray(data.periods) && data.periods.filter((p) => !p?.end).length <= 1
     && data.periods.every((p) => isText(p?.id) && isText(p.start) && isAmount(p.budgetCents))
     && Array.isArray(data.expenses)
-    && data.expenses.every((e) => isText(e?.id) && isText(e.periodId) && isText(e.categoryId) && isText(e.date) && isAmount(e.usdCents))
+    && data.expenses.every((e) => isText(e?.id) && isText(e.periodId) && isText(e.categoryId) && isText(e.date) && isAmount(e.usdCents)
+      && (e.original == null || (CURRENCIES[e.original.currency] && isAmount(e.original.amount) && e.original.perUsd > 0)))
     && data.rates !== null && typeof data.rates?.perUsd === 'object'
     && data.settings?.backupReminderDays > 0
     && data.input !== null && typeof data.input === 'object'; // typeof null is also 'object'
@@ -122,11 +127,7 @@ function load() {
   let loaded = text === null ? null : parse(text);
   if (text !== null && !loaded) {
     needsRecovery = true;
-    try {
-      localStorage.setItem(UNREADABLE_KEY, text);
-    } catch {
-      // No room to keep it; recovering matters more.
-    }
+    unreadableKept = keepAside(text);
   }
   loaded ??= freshState();
   try {
@@ -137,6 +138,29 @@ function load() {
   }
   tidy(loaded); // also puts right a choice that no longer exists
   return loaded;
+}
+
+// Sets unreadable saved data aside under UNREADABLE_KEY, moving it if there's no room for a copy.
+// Returns false if even that fails (it's then left where it was).
+function keepAside(text) {
+  try {
+    localStorage.setItem(UNREADABLE_KEY, text);
+    return true;
+  } catch {
+    // No room for a second copy: move it instead.
+  }
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.setItem(UNREADABLE_KEY, text);
+    return true;
+  } catch {
+    try {
+      localStorage.setItem(STORAGE_KEY, text); // put it back
+    } catch {
+      // Nowhere left to put it.
+    }
+    return false;
+  }
 }
 
 // Run on every load and save: category names without stray spaces at either end, a reminder setting
@@ -168,6 +192,7 @@ function assignColors(data) {
 
 // Returns false if the data couldn't be saved (the phone's storage for the app is full).
 function write() {
+  if (!unreadableKept) return false; // never over the only copy of data that couldn't be read
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;

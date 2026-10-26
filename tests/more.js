@@ -959,6 +959,32 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('trimmed to the newest seven on launch', (await snapshotReasons(page)).join(' | '), [8, 7, 6, 5, 4, 3, 2].map((i) => `before deleting Period ${i}`).join(' | '));
   });
 
+  await scenario('the Backup screen\'s snapshot list stays current', async (open) => {
+    const { page } = await launch(open);
+    await page.waitForTimeout(300);
+    await openMenu(page, 'Backup');
+    await page.waitForSelector('.snapshot-row');
+    // A snapshot gone since the list was read (dropped as the oldest, say): Go back says so.
+    await page.evaluate(() => new Promise((resolve) => {
+      const request = indexedDB.open('budget-tracker');
+      request.onsuccess = () => {
+        const transaction = request.result.transaction(['snapshots', 'snapshot-data'], 'readwrite');
+        transaction.objectStore('snapshots').clear();
+        transaction.objectStore('snapshot-data').clear();
+        transaction.oncomplete = resolve;
+      };
+    }));
+    page.once('dialog', (d) => d.accept());
+    await page.locator('.snapshot-row .link').first().tap();
+    await page.waitForTimeout(300);
+    check('going back to a snapshot that\'s gone: says so', await page.locator('#help .text').first().textContent(), 'That snapshot is no longer there.');
+    check('...and the list catches up', await page.locator('.snapshot-row').count(), 0);
+    // Coming back to the app on a new day takes that day's snapshot: the open list shows it.
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(500);
+    check('back in the app, a new day\'s snapshot: listed on the open Backup screen', await page.locator('.snapshot-row').count(), 1);
+  });
+
   await scenario('daily snapshot on resume', async (open) => {
     // iOS mostly resumes the app rather than relaunching it: coming back on a new day takes that
     // day's snapshot too.
@@ -1276,6 +1302,30 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     await page.locator('#nav-btn').tap();
     await page.waitForTimeout(300);
     check('saved, then left: "Categories saved" keeps its Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Categories saved true');
+  });
+
+  await scenario('categories: undo a save while still on the screen', async (open) => {
+    const { page, save, savedNames } = await categoriesScreen(open);
+    const before = await savedNames();
+    const funRow = (await categoryRows(page)).indexOf('Fun');
+    await page.locator('.cat-row').nth(funRow).locator('.mini').tap();
+    await save.tap();
+    await page.waitForTimeout(300);
+    await page.locator('#undo-btn').tap();
+    await page.waitForTimeout(300);
+    check('Undo of a save, still on the screen: saved categories are back', await savedNames(), before);
+    check('...and the screen shows them, with nothing unsaved', `${(await categoryRows(page)).includes('Fun')} ${await save.isDisabled()}`, 'true true');
+  });
+
+  await scenario('categories: undo reverses just that removal', async (open) => {
+    const { page, nameField } = await categoriesScreen(open);
+    const rows = await categoryRows(page);
+    await page.locator('.cat-row').nth(rows.indexOf('Other')).locator('.mini').tap();
+    const funIndex = (await categoryRows(page)).indexOf('Fun');
+    await nameField(funIndex).fill('Games'); // typed while "Other removed" still offers Undo
+    await page.locator('#undo-btn').tap();
+    const after = await categoryRows(page);
+    check('Undo puts Other back, and keeps the rename typed since', `${after.includes('Other')} ${after.includes('Games')} ${after.includes('Fun')}`, 'true true false');
   });
 
   await scenario('categories: saving with blanks', async (open) => {

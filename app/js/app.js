@@ -1,6 +1,6 @@
 // Entry point: wires the top bar, menu, screens and data together.
 
-import { currentPeriod, periodNumber, spentIn, refreshRate, needsRecovery } from './store.js';
+import { currentPeriod, periodNumber, spentIn, refreshRate, needsRecovery, unreadableKept } from './store.js';
 import { daysBetween, formatMoment } from './dates.js';
 import { formatUsd } from './money.js';
 import { $ } from './ui.js';
@@ -109,13 +109,15 @@ function refresh() {
 // Saving failed (the phone's storage for the app is full): say so plainly, since the change is on
 // screen but won't survive closing the app.
 window.addEventListener('budget:save-failed', () => {
+  if (!unreadableKept) return; // not for lack of room: held back on purpose (said at startup)
   alert("Couldn't save: this phone's storage for the app is full. Export a backup now (Menu → Backup).");
 });
 
 if (needsRecovery) {
   await moveOldSnapshots(); // recovery may need snapshots an older version kept in localStorage
   const recoveredFrom = await recoverFromSnapshot();
-  if (recoveredFrom) alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
+  if (!unreadableKept) alert("Your saved data couldn't be read, and there's no room on the phone to set it aside, so the app won't save over it: nothing you do now will be kept. Free up some space on the phone, then reopen the app.");
+  else if (recoveredFrom) alert(`Your saved data couldn't be read, so the app restored its snapshot from ${formatMoment(recoveredFrom)}. Anything after that is lost unless it's in a backup.`);
   else alert("Your saved data couldn't be read, and there's no snapshot to go back to. It's been kept aside, not deleted: restore a backup from Menu → Backup if you have one.");
 }
 
@@ -152,7 +154,9 @@ refreshRate();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   refreshRate();
-  takeDailySnapshot(); // iOS mostly resumes the app rather than relaunching it (once a day at most)
+  // iOS mostly resumes the app rather than relaunching it (once a day at most); the Backup screen,
+  // if it's showing, lists it.
+  takeDailySnapshot().then(() => window.dispatchEvent(new Event('budget:snapshots')));
   refresh(); // e.g. "Today" may be a new day
   navigator.serviceWorker?.controller?.postMessage('check-for-update');
 });

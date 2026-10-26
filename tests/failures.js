@@ -105,6 +105,14 @@ const sample = (overrides = {}) => ({
     check('corrupted: data restored from the snapshot', JSON.parse(await stored()).expenses[0]?.note, 'lunch');
     check('corrupted: the unreadable copy is kept', await stored('budget-tracker-unreadable'), '{"version":2,"categ');
     check('corrupted: lands on the main screen', await page.locator('#page').isHidden(), true);
+    // Recovering waits on the snapshots before the main screen is built; the party member is measured
+    // all the same (it used to wait for a "load" that had already happened, and never walked), so a
+    // new period still assembles the whole party.
+    await menu(page, 'New Period');
+    for (const k of '50000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+    await page.locator('#page .primary').tap();
+    await page.waitForTimeout(300);
+    check('corrupted, recovered: the party still assembles for a new period', await page.locator('.party-member').count(), 6);
     await context.close();
   });
 
@@ -114,6 +122,35 @@ const sample = (overrides = {}) => ({
     check('corrupted, no snapshot: starts fresh', await page.locator('#title').textContent(), 'First Budget');
     check('corrupted, no snapshot: says so, and that the data was kept', dialogs.join(' | '), "Your saved data couldn't be read, and there's no snapshot to go back to. It's been kept aside, not deleted: restore a backup from Menu → Backup if you have one.");
     check('corrupted, no snapshot: unreadable copy kept', await stored('budget-tracker-unreadable'), 'not json at all');
+    await context.close();
+  });
+
+  // --- Corrupted data and no room to set it aside: it's the only copy, so nothing is saved over it.
+  await scenario('corrupted data, no room to set it aside', async () => {
+    const context = await browser.newContext({ ...devices['iPhone 13'], serviceWorkers: 'block' });
+    await mockRates(context, RATE());
+    await context.addInitScript(() => {
+      if (!sessionStorage.getItem('seeded')) {
+        sessionStorage.setItem('seeded', '1');
+        localStorage.setItem('budget-tracker', 'not json at all');
+      }
+      const real = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k, v) {
+        if (k === 'budget-tracker-unreadable') throw new DOMException('full', 'QuotaExceededError');
+        return real.call(this, k, v);
+      };
+    });
+    const page = await context.newPage();
+    const dialogs = [];
+    page.on('dialog', (d) => { dialogs.push(d.message()); d.accept(); });
+    await page.goto(APP_URL);
+    await page.waitForTimeout(500);
+    check('no room to set it aside: says nothing will be saved', dialogs.join(' | '), "Your saved data couldn't be read, and there's no room on the phone to set it aside, so the app won't save over it: nothing you do now will be kept. Free up some space on the phone, then reopen the app.");
+    for (const k of '100000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+    await page.locator('#page .primary').tap();
+    await page.waitForTimeout(300);
+    check('...and doesn\'t: the unreadable data is still there, untouched', await page.evaluate(() => localStorage.getItem('budget-tracker')), 'not json at all');
+    check('...without a storage-full alert on top', dialogs.length, 1);
     await context.close();
   });
 
@@ -158,6 +195,8 @@ const sample = (overrides = {}) => ({
       ['every category archived', sample({ categories: [{ id: 'c1', name: 'Food', color: null, archived: true }] })],
       ['two open periods', (() => { const d = sample(); d.periods.push({ ...d.periods[0], id: 'p2' }); return d; })()],
       ['an expense with no amount', (() => { const d = sample(); delete d.expenses[0].usdCents; return d; })()],
+      ['an expense in a currency the app doesn\'t know', (() => { const d = sample(); d.expenses[0].original = { currency: 'EUR', amount: 5, perUsd: 0.9 }; return d; })()],
+      ['a foreign expense with no rate', (() => { const d = sample(); d.expenses[0].original = { currency: 'MXN', amount: 100 }; return d; })()],
     ];
     for (const [label, data] of malformed) {
       fs.writeFileSync(path.join(OUT, 'malformed-backup.json'), JSON.stringify(data));
@@ -302,6 +341,12 @@ const sample = (overrides = {}) => ({
     // files still come from it two deploys later.
     const lingering = await context.newPage();
     await lingering.goto('http://localhost:8766/'); // runs "newer"
+    // iOS stops an idle service worker, which loses what it held in memory; it must still know which
+    // version that launch runs.
+    await page.waitForTimeout(300);
+    const devtools = await context.newCDPSession(page);
+    await devtools.send('ServiceWorker.enable');
+    await devtools.send('ServiceWorker.stopAllWorkers');
     for (const next of ['newest', 'final']) {
       version = next;
       await page.reload();
@@ -314,7 +359,7 @@ const sample = (overrides = {}) => ({
         look();
       }), next);
     }
-    check('deploy: a launch still open two deploys later keeps its version', await lingering.evaluate(() => fetch('js/money.js').then((r) => r.text()).then((t) => t.match(/deploy: (\w+)/)?.[1])), 'newer');
+    check('deploy: a launch still open two deploys later keeps its version, though the worker was stopped meanwhile', await lingering.evaluate(() => fetch('js/money.js').then((r) => r.text()).then((t) => t.match(/deploy: (\w+)/)?.[1])), 'newer');
     await context.close();
     pages.close();
   });
