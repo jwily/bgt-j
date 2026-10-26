@@ -1061,6 +1061,26 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('...without redrawing the rest of the screen', await page.evaluate(() => window.layoutReads), 0);
   });
 
+  await scenario('ring: the largest fires first; the small ones never blur together', async (open) => {
+    const { page } = await launch(open);
+    // Nine categories, a long tail of small amounts.
+    await page.evaluate(() => {
+      const data = JSON.parse(localStorage.getItem('budget-tracker'));
+      const period = data.periods[0].id;
+      data.expenses = data.categories.map((c, i) => ({ id: `e${i}`, periodId: period, categoryId: c.id, usdCents: [60000, 20000, 8000, 3000, 1500, 800, 400, 200, 100][i], date: data.periods[0].start, note: '', original: null, createdAt: i }));
+      localStorage.setItem('budget-tracker', JSON.stringify(data));
+    });
+    await page.reload();
+    await appReady(page);
+    await openSummary(page);
+    const waves = await page.evaluate(() => [...document.querySelectorAll('.ring-chart .wave')].map((w) => ({
+      len: parseFloat(w.style.getPropertyValue('--len')), delay: parseFloat(w.style.getPropertyValue('--delay')),
+    })));
+    const firing = [...waves].sort((a, b) => a.delay - b.delay);
+    check('the first to fire is the largest, the last the smallest', `${firing[0].len === Math.max(...waves.map((w) => w.len))} ${firing.at(-1).len === Math.min(...waves.map((w) => w.len))}`, 'true true');
+    check('no two fire under 0.05s apart', firing.slice(1).every((w, i) => w.delay - firing[i].delay >= 0.0495), true);
+  });
+
   await scenario('summary: opening a category redraws only its row', async (open) => {
     const { page, type } = await launch(open);
     await type('500');
