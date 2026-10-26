@@ -341,6 +341,12 @@ const sample = (overrides = {}) => ({
     // files still come from it two deploys later.
     const lingering = await context.newPage();
     await lingering.goto('http://localhost:8766/'); // runs "newer"
+    // iOS stops an idle service worker, which loses what it held in memory; it must still know which
+    // version that launch runs.
+    await page.waitForTimeout(300);
+    const devtools = await context.newCDPSession(page);
+    await devtools.send('ServiceWorker.enable');
+    await devtools.send('ServiceWorker.stopAllWorkers');
     for (const next of ['newest', 'final']) {
       version = next;
       await page.reload();
@@ -353,7 +359,7 @@ const sample = (overrides = {}) => ({
         look();
       }), next);
     }
-    check('deploy: a launch still open two deploys later keeps its version', await lingering.evaluate(() => fetch('js/money.js').then((r) => r.text()).then((t) => t.match(/deploy: (\w+)/)?.[1])), 'newer');
+    check('deploy: a launch still open two deploys later keeps its version, though the worker was stopped meanwhile', await lingering.evaluate(() => fetch('js/money.js').then((r) => r.text()).then((t) => t.match(/deploy: (\w+)/)?.[1])), 'newer');
     await context.close();
     pages.close();
   });
