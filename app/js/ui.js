@@ -20,3 +20,11 @@ export function nudge(node) {
   void node.offsetWidth; // restart the animation
   node.classList.add('nudge');
 }
+
+// Runs fn once the page has fully loaded, style.css included (now, if it already has). Measuring
+// anything styled before then can give 0; and a listener for "load" added after it fired (startup
+// can await first, as when recovering data) would never run.
+export function whenLoaded(fn) {
+  if (document.readyState === 'complete') fn();
+  else window.addEventListener('load', fn, { once: true });
+}

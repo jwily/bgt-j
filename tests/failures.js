@@ -105,6 +105,14 @@ const sample = (overrides = {}) => ({
     check('corrupted: data restored from the snapshot', JSON.parse(await stored()).expenses[0]?.note, 'lunch');
     check('corrupted: the unreadable copy is kept', await stored('budget-tracker-unreadable'), '{"version":2,"categ');
     check('corrupted: lands on the main screen', await page.locator('#page').isHidden(), true);
+    // Recovering waits on the snapshots before the main screen is built; the party member is measured
+    // all the same (it used to wait for a "load" that had already happened, and never walked), so a
+    // new period still assembles the whole party.
+    await menu(page, 'New Period');
+    for (const k of '50000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
+    await page.locator('#page .primary').tap();
+    await page.waitForTimeout(300);
+    check('corrupted, recovered: the party still assembles for a new period', await page.locator('.party-member').count(), 6);
     await context.close();
   });
 

@@ -4,7 +4,7 @@ import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFo
 import { initParty, celebrate } from './party.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
-import { $, el, nudge } from './ui.js';
+import { $, el, nudge, whenLoaded } from './ui.js';
 import { onLongPress } from './presses.js';
 import { toast } from './help.js';
 import { keypad, categoryChip } from './widgets.js';
@@ -94,10 +94,10 @@ export function initInput() {
   initParty(details); // a party member wanders along the top of Note and Date
   renderInput();
   document.fonts?.ready.then(recenter);
-  window.addEventListener('load', () => {
+  whenLoaded(() => {
     SIDEWAYS = matchMedia(sidewaysQuery());
     SIDEWAYS.addEventListener('change', () => { if (!SIDEWAYS.matches) recenter(); });
-  }, { once: true });
+  });
 }
 
 export function renderInput() {

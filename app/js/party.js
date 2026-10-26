@@ -10,7 +10,7 @@
 // assembling): a pause or a cheer is timers, and with another screen open or the app in the
 // background it stops.
 
-import { el } from './ui.js';
+import { el, whenLoaded } from './ui.js';
 
 const PARTY = ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie']; // party.png's rows
 // party.png's columns: the walk's stride, feet together (standing), and the cheer's arm thrown up.
@@ -41,11 +41,11 @@ export function initParty(container) {
   area.append(member);
   // Measured once style.css has surely applied (at startup it may not have yet, and an unstyled
   // member measures 0, which would leave it, and a new period's party, walking on the spot).
-  window.addEventListener('load', () => {
+  whenLoaded(() => {
     PX = member.getBoundingClientRect().width / CELL;
     SPEED = (STRIDE * PX) / (2 * STEP);
     EXIT_SPEED = (STRIDE * PX) / (2 * EXIT_STEP);
-  }, { once: true });
+  });
   // Runs only on the main screen with the app in view: another screen opening (body.page-open)
   // or the app going to the background stops it; coming back resumes it.
   new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
