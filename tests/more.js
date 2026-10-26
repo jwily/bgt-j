@@ -1291,6 +1291,17 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('...and the screen shows them, with nothing unsaved', `${(await categoryRows(page)).includes('Fun')} ${await save.isDisabled()}`, 'true true');
   });
 
+  await scenario('categories: undo reverses just that removal', async (open) => {
+    const { page, nameField } = await categoriesScreen(open);
+    const rows = await categoryRows(page);
+    await page.locator('.cat-row').nth(rows.indexOf('Other')).locator('.mini').tap();
+    const funIndex = (await categoryRows(page)).indexOf('Fun');
+    await nameField(funIndex).fill('Games'); // typed while "Other removed" still offers Undo
+    await page.locator('#undo-btn').tap();
+    const after = await categoryRows(page);
+    check('Undo puts Other back, and keeps the rename typed since', `${after.includes('Other')} ${after.includes('Games')} ${after.includes('Fun')}`, 'true true false');
+  });
+
   await scenario('categories: saving with blanks', async (open) => {
     const { page, save, nameField, savedNames } = await categoriesScreen(open);
     // An existing category cleared is removed, and tapping Save while an empty slot still has the

@@ -70,11 +70,18 @@ function draw(saved = categoriesFromState()) {
   draft.splice(0, draft.length, ...draft.filter(holdsCategory));
   const active = draft.filter((c) => !c.archived);
   const archived = draft.filter((c) => c.archived);
+  // change() edits the draft and may return { message, undo }: the message to show, about the draft
+  // (so leaving the screen ends it), and how to reverse just that edit (not anything typed since).
   const editDraft = (change) => {
-    const before = draft.map((c) => ({ ...c }));
-    const message = change();
+    const { message, undo } = change() ?? {};
     draw();
-    if (message) toast(message, () => { categoryDraft = before; draw(); }, { screen: true }); // about the draft: gone if you leave
+    if (message) {
+      toast(message, undo && (() => {
+        if (categoryDraft !== draft) return; // the draft was saved or started over meanwhile
+        undo();
+        draw();
+      }), { screen: true });
+    }
   };
 
   const saveButton = el('button', { className: 'primary', textContent: 'Save', disabled: !draftDiffers(saved) });
@@ -154,13 +161,18 @@ function draw(saved = categoriesFromState()) {
         return;
       }
       editDraft(() => {
-        draft.splice(draft.indexOf(category), 1);
+        const at = draft.indexOf(category);
+        draft.splice(at, 1);
         // One with expenses is archived, so past summaries keep it.
-        if (category.id && categoryIsUsed(category.id)) {
-          draft.push({ ...category, archived: true });
-          return `${category.name.trim()} archived`;
-        }
-        return `${category.name.trim()} removed`;
+        const archivedCopy = category.id && categoryIsUsed(category.id) ? { ...category, archived: true } : null;
+        if (archivedCopy) draft.push(archivedCopy);
+        return {
+          message: `${category.name.trim()} ${archivedCopy ? 'archived' : 'removed'}`,
+          undo: () => {
+            if (archivedCopy) draft.splice(draft.indexOf(archivedCopy), 1);
+            draft.splice(Math.min(at, draft.length), 0, category);
+          },
+        };
       });
     });
 
