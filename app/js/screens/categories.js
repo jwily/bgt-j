@@ -52,12 +52,14 @@ function categoryDraftProblem(categories) {
 }
 
 // Redraws for changes elsewhere (the day's rates arriving, say) leave the screen as it is, so a
-// field isn't rebuilt under your finger mid-word; only a change to the saved categories redraws it.
+// field isn't rebuilt under your finger mid-word; only a change to the saved categories redraws it,
+// starting over from them (an Undo of Save, say: the draft was what that Undo just took back).
 // Edits on the screen redraw it themselves (draw).
 export function render() {
   const saved = categoriesFromState();
   const from = JSON.stringify(saved);
   if (from === drawnFrom) return;
+  if (drawnFrom !== null) categoryDraft = null; // the saved categories changed under the screen
   drawnFrom = from;
   draw(saved);
 }

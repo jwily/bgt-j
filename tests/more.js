@@ -1278,6 +1278,19 @@ const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
     check('saved, then left: "Categories saved" keeps its Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Categories saved true');
   });
 
+  await scenario('categories: undo a save while still on the screen', async (open) => {
+    const { page, save, savedNames } = await categoriesScreen(open);
+    const before = await savedNames();
+    const funRow = (await categoryRows(page)).indexOf('Fun');
+    await page.locator('.cat-row').nth(funRow).locator('.mini').tap();
+    await save.tap();
+    await page.waitForTimeout(300);
+    await page.locator('#undo-btn').tap();
+    await page.waitForTimeout(300);
+    check('Undo of a save, still on the screen: saved categories are back', await savedNames(), before);
+    check('...and the screen shows them, with nothing unsaved', `${(await categoryRows(page)).includes('Fun')} ${await save.isDisabled()}`, 'true true');
+  });
+
   await scenario('categories: saving with blanks', async (open) => {
     const { page, save, nameField, savedNames } = await categoriesScreen(open);
     // An existing category cleared is removed, and tapping Save while an empty slot still has the
