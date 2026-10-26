@@ -154,7 +154,9 @@ refreshRate();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   refreshRate();
-  takeDailySnapshot(); // iOS mostly resumes the app rather than relaunching it (once a day at most)
+  // iOS mostly resumes the app rather than relaunching it (once a day at most); the Backup screen,
+  // if it's showing, lists it.
+  takeDailySnapshot().then(() => window.dispatchEvent(new Event('budget:snapshots')));
   refresh(); // e.g. "Today" may be a new day
   navigator.serviceWorker?.controller?.postMessage('check-for-update');
 });
