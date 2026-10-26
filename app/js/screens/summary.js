@@ -122,37 +122,46 @@ function itemRow(expense) {
 }
 
 // The spending ring, after the bar of Squall's Renzokuken: each category a wave going clockwise
-// from 12 o'clock, largest first so the smallest comes last, rising from black to its color at a
+// from 12 o'clock, smallest first so the largest comes last, rising from black to its color at a
 // hard leading edge (its clockwise end, so the last edge marks where spending stops). Drawn against
 // the budget, so what's unspent stays black; over budget, against the spending, all of it waves.
-// Arriving, the waves fire one at a time, the furthest first, each travelling clockwise from 12
-// o'clock to its place at FF8's constant speed (measured from renzo.mov) and landing gently; the
-// next fires as the one before is 85% of the way there, so each travels only through space nothing
-// has landed in yet. The tick at 12 o'clock flashes as each fires. The whole sequence then plays in
-// PACE * (its natural length) ^ TEMPO seconds, rhythm kept: a smooth squeeze, so long sequences
-// don't keep you waiting and short ones still read as one wave after another (about 0.35-1.3s).
+// Arriving, the waves fire one at a time, the furthest first (so the largest opens the sequence),
+// each travelling clockwise from 12 o'clock to its place at FF8's constant speed (measured from
+// renzo.mov) and landing gently; the next fires as the one before is 85% of the way there, so each
+// travels only through space nothing has landed in yet. The tick at 12 o'clock flashes as each
+// fires. The whole sequence then plays in PACE * (its natural length) ^ TEMPO seconds, rhythm kept:
+// a smooth squeeze, so long sequences don't keep you waiting and short ones still read as one wave
+// after another (about 0.35-1.4s). The small waves at the end come quicker and quicker, but never
+// closer than MIN_GAP, so each still reads as its own wave rather than a blur.
 const WAVE_SPEED = 400; // degrees a second
 const NEXT_FIRES_AT = 0.85; // of the previous wave's travel
 const TEMPO = 0.3; // 1 would keep FF8's speed; lower evens lengths out more
 const PACE = 0.85;
+const MIN_GAP = 0.05; // seconds between two waves firing (3 frames)
 function waveRing(slices, total, budget) {
   const whole = Math.max(budget, total);
   let at = 0;
-  const placed = [...slices].sort((a, b) => b.value - a.value).map(({ value, color }) => {
+  const placed = [...slices].sort((a, b) => a.value - b.value).map(({ value, color }) => {
     const from = (at / whole) * 360;
     at += value;
     return { color, from, to: (at / whole) * 360 };
   });
-  // Timings at FF8's speed, furthest wave first, then squeezed.
+  // Timings at FF8's speed, furthest wave first, then squeezed, then kept MIN_GAP apart.
+  const firing = [...placed].reverse();
   let fire = 0, end = 0;
-  for (const wave of [...placed].reverse()) {
+  for (const wave of firing) {
     wave.delay = fire;
     wave.dur = wave.to / WAVE_SPEED;
     fire += wave.dur * NEXT_FIRES_AT;
     end = Math.max(end, wave.delay + wave.dur);
   }
   const scale = end && (PACE * end ** TEMPO) / end;
-  const seconds = (t) => `${(t * scale).toFixed(3)}s`;
+  firing.forEach((wave, i) => {
+    wave.dur *= scale;
+    wave.delay *= scale;
+    if (i) wave.delay = Math.max(wave.delay, firing[i - 1].delay + MIN_GAP);
+  });
+  const seconds = (t) => `${t.toFixed(3)}s`;
   const waves = placed.map(({ color, from, to, delay, dur }) => {
     const wave = el('span', { className: 'wave' });
     wave.style.cssText = `--c: ${color}; --from: ${from}deg; --len: ${to - from}deg; --delay: ${seconds(delay)}; --dur: ${seconds(dur)}`;

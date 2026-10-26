@@ -127,12 +127,14 @@ Read README.md for what the app does; this file covers how to work on it.
   under the bar's right end, over its bottom rim, as on the GF Compatibility bars (`compatibility.png`).
 - The summary's spending ring (the user's design, after Squall's Renzokuken bar in `renzo.mov`), in
   the SPENT window: a black channel in a light grey rim with an I-beam tick at 12 o'clock. Each
-  category is a wave going clockwise, largest first so the smallest comes last, rising from black to
+  category is a wave going clockwise, smallest first so the largest comes last (the user's choice:
+  the first wave to fire is then the largest), rising from black to
   its full color at a hard leading edge. Drawn against the budget, unspent left black; over budget,
   the rim and tick turn FF8's trigger yellow (#d0da00). Opening the summary, the waves fire one at a
   time, the furthest first, each gliding at FF8's measured speed and landing gently; the next fires
   at 85% of the previous one's travel; the tick flashes as each fires; the whole is squeezed smoothly
-  toward 1s (about 0.35-1.3s). Not on redraws.
+  toward 1s (about 0.35-1.4s), and no two fire under 0.05s apart
+  (`MIN_GAP`: with the largest first, the small ones at the end would otherwise blur together). Not on redraws.
 - A party member (the user's idea; `party.js`): one of FF8's six, random at launch and a different
   one each time you come back to the main screen, wanders along the top of Note and Date: strolls of
   whole steps, pauses, sometimes turns back, mirrored to walk right. Its walk is FFRK's two frames
@@ -217,7 +219,8 @@ Read README.md for what the app does; this file covers how to work on it.
   (iOS mostly resumes rather than relaunches); the first launch running a new version says
   "App updated" briefly in HELP (app.js asks sw.js which version it runs).
   Add any new app file to FILES in sw.js.
-- Tried and replaced on the summary: a donut (became the ring), Renzokuken's stepped motion (felt
+- Tried and replaced on the summary: the ring laid out largest first (so the smallest fired first),
+  a donut (became the ring), Renzokuken's stepped motion (felt
   choppy), the reverse wave order, a 0.7-1.3s clamp on the ring's length (now a smooth curve),
   translucent gauge fills with a glass sheen. Gauge numbers went to out of 1000, back to 100, and
   out of 1000 again (the user's current choice).
