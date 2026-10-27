@@ -3,7 +3,7 @@
 // user's own iPhone 14 Pro.
 // (Sizes are Safari's visible area; as a home-screen app the screen is taller still.)
 const { chromium, webkit, devices } = require('playwright');
-const { asInstalledApp, mockRates, scenarios } = require('./helpers');
+const { asInstalledApp, mockRates, scenarios, localToday, settled } = require('./helpers');
 const ENGINE = process.env.ENGINE || 'chromium';
 let failures = 0;
 const check = (label, ok, detail) => {
@@ -18,7 +18,7 @@ const check = (label, ok, detail) => {
   for (const [name, device] of [['13 mini', devices['iPhone 13 Mini']], ['SE 3', devices['iPhone SE (3rd gen)']], ['13', devices['iPhone 13']], ['14 Pro', devices['iPhone 14 Pro']]]) {
     await scenario(`${name}`, async () => {
       const context = await browser.newContext(device);
-      await mockRates(context, '{"date":"2026-10-20","rates":{"MXN":18.5}}');
+      await mockRates(context, JSON.stringify({ date: localToday(), rates: { MXN: 18.5 } }));
       const page = await context.newPage();
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto('http://localhost:8765/');
@@ -38,7 +38,7 @@ const check = (label, ok, detail) => {
       });
       check(`${name}: budget confirm label centered`, Math.abs(labelOffset) <= 1, `${labelOffset}px`);
       await page.locator('#page .primary').tap();
-      await page.waitForTimeout(400);
+      await settled(page);
 
       // The chosen currency and its junction icon are centered together in the Amount window,
       // whichever it is, and switching doesn't shift anything up or down.
@@ -51,7 +51,7 @@ const check = (label, ok, detail) => {
       });
       const usd = await opts();
       await page.locator('.currency-zone').tap();
-      await page.waitForTimeout(350); // the row's 0.2s glide
+      await settled(page); // the row's glide
       const mxn = await opts();
       check(`${name}: chosen currency and its icon centered (USD, then MXN)`, Math.abs(usd.offset) <= 1 && Math.abs(mxn.offset) <= 1, `${usd.offset}px, ${mxn.offset}px`);
       check(`${name}: no vertical shift switching currency`, usd.top === mxn.top, `${usd.top} -> ${mxn.top}`);
@@ -72,7 +72,7 @@ const check = (label, ok, detail) => {
       let worstOffset = 0, smallestGap = Infinity;
       for (const n of names) {
         await page.locator('.strip .chip', { hasText: n }).first().tap();
-        await page.waitForTimeout(650);
+        await settled(page);
         const m = await page.evaluate(() => {
           const strip = document.querySelector('.strip').getBoundingClientRect();
           const chip = document.querySelector('.strip .chip.selected');
@@ -125,15 +125,15 @@ const check = (label, ok, detail) => {
       await key('⌫'); // clear the 9s typed above (hold ⌫)
       const back = page.locator('#view-input .key').filter({ hasText: /^⌫$/ });
       await back.hover();
-      await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
+      await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up(); // a long press: holding is the point
       await key('5');
       await page.locator('.note').fill('A very long note that goes on and on well past the width of any phone screen');
       await page.locator('.add-btn').tap();
       await page.waitForSelector('#help:not(.message)', { timeout: 6000 });
       await page.locator('#help').click({ position: { x: 20, y: 30 } });
-      await page.waitForTimeout(300);
+      await settled(page);
       await page.locator('.cat-head').first().tap();
-      await page.waitForTimeout(300);
+      await settled(page);
       const overflow = await page.evaluate(() => document.getElementById('page').scrollWidth - document.getElementById('page').clientWidth);
       check(`${name}: summary never wider than the screen`, overflow <= 0, `${overflow}px too wide`);
       // The gauge's number sits under the bar's right end, lined up with the amount above it; the
@@ -165,20 +165,20 @@ const check = (label, ok, detail) => {
   // visible area above): the main screen fits without scrolling.
   await scenario('14 Pro installed', async () => {
     const context = await browser.newContext({ ...devices['iPhone 14 Pro'], viewport: { width: 393, height: 852 } });
-    await mockRates(context, '{"date":"2026-10-20","rates":{"MXN":18.5}}');
+    await mockRates(context, JSON.stringify({ date: localToday(), rates: { MXN: 18.5 } }));
     const page = await context.newPage();
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('http://localhost:8765/');
     for (const k of '200000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
     await page.locator('#page .primary').tap();
-    await page.waitForTimeout(400);
+    await settled(page);
     check('14 Pro installed: the main screen fits without scrolling', await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1));
     // Categories: each remove button's ✕ has the same space on both sides (to the name field, to
     // the window's inner edge).
     await page.locator('#nav-btn').tap();
     await page.waitForSelector('#menu-backdrop.open');
     await page.locator('#menu button', { hasText: 'Categories' }).tap();
-    await page.waitForTimeout(400);
+    await settled(page);
     const x = await page.evaluate(() => {
       const row = document.querySelector('.cat-row'), input = row.querySelector('input').getBoundingClientRect();
       const range = document.createRange(); range.selectNodeContents(row.querySelector('.mini')); const glyph = range.getBoundingClientRect();

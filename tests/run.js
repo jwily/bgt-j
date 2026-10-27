@@ -12,9 +12,13 @@ const { serveApp } = require('./helpers');
 const PASSES = ['main', 'more', 'layout', 'failures'];
 const ENGINES = ['webkit', 'chromium'];
 
+const children = new Set(); // the passes running
+
 function runPass(pass, engine) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [path.join(__dirname, `${pass}.js`)], { env: { ...process.env, ENGINE: engine } });
+    children.add(child);
+    child.on('exit', () => children.delete(child));
     let output = '';
     child.stdout.on('data', (d) => { output += d; });
     child.stderr.on('data', (d) => { output += d; });
@@ -25,6 +29,19 @@ function runPass(pass, engine) {
 // On a Mac, keep it from sleeping while the tests run (a sleeping Mac freezes the browsers, and the
 // run sits silently until it wakes). caffeinate -w lets go as soon as this process ends.
 if (process.platform === 'darwin') spawn('caffeinate', ['-i', '-w', String(process.pid)], { stdio: 'ignore' }).on('error', () => {}).unref();
+
+// Stopped part-way (Ctrl-C, or killed): stop the passes too. Otherwise they ran on, unseen, and
+// slowed every run after. Each is asked first (Playwright then closes its browsers), and any still
+// running 3s later (one kept alive by its own server, say) is ended outright.
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(signal, () => {
+    for (const child of children) child.kill('SIGTERM');
+    setTimeout(() => {
+      for (const child of children) child.kill('SIGKILL');
+      process.exit(130);
+    }, 3000);
+  });
+}
 
 (async () => {
   const [onlyEngine, onlyPass] = process.argv.slice(2);

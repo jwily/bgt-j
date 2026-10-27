@@ -3,11 +3,10 @@
 const { chromium, webkit, devices } = require('playwright');
 const ENGINE = process.env.ENGINE || 'chromium';
 const fs = require('fs');
-const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
+const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved, localToday, settled } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
 // FF8's six party members, one of whom wanders the main screen.
-const localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const PARTY = ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'];
 
 // The summary's spending ring: each wave's color and start and end angles (clockwise from 12
@@ -41,7 +40,7 @@ const ringWaves = (page) => page.evaluate(() => {
   for (const k of '200000') await sheetKey(k);
   check('budget display', await page.locator('.budget-amount').textContent(), '$2,000.00');
   await page.locator('#page .primary').tap();
-  await page.waitForTimeout(400);
+  await settled(page);
   await page.screenshot({ path: `${OUT}/${ENGINE}-1-main-empty.png` });
 
   // A party member, one of FF8's six, wanders along the top of Note and Date; taps go through it.
@@ -58,7 +57,7 @@ const ringWaves = (page) => page.evaluate(() => {
   const before = await page.locator('.party-member').first().getAttribute('data-member');
   await openSummary(page);
   await page.locator('#nav-btn').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   const after = await page.locator('.party-member').first().getAttribute('data-member');
   check('back on the main screen, a different party member', after !== before && PARTY.includes(after), true);
 
@@ -96,17 +95,17 @@ const ringWaves = (page) => page.evaluate(() => {
   // Category: tap the third chip, wait for the snap
   check('strip is alphabetical', (await page.locator('.strip .chip').allTextContents()).join(','), 'Bills,Dining,Fun,Groceries,Health,Housing,Other,Shopping,Transport');
   await page.locator('.strip .chip', { hasText: 'Transport' }).tap();
-  await page.waitForTimeout(700);
+  await settled(page);
   check('selected category after tap', await page.locator('.strip .chip.selected').textContent(), 'Transport');
   // Category: scroll the strip by hand one chip to the left (chips vary in width, so measure)
   await page.locator('.strip').evaluate((s) => {
     const [a, b] = ['Shopping', 'Transport'].map((n) => [...s.children].find((c) => c.textContent === n));
     s.scrollBy({ left: (a.offsetLeft + a.offsetWidth / 2) - (b.offsetLeft + b.offsetWidth / 2) });
   });
-  await page.waitForTimeout(500);
+  await settled(page);
   check('selected category after scroll', await page.locator('.strip .chip.selected').textContent(), 'Shopping');
   await page.locator('.strip .chip', { hasText: 'Transport' }).tap();
-  await page.waitForTimeout(700);
+  await settled(page);
   await page.locator('.note').fill('Uber');
   await page.locator('.add-btn').tap();
   check('spent after MX$250', await spentText(page), '$523.32');
@@ -191,14 +190,14 @@ const ringWaves = (page) => page.evaluate(() => {
 
   // Edit the expense: 250 -> 300 pesos
   await page.locator('.item').first().tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   await page.locator('#sheet input').first().fill('300');
   await page.locator('#sheet .primary').tap();
   check('edited MXN converts at saved rate', await page.locator('.ring-center strong').textContent(), '$525.88');
 
   // Edit budget
   await page.locator('.edit-budget').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   check('edit budget prefilled', await page.locator('.budget-amount').textContent(), '$2,000.00');
   await sheetKey('⌫');
   await page.locator('#page .primary').tap();
@@ -215,27 +214,27 @@ const ringWaves = (page) => page.evaluate(() => {
 
   // New Period
   await page.locator('#nav-btn').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   check('menu labels', (await page.locator('#menu button').allTextContents()).map((t) => t.replace(/Backup.*/, 'Backup')).join(','), 'Backup,Categories,New Period,Past Periods,Current Period'); // setup on top, periods nearest the thumb
   check('menu backup line', await page.locator('#backup-status').textContent(), 'never');
   check('backup line red', await page.locator('#backup-status.bad').count(), 1);
   check('dot on menu button', await page.locator('#nav-btn.alert').count(), 1);
   await page.locator('#menu button', { hasText: 'New Period' }).tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   check('new period title', await titleText(page), 'New Period');
   const backupFile = await grabFile(page, ENGINE, () => page.locator('#page .wide-btn', { hasText: 'Back up first' }).tap());
   check('backup file name', /^bgt-j-backup-\d{4}-\d{2}-\d{2}\.json$/.test(backupFile.name), true);
   fs.writeFileSync(`${OUT}/backup.json`, backupFile.text);
-  await page.waitForTimeout(200);
+  await settled(page);
   check('back up first button', await page.locator('#page .wide-btn').textContent(), 'Backed up ✓');
   check('dot cleared', await page.locator('#nav-btn.alert').count(), 0);
   check('menu backup line after', await page.locator('#backup-status').textContent(), 'today');
   for (const k of '150000') await sheetKey(k);
   await page.locator('#page .primary').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   check('nothing spent in new period', await spentText(page), '$0.00');
   await page.locator('#nav-btn').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   await page.locator('#menu button', { hasText: 'Past Periods' }).tap();
   check('period rows', await page.locator('.period-row').count(), 2);
   await page.locator('.period-row').nth(1).tap();
@@ -249,7 +248,7 @@ const ringWaves = (page) => page.evaluate(() => {
   // the list. Add one, archive a used one, save.
   const gfOrder = readPalette().map((c) => c.hex);
   await page.locator('#nav-btn').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   await page.locator('#menu button', { hasText: 'Categories' }).tap();
   check('no color picker', await page.locator('.swatch, .palette').count(), 0);
   check('colors follow GF order alphabetically', await page.evaluate(() => {
@@ -272,7 +271,7 @@ const ringWaves = (page) => page.evaluate(() => {
   check('Transport archived', await page.locator('#help .text').first().textContent(), 'Transport archived');
   check('colors in GF order after removing one', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
   await saveButton.tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   check('saved message', await page.locator('#help .text').first().textContent(), 'Categories saved');
   check('Save sorts them right away', (await categoryRows(page)).join(','), 'Bills,Coffee,Dining,Fun,Groceries,Health,Housing,Other,Shopping');
   check('colors in GF order after saving', (await categoryDotColors(page)).join(','), gfOrder.slice(0, 10).join(','));
@@ -280,26 +279,26 @@ const ringWaves = (page) => page.evaluate(() => {
     readPalette().map((c) => c.accent).slice(0, 10).join(','));
   await page.screenshot({ path: `${OUT}/${ENGINE}-4-categories.png`, fullPage: true });
   await page.locator('#nav-btn').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   check('strip excludes archived', await page.locator('.strip .chip', { hasText: 'Transport' }).count(), 0);
 
   check('strip includes new category', await page.locator('.strip .chip', { hasText: 'Coffee' }).count(), 1);
 
   // Backup screen: status, storage line, restore from the file made earlier
   await page.locator('#nav-btn').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
   await page.locator('#menu button', { hasText: 'Backup' }).tap();
   check('backup page status', await page.locator('.backup-status').textContent(), 'Backed up today');
-  await page.waitForTimeout(200);
+  await settled(page);
   check('storage line shown', (await page.locator('.page-body .empty-note').last().textContent()).startsWith('Storage:'), true);
   page.once('dialog', (d) => d.accept());
   await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/backup.json`);
-  await page.waitForTimeout(400);
+  await settled(page);
   check('restore toast', await page.locator('#help .text').first().textContent(), 'Backup restored');
   check('restored: back to one period with Transport active', await page.locator('.strip .chip', { hasText: 'Transport' }).count(), 1);
   check('restored spent amount', await spentText(page), '$525.88');
   await page.locator('#nav-btn').tap();
-  await page.waitForTimeout(300);
+  await settled(page);
 
   // Dark mode look
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -308,7 +307,7 @@ const ringWaves = (page) => page.evaluate(() => {
 
   // Reload keeps data
   await page.reload();
-  await page.waitForTimeout(300);
+  await settled(page);
   check('persists after reload', await spentText(page), '$525.88');
   check('no first-budget screen after reload', await page.locator('#page').isHidden(), true);
 

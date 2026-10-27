@@ -44,6 +44,33 @@ exports.appReady = (page) => page.waitForFunction(() => document.getElementById(
 // Independent scenarios: scenario(name, async (open) => ...) runs one on its own; open(options)
 // makes it a phone-sized browser context, closed afterwards. A crash fails just that scenario (a
 // FAIL line naming it) and the rest still run, so one problem can't hide the checks after it.
+// Waits until nothing on the page is still animating (a screen fading in, a window swishing in, the
+// ring's waves; endless ones like the hand's bob don't count), instead of pausing for a guessed time.
+// Taps redraw at once, so after one this is all there is to wait for. (Polls on a timer, not on
+// animation frames, so it also works while a test holds the fake clock still.)
+// Scrolling counts too (the category strip gliding or snapping, a screen scrolling): it has to have
+// stayed put since the last look, and the strip's glide (input.js turns snapping off while it runs;
+// its last frames move less than a pixel, so it can look still) has to be over.
+exports.settled = (page) => page.waitForFunction(() => {
+  const scrolled = [...document.querySelectorAll('.strip, #page')].map((e) => `${e.scrollLeft},${e.scrollTop}`).join('|');
+  const still = scrolled === window.settledScroll && document.querySelector('.strip')?.style.scrollSnapType !== 'none';
+  window.settledScroll = scrolled;
+  return still && !document.getAnimations().some((a) => a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming().endTime));
+}, null, { polling: 50, timeout: 10000 });
+
+// Waits (up to 5s) for a condition in the page, such as a message appearing after background work;
+// gives up quietly, so the check that follows reports what actually happened.
+exports.soon = (page, condition, arg) => page.waitForFunction(condition, arg, { polling: 50, timeout: 5000 }).catch(() => {});
+// The same from the test's side (for what only the test can look at, like IndexedDB through a helper).
+exports.until = async (test, ms = 5000) => {
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise((resolve) => setTimeout(resolve, 50))) {
+    if (await test()) return;
+  }
+};
+
+// Today in the phone's local time zone, as the app keeps days: "YYYY-MM-DD" (a date, or today).
+exports.localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
 exports.scenarios = (browser) => async (name, run) => {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) return; // ONLY=<part of a name>: run just those
   const { devices } = require('playwright');
