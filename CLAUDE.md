@@ -11,7 +11,7 @@ Read README.md for what the app does; this file covers how to work on it.
 - `app/` is the deployable app: plain HTML/CSS/ES modules, no build step, no dependencies.
   Serve it with `cd app && python3 -m http.server 8000`.
 - `tests/` holds the Playwright suites and design tools. `cd tests && npm test` runs every pass on
-  WebKit and Chromium, all eight at once (about 70s; it starts its own server on port 8765). Each
+  WebKit and Chromium, all eight at once (about 2m10s; it starts its own server on port 8765). Each
   engine writes to its own `tests/output/<engine>/` so runs can overlap. First time: `npm install && npm run setup`.
 - Four passes: `main` (core flow), `more` (edge cases), `layout` (spacing/fit on four iPhones),
   `failures` (storage full/corrupt, rate server down, bad backups, offline, overnight, big data).

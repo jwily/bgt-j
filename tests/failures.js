@@ -4,12 +4,11 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check, scenarios } = require('./helpers');
+const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check, scenarios, localToday } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
-const RATE = (date = '2026-10-21', rates = { MXN: 20 }) => JSON.stringify({ date, rates });
-const localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const RATE = (date = localToday(), rates = { MXN: 20 }) => JSON.stringify({ date, rates }); // today's unless a test says otherwise
 
 // A small v2 data set for scenarios that start from saved data.
 const sample = (overrides = {}) => ({

@@ -7,8 +7,8 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check, scenarios } = require('./helpers');
-const RATE = '{"amount":1,"base":"USD","date":"2026-10-20","rates":{"MXN":20}}';
+const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check, scenarios, localToday } = require('./helpers');
+const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates: { MXN: 20 } }); // today's, so never shown as old
 
 (async () => {
   const browser = asInstalledApp(ENGINE === 'webkit' ? await webkit.launch() : await chromium.launch());

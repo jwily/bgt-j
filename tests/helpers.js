@@ -44,6 +44,9 @@ exports.appReady = (page) => page.waitForFunction(() => document.getElementById(
 // Independent scenarios: scenario(name, async (open) => ...) runs one on its own; open(options)
 // makes it a phone-sized browser context, closed afterwards. A crash fails just that scenario (a
 // FAIL line naming it) and the rest still run, so one problem can't hide the checks after it.
+// Today in the phone's local time zone, as the app keeps days: "YYYY-MM-DD" (a date, or today).
+exports.localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
 exports.scenarios = (browser) => async (name, run) => {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) return; // ONLY=<part of a name>: run just those
   const { devices } = require('playwright');

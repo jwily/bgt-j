@@ -3,11 +3,10 @@
 const { chromium, webkit, devices } = require('playwright');
 const ENGINE = process.env.ENGINE || 'chromium';
 const fs = require('fs');
-const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved } = require('./helpers');
+const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved, localToday } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
 // FF8's six party members, one of whom wanders the main screen.
-const localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const PARTY = ['Squall', 'Zell', 'Irvine', 'Quistis', 'Rinoa', 'Selphie'];
 
 // The summary's spending ring: each wave's color and start and end angles (clockwise from 12
