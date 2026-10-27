@@ -4,7 +4,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check, scenarios, localToday } = require('./helpers');
+const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check, scenarios, localToday, settled } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
@@ -82,7 +82,7 @@ const sample = (overrides = {}) => ({
     });
     await type('500');
     await page.locator('.add-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('storage full: warns', dialogs.some((m) => m.startsWith("Couldn't save: this phone's storage for the app is full")), true);
     // More changes while it stays full (each currency tap saves) don't each raise another.
     await page.locator('.currency-opts').tap();
@@ -110,7 +110,7 @@ const sample = (overrides = {}) => ({
     await menu(page, 'New Period');
     for (const k of '50000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
     await page.locator('#page .primary').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('corrupted, recovered: the party still assembles for a new period', await page.locator('.party-member').count(), 6);
     await context.close();
   });
@@ -143,11 +143,11 @@ const sample = (overrides = {}) => ({
     const dialogs = [];
     page.on('dialog', (d) => { dialogs.push(d.message()); d.accept(); });
     await page.goto(APP_URL);
-    await page.waitForTimeout(500);
+    await settled(page);
     check('no room to set it aside: says nothing will be saved', dialogs.join(' | '), "Your saved data couldn't be read, and there's no room on the phone to set it aside, so the app won't save over it: nothing you do now will be kept. Free up some space on the phone, then reopen the app.");
     for (const k of '100000') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
     await page.locator('#page .primary').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('...and doesn\'t: the unreadable data is still there, untouched', await page.evaluate(() => localStorage.getItem('budget-tracker')), 'not json at all');
     check('...without a storage-full alert on top', dialogs.length, 1);
     await context.close();
@@ -159,7 +159,7 @@ const sample = (overrides = {}) => ({
       const { context, page, type } = await open({ rate, status });
       await type('100000');
       await page.locator('#page .primary').tap();
-      await page.waitForTimeout(300);
+      await settled(page);
       await page.locator('.currency-opts').tap();
       check(`rate server ${label}: honest estimate`, (await page.locator('.amount-sub span').allTextContents())[1], '~18.5 MXN per USD (estimate: no rates downloaded yet)');
       await context.close();
@@ -185,7 +185,7 @@ const sample = (overrides = {}) => ({
     fs.writeFileSync(path.join(OUT, 'newer-backup.json'), JSON.stringify(sample({ version: 99 })));
     await menu(page, 'Backup');
     await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'newer-backup.json'));
-    await page.waitForTimeout(300);
+    await settled(page);
     check('newer backup: says so', await page.locator('#help .text').first().textContent(), 'That backup is from a newer version of the app. Reopen the app to update it, then try again.');
 
     // Backups the app couldn't run on are refused, not restored.
@@ -200,14 +200,14 @@ const sample = (overrides = {}) => ({
     for (const [label, data] of malformed) {
       fs.writeFileSync(path.join(OUT, 'malformed-backup.json'), JSON.stringify(data));
       await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'malformed-backup.json'));
-      await page.waitForTimeout(300);
+      await settled(page);
       check(`backup with ${label}: refused`, await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
     }
 
     // A reminder setting the Backup screen doesn't offer (a hand-edited backup) becomes the default.
     fs.writeFileSync(path.join(OUT, 'odd-reminder.json'), JSON.stringify(sample({ settings: { backupReminderDays: 45 } })));
     await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'odd-reminder.json'));
-    await page.waitForTimeout(300);
+    await settled(page);
     check('a reminder setting not offered: the default, shown chosen', await page.locator('.reminder .options .on').textContent(), '30');
 
     const broken = sample({
@@ -218,12 +218,12 @@ const sample = (overrides = {}) => ({
     });
     fs.writeFileSync(path.join(OUT, 'broken-backup.json'), JSON.stringify(broken));
     await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'broken-backup.json'));
-    await page.waitForTimeout(400);
+    await settled(page);
     check('broken references: backup restores', await page.locator('#help .text').first().textContent(), 'Backup restored');
     const csv = await grabFile(page, ENGINE, () => page.locator('.wide-btn', { hasText: 'CSV' }).tap());
     check('broken references: CSV still exports both rows', csv.text.split('\n').length, 3);
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await menu(page, 'Current Period');
     check('broken references: summary shows the expense as Unknown', await page.locator('.cat-head', { hasText: 'Unknown' }).count(), 1);
     await context.close();
@@ -239,7 +239,7 @@ const sample = (overrides = {}) => ({
     await type('500');
     check('overnight: the date button says Today', await page.locator('.date-btn span').textContent(), 'Today');
     await page.locator('.add-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('overnight: filed under the new day', JSON.parse(await stored()).expenses.at(-1).date, localToday(morning));
     await context.close();
   });
@@ -267,14 +267,14 @@ const sample = (overrides = {}) => ({
     const { context, page, type } = await open({ serviceWorkers: 'allow' });
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.reload(); // now controlled by the service worker, which caches as it goes
-    await page.waitForTimeout(600);
+    await settled(page);
     await context.setOffline(true);
     await page.reload();
-    await page.waitForTimeout(600);
+    await settled(page);
     check('offline: the app still opens', await page.locator('#page .key').count(), 12);
     await type('100000');
     await page.locator('#page .primary').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('offline: and works', await page.locator('#page').isHidden(), true);
     await context.close();
   });
@@ -310,7 +310,7 @@ const sample = (overrides = {}) => ({
     const says = (text) => page.waitForFunction((t) => document.querySelector('#help .text')?.textContent === t, text, { timeout: 5000 }).then(() => true, () => false);
     const helpText = () => page.evaluate(() => document.querySelector('#help .text')?.textContent ?? '');
     check('deploy: the first version loads', await deployed(), 'old');
-    await page.waitForTimeout(800);
+    await settled(page);
     check('deploy: a fresh install says nothing', await helpText() === 'App updated', false);
     const firstSaved = await savedVersion('old');
     await page.evaluate(() => caches.open('another-app-on-this-site').then((c) => c.put('x', new Response('y'))));
@@ -327,7 +327,7 @@ const sample = (overrides = {}) => ({
     check('deploy: briefly, like any message', await helpText() === 'App updated', false);
     const before = await savedVersion('new');
     await page.reload();
-    await page.waitForTimeout(800);
+    await settled(page);
     check('deploy: a launch with nothing new saves nothing', JSON.stringify(await savedVersion('new')), JSON.stringify(before));
     check('deploy: ...and says nothing', await helpText() === 'App updated', false);
     version = 'newer';
@@ -342,7 +342,7 @@ const sample = (overrides = {}) => ({
     await lingering.goto('http://localhost:8766/'); // runs "newer"
     // iOS stops an idle service worker, which loses what it held in memory; it must still know which
     // version that launch runs.
-    await page.waitForTimeout(300);
+    await settled(page);
     const devtools = await context.newCDPSession(page);
     await devtools.send('ServiceWorker.enable');
     await devtools.send('ServiceWorker.stopAllWorkers');
@@ -367,7 +367,7 @@ const sample = (overrides = {}) => ({
   // never runs, the page still shows after 2.5s instead of staying black.
   await scenario('starting up', async () => {
     const { context, page } = await open();
-    await page.waitForTimeout(250); // the 0.15s fade-in
+    await settled(page); // the fade-in
     check('start: revealed once built', await page.evaluate(() => !document.body.classList.contains('starting') && getComputedStyle(document.body).opacity), '1');
     await context.close();
     // On a slow connection the font can take a while; the app waits for it rather than appearing in
@@ -384,7 +384,7 @@ const sample = (overrides = {}) => ({
     const bare = await noScript.newPage();
     await bare.goto(APP_URL);
     const hidden = await bare.evaluate(() => getComputedStyle(document.body).opacity);
-    await bare.waitForTimeout(2800);
+    await bare.waitForTimeout(2800); // past the 2.5s the page waits before showing anyway: a deliberate wait
     check('start: if the app never starts, the page still shows after 2.5s', `${hidden} -> ${await bare.evaluate(() => getComputedStyle(document.body).opacity)}`, '0 -> 1');
     await noScript.close();
   });

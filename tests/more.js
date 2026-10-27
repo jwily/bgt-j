@@ -7,7 +7,7 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check, scenarios, localToday } = require('./helpers');
+const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check, scenarios, localToday, settled, soon, until } = require('./helpers');
 const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates: { MXN: 20 } }); // today's, so never shown as old
 
 (async () => {
@@ -39,15 +39,15 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const type = async (digits) => { for (const k of digits) await mainKey(k); };
     const hold = async (selector) => {
       await page.locator(selector).first().hover();
-      await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
-      await page.waitForTimeout(100);
+      await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up(); // a long press: holding is the point
+      await settled(page);
     };
     return { context, page, hits, mainKey, sheetKey, type, hold };
   };
   // Chooses a category on the strip (tapping a chip centers it, which selects it).
   const pick = async (page, name) => {
     await page.locator('.strip .chip', { hasText: name }).tap();
-    await page.waitForTimeout(700);
+    await settled(page);
   };
   // Two expenses on a $1,500 budget, as the scenarios below expect: $42.50 yesterday in Health, and
   // MX$300 ($15.00) with a note, in pesoCategory. Returns yesterday's date label.
@@ -95,7 +95,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const { page, hits, sheetKey } = await launch(open, { budget: null });
     // The first budget screen can't be dismissed by tapping outside it.
     await page.mouse.click(200, 40);
-    await page.waitForTimeout(200);
+    await settled(page);
     check('first budget screen stays open', await page.locator('#page').isVisible(), true);
     check('first budget screen has no Back', await page.locator('#nav-btn').isHidden(), true);
     check('start disabled while empty', await page.locator('#page .primary').isDisabled(), true);
@@ -103,11 +103,11 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     for (const k of ['1', '5', '00', '00']) await sheetKey(k);
     check('budget with 00 key', await page.locator('.budget-amount').textContent(), '$1,500.00');
     await page.locator('#page .primary').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('rate fetched once on launch', hits.rates, 1);
     // Reopened the same day: no second rate download.
     await page.reload();
-    await page.waitForTimeout(400);
+    await settled(page);
     check('no refetch same day', hits.rates, 1);
   });
 
@@ -221,7 +221,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     });
     await page.reload();
     await appReady(page);
-    await page.waitForTimeout(300);
+    await settled(page);
     check('currency row: placed at launch, no glide in', await page.evaluate(() => window.glidedAtLaunch), false);
     await page.locator('.currency-opts').tap();
     check('currency row: glides when the currency changes', await gliding(), true);
@@ -397,7 +397,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const name = await next.textContent();
     await next.tap();
     check('strip tap: selected at once', await page.locator('.strip .chip.selected').textContent(), name);
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(300); // the check is what 0.3s on looks like: a deliberate wait
     check('strip tap: centred within 0.3s', await page.evaluate(() => {
       const strip = document.querySelector('.strip'), chip = strip.querySelector('.chip.selected');
       return Math.abs(chip.offsetLeft + chip.offsetWidth / 2 - (strip.scrollLeft + strip.clientWidth / 2)) <= 2;
@@ -409,14 +409,14 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     // Taps on the strip don't open the grid; a long press does. Then pick Health.
     const selectedChip = page.locator('.strip .chip.selected');
     await selectedChip.tap();
-    await page.waitForTimeout(450);
+    await settled(page);
     await selectedChip.tap();
-    await page.waitForTimeout(450);
+    await settled(page);
     check('taps on the strip don\'t open the grid', await page.locator('#sheet-backdrop.open').count(), 0);
     await selectedChip.hover();
-    await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
+    await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up(); // a long press: holding is the point
     await page.waitForSelector('#sheet-backdrop.open', { timeout: 5000 }).catch(() => {}); // wait for it, not a fixed time
-    await page.waitForTimeout(250); // let it finish arriving before measuring
+    await settled(page); // finished arriving, before measuring
     check('grid opened', await page.locator('#sheet').getAttribute('data-label'), 'Category');
     check('grid has no duplicate heading', await page.locator('#sheet h2').count(), 0);
     check('grid opens level with the strip', await page.evaluate(() =>
@@ -435,7 +435,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
       'rgb(143, 143, 143) | rgb(237, 237, 237)');
     await page.screenshot({ path: `${OUT}/${ENGINE}-x1-grid.png` });
     await page.locator('#sheet .grid .chip', { hasText: 'Health' }).tap();
-    await page.waitForTimeout(700);
+    await settled(page);
     check('grid pick selects', await page.locator('.strip .chip.selected').textContent(), 'Health');
     check('grid closed', await page.locator('#sheet-backdrop.open').count(), 0);
   });
@@ -474,53 +474,53 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const tacos = page.locator('.item', { hasText: 'Tacos' });
     check('MXN item shown', await tacos.locator('.orig').textContent(), 'from MX$300');
     await tacos.tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('edit sheet MXN hint', (await page.locator('#sheet .hint').textContent()).startsWith('Entered as MX$300 at 19.50 MXN per USD'), true);
     const funId = await page.locator('#sheet select option', { hasText: 'Fun' }).getAttribute('value');
     await page.locator('#sheet select').selectOption(funId);
     await page.locator('#sheet .primary').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('moved to Fun', await page.locator('.cat-head', { hasText: 'Fun' }).count(), 1);
     check('Health still open with 1 item', await page.locator('.items .item').count(), 1);
     await page.locator('.item').first().tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('Edit Expense swishes in from the left', await animationOf(page, '#sheet'), 'swish-in-left 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)');
     await page.locator('#sheet .danger').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('deleted', await page.locator('.cat-head', { hasText: 'Health' }).count(), 0);
     await page.locator('#undo-btn').tap();
-    await page.waitForTimeout(200);
+    await settled(page);
     check('undo delete', await page.locator('.cat-head', { hasText: 'Health' }).count(), 1);
     await page.locator('.cat-head', { hasText: 'Fun' }).tap();
     await page.locator('.item', { hasText: 'Tacos' }).tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.locator('#sheet input').first().fill('');
     await page.locator('#sheet .primary').tap();
     check('empty amount keeps sheet open', await page.locator('#sheet-backdrop.open').count(), 1);
     await page.mouse.click(200, 30);
-    await page.waitForTimeout(300);
+    await settled(page);
     check('tap outside closes edit sheet', await page.locator('#sheet-backdrop.open').count(), 0);
 
     // Edit budget, then Back without saving: unchanged
     await page.locator('.edit-budget').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await sheetKey('9');
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('cancel keeps budget', await page.locator('.stat .value').first().textContent(), '$1,500.00');
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.screenshot({ path: `${OUT}/${ENGINE}-x2-summary-dark.png`, fullPage: true });
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
 
     // Menu with overdue-backup dot, dismiss by tapping outside
     check('dot shown (never backed up)', await page.locator('#nav-btn.alert').count(), 1);
     await page.screenshot({ path: `${OUT}/${ENGINE}-x3-main-dark-dot.png` });
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.screenshot({ path: `${OUT}/${ENGINE}-x4-menu-dark.png` });
     await page.mouse.click(40, 400);
-    await page.waitForTimeout(300);
+    await settled(page);
     check('menu closes on outside tap', await page.locator('#menu-backdrop.open').count(), 0);
   });
 
@@ -541,13 +541,13 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     // Restoring a file that isn't a backup
     fs.writeFileSync(`${OUT}/not-a-backup.json`, '{"hello":"world"}');
     await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/not-a-backup.json`);
-    await page.waitForTimeout(300);
+    await settled(page);
     check('bad backup rejected', await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
     // Cancelling the share sheet isn't a backup
     if (ENGINE === 'webkit') {
       await page.evaluate(() => { window.__shareMode = 'cancel'; });
       await page.locator('.wide-btn', { hasText: 'Export backup' }).tap();
-      await page.waitForTimeout(300);
+      await settled(page);
       check('cancelled share sheet is not a backup', await page.locator('.backup-status').textContent(), 'Never backed up');
       await page.evaluate(() => { window.__shareMode = 'save'; });
     }
@@ -559,12 +559,12 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     fs.writeFileSync(`${OUT}/x-backup-different.json`, JSON.stringify({ ...backup, periods: backup.periods.map((p, i, all) => (i === all.length - 1 ? { ...p, budgetCents: 999900 } : p)) }));
     page.once('dialog', (d) => d.dismiss());
     await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/x-backup-different.json`);
-    await page.waitForTimeout(300);
+    await settled(page);
     check('dismissed restore changes nothing', await spentText(page), '$57.88');
     // A backup with "input": null is rejected instead of crashing the app
     fs.writeFileSync(`${OUT}/null-input.json`, JSON.stringify({ ...backup, input: null }));
     await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/null-input.json`);
-    await page.waitForTimeout(300);
+    await settled(page);
     check('null input backup rejected', await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
   });
 
@@ -575,7 +575,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await page.screenshot({ path: `${OUT}/${ENGINE}-x5-new-period.png` });
     for (const k of ['1', '00', '00']) await sheetKey(k);
     await page.locator('#page .primary').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await openSummary(page);
     check('empty period note', await page.locator('.empty-note').textContent(), 'No expenses yet.');
     check('empty ring has no waves', await page.locator('.ring-chart .wave').count(), 0);
@@ -587,7 +587,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
       await openMenu(page, item);
       check(`no stray text: ${label}`, stray.test(await page.locator('#page-body').innerText()), false);
       await page.locator('#nav-btn').tap();
-      await page.waitForTimeout(250);
+      await settled(page);
     }
     check('no stray text: main screen', stray.test(await page.locator('#view-input').innerText()), false);
   });
@@ -602,9 +602,9 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await page.locator('.cat-row').nth(housingRow).locator('.mini').tap();
     check('unused category removed (undo offered)', await page.locator('#help .text').first().textContent(), 'Housing removed');
     await page.locator('#page .actions .primary', { hasText: 'Save' }).tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(400);
+    await settled(page);
     check('selection moved to an active category', await page.locator('.strip .chip.selected').textContent(), 'Bills');
     check('saved selection is valid', await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('budget-tracker')); return s.categories.some((c) => c.id === s.input.categoryId && !c.archived); }), true);
     check('add button uses selected color', await page.locator('.add-btn').evaluate((b) => b.style.getPropertyValue('--c')),
@@ -631,28 +631,28 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await page.waitForFunction(() => document.getElementById('title').textContent === 'Categories' && !document.getElementById('page').hidden, null, { timeout: 2000 }).catch(() => {});
     check('menu: lifting opens the command under the thumb, not the one pressed first', await titleText(page), 'Categories');
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await reopenMenu();
     await press(page, '.menu-list button', 'Current Period', [['pointermove', -400], ['pointerup', -400]]); // off the menu
-    await page.waitForTimeout(300);
+    await settled(page);
     check('menu: lifting off the commands opens nothing', await page.locator('#page').isHidden(), true);
     await press(page, '.menu-list button', 'Categories', [['pointermove', -400], ['pointermove', 'Categories'], ['pointerup', 'Categories']], false);
     await page.waitForFunction(() => !document.getElementById('page').hidden, null, { timeout: 2000 }).catch(() => {});
     check('menu: sliding off and back onto a command still opens it (iOS sends no click)', await titleText(page), 'Categories');
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await reopenMenu();
     await press(page, '.menu-list button', 'Past Periods', [['pointermove', -400], ['pointermove', 'Past Periods'], ['pointerup', 'Past Periods']]);
-    await page.waitForTimeout(400);
+    await settled(page);
     await page.locator('#nav-btn').tap(); // back: if iOS's click went through too, a second Past Periods would be underneath
-    await page.waitForTimeout(300);
+    await settled(page);
     check('menu: ...and opens it once when iOS does click', await page.locator('#page').isHidden(), true);
     // Tapping the HELP window while the menu is open opens the summary and closes the menu.
     await page.waitForSelector('#help:not(.message)'); // the HELP window can't be tapped while it shows a message
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(250);
+    await settled(page);
     await page.locator('#help').click({ position: { x: 20, y: 30 } });
-    await page.waitForTimeout(300);
+    await settled(page);
     check('help tap opens the summary', await titleText(page), 'Current Period');
     check('and closes the menu', await page.locator('#menu-backdrop.open').count(), 0);
   });
@@ -662,14 +662,14 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     // Sideways: only the "turn your phone upright" screen shows; turning back restores the app with
     // the same category chosen (the strip's width changes while sideways).
     await page.locator('.strip .chip').last().tap();
-    await page.waitForTimeout(700);
+    await settled(page);
     const chosen = await page.locator('.strip .chip.selected').textContent();
     const upright = page.viewportSize();
     await page.setViewportSize({ width: upright.height, height: upright.width });
-    await page.waitForTimeout(400);
+    await settled(page);
     check('sideways: only the turn-upright screen shows', await page.evaluate(() => [getComputedStyle(document.querySelector('.turn-upright')).display, getComputedStyle(document.getElementById('view-input')).visibility].join(' ')), 'grid hidden');
     await page.setViewportSize(upright);
-    await page.waitForTimeout(600);
+    await settled(page);
     check('upright again: the app is back', await page.evaluate(() => [getComputedStyle(document.querySelector('.turn-upright')).display, getComputedStyle(document.getElementById('view-input')).visibility].join(' ')), 'none visible');
     check('upright again: same category chosen', await page.locator('.strip .chip.selected').textContent(), chosen);
   });
@@ -763,7 +763,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
       const fine = h.moving === h.overflows && h.oneLine && h.clearOfFade;
       check(`HELP on ${screen}: scrolls exactly when it doesn't fit, one line, first letter clear${fine ? '' : ` ${JSON.stringify(h)}`}`, fine, true);
       await page.locator('#nav-btn').tap();
-      await page.waitForTimeout(300);
+      await settled(page);
     }
     check('some HELP lines scroll and some sit still (the check above covers both)', results.some((r) => r.moving) && results.some((r) => !r.moving), true);
   });
@@ -786,12 +786,12 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     check('a screen\'s windows fade in when it opens', arrival.fading, 'fade-in 0.18s ease-out');
     check('a redraw just after a screen opens doesn\'t replay its fade-in', arrival.replayed, 0);
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
 
     // Typing on New Period updates the amount without rebuilding the screen: the Start button (and
     // its bobbing hand) and the scrolling HELP text carry on rather than restarting.
     await openMenu(page, 'New Period');
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.evaluate(() => { window.startButton = document.querySelector('#page .primary'); window.helpText = document.querySelector('#help .text'); });
     for (const k of '12') await page.locator('#page .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
     check('New Period: typing keeps the same Start button and HELP text', await page.evaluate(() => window.startButton.isConnected && window.helpText.isConnected), true);
@@ -812,34 +812,34 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await openMenu(page, 'New Period');
     for (const k of ['1', '00', '00']) await sheetKey(k);
     await page.locator('#page .primary').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     // Period 1 with expenses, and the current one, empty.
     const expenseCount = (await saved(page)).expenses.length;
     await openMenu(page, 'Past Periods');
     await page.locator('.period-row').nth(1).tap(); // oldest is listed last
-    await page.waitForTimeout(300);
+    await settled(page);
     page.once('dialog', (d) => d.accept());
     await page.locator('.delete-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('past period deleted', await page.locator('.period-row').count(), 1);
     check('delete message', await page.locator('#help .text').first().textContent(), 'Period 1 deleted');
     check('its expenses deleted too', (await saved(page)).expenses.length, 0);
     await page.locator('#undo-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('undo restores the period', await page.locator('.period-row').count(), 2);
     check('undo restores its expenses', (await saved(page)).expenses.length, expenseCount);
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(250);
+    await settled(page);
     const spentBefore = await spentText(page);
     await openMenu(page, 'Current Period');
     page.once('dialog', (d) => d.accept());
     await page.locator('.delete-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('deleting the current period returns to the main screen', await page.locator('#page').isHidden(), true);
     check('previous period reopened', await spentText(page), '$57.88');
     check('reopened period is current', (await saved(page)).periods.map((p) => p.end).join(','), '');
     await page.locator('#undo-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('undo makes the newer period current again', await spentText(page), spentBefore);
     check('and closes the reopened one again', (await saved(page)).periods.filter((p) => !p.end).length, 1);
   });
@@ -850,7 +850,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await context.route('https://api.frankfurter.dev/**', (r) => r.abort());
     const page = await newPage(context);
     await page.goto(URL);
-    await page.waitForTimeout(300);
+    await settled(page);
     await startFirstPeriod(page, '100000');
     await page.locator('.currency-opts').tap();
     for (const k of '185') await page.locator('#view-input .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
@@ -862,20 +862,20 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const { page } = await launch(open, { budget: null });
     const snaps = () => snapshotReasons(page);
     const expensesNow = async () => (await saved(page)).expenses.length;
-    await page.waitForTimeout(300);
+    await settled(page);
     check('snapshots: one taken on first launch', (await snaps()).join('|'), 'start of the day');
     await startFirstPeriod(page, '100000');
     for (const k of '500') await page.locator('#view-input .key').filter({ hasText: new RegExp(`^${k}$`) }).first().tap();
     await page.locator('.add-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.reload();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('snapshots: still one a day after reopening', (await snaps()).length, 1);
     await page.waitForSelector('#help:not(.message)', { timeout: 6000 });
     await openMenu(page, 'Current Period');
     page.once('dialog', (d) => d.accept());
     await page.locator('.delete-btn').tap(); // the only period: back to First Budget
-    await page.waitForTimeout(300);
+    await settled(page);
     check('snapshots: taken before deleting a period', (await snaps())[0], 'before deleting Current Period');
     check('the expense is gone', await expensesNow(), 0);
     await startFirstPeriod(page, '100000');
@@ -887,14 +887,17 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     }), '0px,1px 0px 10px');
     page.once('dialog', (d) => d.accept());
     await page.locator('.snapshot-row', { hasText: 'before deleting' }).locator('.link').tap();
-    await page.waitForTimeout(300);
+    await soon(page, () => /^Back to/.test(document.querySelector('#help .text')?.textContent ?? '')); // restored (and its snapshot stored)
+
     check('going back restores the deleted expense', await expensesNow(), 1);
     check('going back snapshots the current data first', (await snaps())[0], 'before going back to a snapshot');
     // The first launch's snapshot is from before the first budget: going back to it means no
     // period, so First Budget (Add used to crash with no period to add to).
     page.once('dialog', (d) => d.accept());
     await page.locator('.snapshot-row', { hasText: 'start of the day' }).locator('.link').tap();
-    await page.waitForTimeout(300);
+    await soon(page, () => document.getElementById('title').textContent === 'First Budget'); // (the last step's "Back to" may still show)
+    await until(async () => (await snaps()).length === 4);
+
     check('going back to before the first budget: First Budget', await titleText(page), 'First Budget');
     check('all kept while under seven', (await snaps()).length, 4);
     // The list holds only times and reasons; the copies are kept apart, read only to go back to one.
@@ -922,14 +925,15 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await context.route('https://api.frankfurter.dev/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: RATE }));
     const page = await newPage(context);
     await page.goto(URL);
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.reload(); // the seeding above runs before the app's first open; now the app upgrades it
     await appReady(page);
     await openMenu(page, 'Backup');
     await page.waitForSelector('.snapshot-row');
     page.once('dialog', (d) => d.accept());
     await page.locator('.snapshot-row', { hasText: 'before deleting Period 2' }).locator('.link').tap();
-    await page.waitForTimeout(300);
+    await soon(page, () => /^Back to/.test(document.querySelector('#help .text')?.textContent ?? '')); // restored (and its snapshot stored)
+
     check('an old-style snapshot, after the upgrade: going back to it works', (await page.locator('#help .text').first().textContent()).startsWith('Back to'), true);
   });
 
@@ -955,13 +959,13 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const page = await newPage(context);
     await page.goto(URL);
     await appReady(page);
-    await page.waitForTimeout(500);
+    await settled(page);
     check('trimmed to the newest seven on launch', (await snapshotReasons(page)).join(' | '), [8, 7, 6, 5, 4, 3, 2].map((i) => `before deleting Period ${i}`).join(' | '));
   });
 
   await scenario('the Backup screen\'s snapshot list stays current', async (open) => {
     const { page } = await launch(open);
-    await page.waitForTimeout(300);
+    await settled(page);
     await openMenu(page, 'Backup');
     await page.waitForSelector('.snapshot-row');
     // A snapshot gone since the list was read (dropped as the oldest, say): Go back says so.
@@ -976,12 +980,12 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     }));
     page.once('dialog', (d) => d.accept());
     await page.locator('.snapshot-row .link').first().tap();
-    await page.waitForTimeout(300);
+    await soon(page, () => document.querySelectorAll('.snapshot-row').length === 0); // said so, and re-listed
     check('going back to a snapshot that\'s gone: says so', await page.locator('#help .text').first().textContent(), 'That snapshot is no longer there.');
     check('...and the list catches up', await page.locator('.snapshot-row').count(), 0);
     // Coming back to the app on a new day takes that day's snapshot: the open list shows it.
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-    await page.waitForTimeout(500);
+    await soon(page, () => document.querySelectorAll('.snapshot-row').length === 1);
     check('back in the app, a new day\'s snapshot: listed on the open Backup screen', await page.locator('.snapshot-row').count(), 1);
   });
 
@@ -989,7 +993,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     // iOS mostly resumes the app rather than relaunching it: coming back on a new day takes that
     // day's snapshot too.
     const { page } = await launch(open);
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.evaluate(() => new Promise((resolve) => { // make today's snapshot yesterday's
       const request = indexedDB.open('budget-tracker');
       request.onsuccess = () => {
@@ -1003,7 +1007,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
       };
     }));
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-    await page.waitForTimeout(300);
+    await until(async () => (await snapshotReasons(page)).filter((r) => r === 'start of the day').length === 2);
     check('back from the background on a new day: that day\'s snapshot', (await snapshotReasons(page)).filter((r) => r === 'start of the day').length, 2);
   });
 
@@ -1012,7 +1016,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     // listener on that element that cancelled the end of every later touch inside it, so fields
     // there stopped taking focus until the app was restarted (buttons still worked).
     const { page, type } = await launch(open);
-    const tapAt = async (box, dx, dy) => { await page.touchscreen.tap(box.x + dx, box.y + dy); await page.waitForTimeout(150); };
+    const tapAt = async (box, dx, dy) => { await page.touchscreen.tap(box.x + dx, box.y + dy); await settled(page); };
     const focuses = async (field) => {
       const box = await field.boundingBox();
       await tapAt(box, 20, box.height / 2);
@@ -1025,7 +1029,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await openSummary(page);
     await page.locator('.cat-head').first().tap();
     await page.locator('.item').first().tap();
-    await page.waitForTimeout(400);
+    await settled(page);
     const note = page.locator('#sheet input[type=text]').last();
     const sheet = await page.locator('#sheet').boundingBox();
     await tapAt(sheet, 6, sheet.height / 2); // the sheet's own edge
@@ -1099,10 +1103,10 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await openMenu(page, 'Current Period');
     page.once('dialog', (d) => d.accept());
     await page.locator('.delete-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('the only period deleted: First Budget', await titleText(page), 'First Budget');
     await page.locator('#undo-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('Undo: the period is back, and so is the main screen (not First Budget over it)', `${(await saved(page)).periods.length} ${await page.locator('#page').isHidden()}`, '1 true');
   });
 
@@ -1115,16 +1119,16 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
       localStorage.setItem('budget-tracker', JSON.stringify(s));
     });
     await page.reload();
-    await page.waitForTimeout(400);
+    await settled(page);
     check('reminder: 10 days ago is fine with the default 30', await page.locator('#nav-btn.alert').count(), 0);
     await openMenu(page, 'Backup');
     check('reminder: 30 is selected by default', await page.locator('.reminder .options .on').textContent(), '30');
     await page.locator('.reminder .options button', { hasText: /^7$/ }).tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('reminder: choosing 7 is saved', (await saved(page)).settings.backupReminderDays, 7);
     check('reminder: and shown as selected', await page.locator('.reminder .options .on').textContent(), '7');
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('reminder: now 10 days ago gets the nudge', await page.locator('#nav-btn.alert').count(), 1);
   });
 
@@ -1141,7 +1145,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     let explained = '';
     page.once('dialog', (d) => { explained = d.message(); d.accept(); });
     await page.locator('#help').click({ position: { x: 20, y: 30 } });
-    await page.waitForTimeout(300);
+    await settled(page);
     check('Safari tab: tapping it explains the separate data', explained.includes('Data entered in a Safari tab stays separate'), true);
   });
 
@@ -1199,7 +1203,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const funIndex = (await categoryRows(page)).indexOf('Fun');
     await nameField(funIndex).fill('groceries');
     await save.tap();
-    await page.waitForTimeout(200);
+    await settled(page);
     check('saving a clashing name is refused', await page.locator('#help .text').first().textContent(), "There's already a category called Groceries.");
     check('and nothing is saved', await savedNames(), before);
     await nameField(funIndex).fill('Fun');
@@ -1232,11 +1236,11 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     // Back with unsaved changes: Cancel stays, OK leaves without saving.
     page.once('dialog', (d) => d.dismiss());
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(200);
+    await settled(page);
     check('Back with unsaved changes: Cancel stays', await titleText(page), 'Categories');
     page.once('dialog', (d) => d.accept());
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('Back with unsaved changes: OK leaves', await page.locator('#page').isHidden(), true);
     check('and the changes are discarded', await savedNames(), before);
   });
@@ -1268,7 +1272,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     check('cleared again: Restore back on', `${await restore.isDisabled()} ${await hint.isVisible()}`, 'false false');
     await page.locator('.cat-row.slot input').fill('Travel');
     await page.locator('#page .actions .primary').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('all 16 saved: no empty slots, Restore off', `${await savedNames()} ${await page.locator('.cat-row.slot').count()} ${await restore.isDisabled()}`, '16 0 true');
     await page.locator('.cat-row').first().locator('.mini').tap(); // Bills
     check('removing one frees a slot for it', await restore.isDisabled(), false);
@@ -1289,7 +1293,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await nameField(funIndex).fill('Fun');
     await slot.fill('Gas');
     await save.tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('after a refused save, a slot typed in again is saved', (await savedNames()).split(',').includes('Gas'), true);
     // Something saved elsewhere (the day's rate arriving, say) doesn't rebuild the screen under a
     // field being typed in.
@@ -1313,14 +1317,14 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     check('removing one: a message with Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Other removed true');
     page.once('dialog', (d) => d.accept()); // discard the unsaved change
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('left without saving: the message and its Undo are gone (nothing was removed)', `${await page.locator('#undo-btn').isVisible()} ${await page.locator('#help').getAttribute('data-label')}`, 'false Status');
     // A saved change is different: its Undo still applies after leaving.
     await openMenu(page, 'Categories');
     await page.locator('.cat-row').nth(otherRow).locator('.mini').tap();
     await save.tap();
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('saved, then left: "Categories saved" keeps its Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Categories saved true');
   });
 
@@ -1330,9 +1334,9 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const funRow = (await categoryRows(page)).indexOf('Fun');
     await page.locator('.cat-row').nth(funRow).locator('.mini').tap();
     await save.tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.locator('#undo-btn').tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('Undo of a save, still on the screen: saved categories are back', await savedNames(), before);
     check('...and the screen shows them, with nothing unsaved', `${(await categoryRows(page)).includes('Fun')} ${await save.isDisabled()}`, 'true true');
   });
@@ -1357,7 +1361,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await nameField(names.indexOf('Health')).fill('');
     await page.locator('.cat-row.slot input').first().tap(); // an empty slot, focused
     await save.tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     const afterSave = (await savedNames()).split(',');
     check('Save with blanks: the rename is saved', afterSave.includes('Stuff') && !afterSave.includes('Shopping'), true);
     check('Save with blanks: a category whose name was cleared is removed', afterSave.includes('Health'), false);
@@ -1373,7 +1377,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
       localStorage.setItem('budget-tracker', JSON.stringify(data));
     });
     await page.reload();
-    await page.waitForTimeout(400);
+    await settled(page);
     check('spaces around a saved name are dropped on load', await page.locator('.strip .chip', { hasText: 'Bills' }).first().evaluate((c) => c.textContent), 'Bills');
     await openMenu(page, 'Categories');
     check('and on the Categories screen', (await categoryRows(page))[0], 'Bills');
@@ -1382,7 +1386,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await nameField(otherIndex).press('Enter');
     check('typed trailing spaces go when you finish the name', await nameField(otherIndex).inputValue(), 'Misc');
     await save.tap();
-    await page.waitForTimeout(300);
+    await settled(page);
     check('and are never saved', await page.evaluate(() => JSON.parse(localStorage.getItem('budget-tracker')).categories.some((c) => c.name !== c.name.trim())), false);
     check('saved as Misc', (await savedNames()).split(',').includes('Misc'), true);
   });
@@ -1394,7 +1398,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await page.evaluate(() => Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => innerHeight - 300 }));
     await page.locator('.cat-row.slot input').last().tap();
     await page.evaluate(() => visualViewport.dispatchEvent(new Event('resize')));
-    await page.waitForTimeout(200);
+    await settled(page);
     const field = await page.evaluate(() => ({ value: document.activeElement.value, bottom: document.activeElement.getBoundingClientRect().bottom, keyboardTop: innerHeight - 300 }));
     check(`an empty slot being typed in is above the keyboard (bottom ${field.bottom}, keyboard at ${field.keyboardTop})`, field.value === '' && field.bottom <= field.keyboardTop, true);
   });
@@ -1414,10 +1418,10 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     });
     const page = await newPage(context);
     await page.goto(URL);
-    await page.waitForTimeout(400);
+    await settled(page);
     check('rates: downloaded on first launch', downloads, 1);
     await page.reload();
-    await page.waitForTimeout(400);
+    await settled(page);
     check('rates: not today’s yet, but checked under 3 hours ago, so no download', downloads, 1);
     const hoursAgo = (h) => page.evaluate((ms) => {
       const s = JSON.parse(localStorage.getItem('budget-tracker'));
@@ -1427,11 +1431,11 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await hoursAgo(4);
     rateDate = today; // now the source has today's rate
     await page.reload();
-    await page.waitForTimeout(400);
+    await settled(page);
     check('rates: checked again after 3 hours', downloads, 2);
     await hoursAgo(4);
     await page.reload();
-    await page.waitForTimeout(400);
+    await settled(page);
     check('rates: has today’s rate, so no more checks today', downloads, 2);
   });
 
@@ -1452,7 +1456,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await context.addInitScript((data) => { if (!localStorage.getItem('budget-tracker')) localStorage.setItem('budget-tracker', data); }, JSON.stringify(v1('saved before the upgrade')));
     const page = await newPage(context);
     await page.goto(URL);
-    await page.waitForTimeout(500);
+    await settled(page);
     const upgraded = await saved(page);
     check('v1 data: upgraded to the current version (3)', upgraded.version, 3);
     check('v1 data: gets the default reminder setting', upgraded.settings.backupReminderDays, 30);
@@ -1462,16 +1466,16 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     check('v1 data: remembered currency still MXN', await page.locator('.currency-opts .on').textContent(), 'MXN');
     check('v1 data: totals intact', await spentText(page), '$13.51');
     await page.locator('#help').click({ position: { x: 20, y: 30 } });
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.locator('.cat-head', { hasText: 'Food' }).tap();
     check('v1 data: expense still shows its pesos', await page.locator('.item .orig').textContent(), 'from MX$250');
     await page.locator('#nav-btn').tap();
-    await page.waitForTimeout(250);
+    await settled(page);
     fs.writeFileSync(`${OUT}/v1-backup.json`, JSON.stringify(v1('restored from an old backup')));
     await openMenu(page, 'Backup');
     page.once('dialog', (d) => d.accept());
     await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/v1-backup.json`);
-    await page.waitForTimeout(400);
+    await settled(page);
     check('v1 backup: restores', await page.locator('#help .text').first().textContent(), 'Backup restored');
     const restored = await saved(page);
     check('v1 backup: upgraded on restore', [restored.version, restored.expenses[0].note, restored.expenses[0].original.perUsd].join('|'), '3|restored from an old backup|18.5');
