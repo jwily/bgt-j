@@ -4,7 +4,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check, scenarios, localToday, settled } = require('./helpers');
+const { fakeShareSheet, grabFile, APP_URL, asInstalledApp, mockRates, serveApp, openMenu, appReady, check, scenarios, localToday, settled, chooseFile } = require('./helpers');
 
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
@@ -184,7 +184,7 @@ const sample = (overrides = {}) => ({
     fs.mkdirSync(OUT, { recursive: true });
     fs.writeFileSync(path.join(OUT, 'newer-backup.json'), JSON.stringify(sample({ version: 99 })));
     await menu(page, 'Backup');
-    await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'newer-backup.json'));
+    await chooseFile(page, path.join(OUT, 'newer-backup.json'));
     await settled(page);
     check('newer backup: says so', await page.locator('#help .text').first().textContent(), 'That backup is from a newer version of the app. Reopen the app to update it, then try again.');
 
@@ -199,14 +199,14 @@ const sample = (overrides = {}) => ({
     ];
     for (const [label, data] of malformed) {
       fs.writeFileSync(path.join(OUT, 'malformed-backup.json'), JSON.stringify(data));
-      await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'malformed-backup.json'));
+      await chooseFile(page, path.join(OUT, 'malformed-backup.json'));
       await settled(page);
       check(`backup with ${label}: refused`, await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
     }
 
     // A reminder setting the Backup screen doesn't offer (a hand-edited backup) becomes the default.
     fs.writeFileSync(path.join(OUT, 'odd-reminder.json'), JSON.stringify(sample({ settings: { backupReminderDays: 45 } })));
-    await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'odd-reminder.json'));
+    await chooseFile(page, path.join(OUT, 'odd-reminder.json'));
     await settled(page);
     check('a reminder setting not offered: the default, shown chosen', await page.locator('.reminder .options .on').textContent(), '30');
 
@@ -217,7 +217,7 @@ const sample = (overrides = {}) => ({
       ],
     });
     fs.writeFileSync(path.join(OUT, 'broken-backup.json'), JSON.stringify(broken));
-    await page.locator('.page-body input[type=file]').setInputFiles(path.join(OUT, 'broken-backup.json'));
+    await chooseFile(page, path.join(OUT, 'broken-backup.json'));
     await settled(page);
     check('broken references: backup restores', await page.locator('#help .text').first().textContent(), 'Backup restored');
     const csv = await grabFile(page, ENGINE, () => page.locator('.wide-btn', { hasText: 'CSV' }).tap());

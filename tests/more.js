@@ -7,7 +7,7 @@ const fs = require('fs');
 const ENGINE = process.env.ENGINE || 'chromium';
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 const URL = 'http://localhost:8765/';
-const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check, scenarios, localToday, settled, soon, until } = require('./helpers');
+const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, appReady, snapshotReasons, asInstalledApp, mockRates, startFirstPeriod, messageCleared, categoryRows, categoryDotColors, readPalette, check, scenarios, localToday, settled, soon, until, chooseFile } = require('./helpers');
 const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates: { MXN: 20 } }); // today's, so never shown as old
 
 (async () => {
@@ -540,7 +540,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
 
     // Restoring a file that isn't a backup
     fs.writeFileSync(`${OUT}/not-a-backup.json`, '{"hello":"world"}');
-    await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/not-a-backup.json`);
+    await chooseFile(page, `${OUT}/not-a-backup.json`);
     await settled(page);
     check('bad backup rejected', await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
     // Cancelling the share sheet isn't a backup
@@ -558,12 +558,12 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     const backup = JSON.parse(jsonFile.text);
     fs.writeFileSync(`${OUT}/x-backup-different.json`, JSON.stringify({ ...backup, periods: backup.periods.map((p, i, all) => (i === all.length - 1 ? { ...p, budgetCents: 999900 } : p)) }));
     page.once('dialog', (d) => d.dismiss());
-    await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/x-backup-different.json`);
+    await chooseFile(page, `${OUT}/x-backup-different.json`);
     await settled(page);
     check('dismissed restore changes nothing', await spentText(page), '$57.88');
     // A backup with "input": null is rejected instead of crashing the app
     fs.writeFileSync(`${OUT}/null-input.json`, JSON.stringify({ ...backup, input: null }));
-    await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/null-input.json`);
+    await chooseFile(page, `${OUT}/null-input.json`);
     await settled(page);
     check('null input backup rejected', await page.locator('#help .text').first().textContent(), "That file isn't a budget backup.");
   });
@@ -1474,7 +1474,7 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     fs.writeFileSync(`${OUT}/v1-backup.json`, JSON.stringify(v1('restored from an old backup')));
     await openMenu(page, 'Backup');
     page.once('dialog', (d) => d.accept());
-    await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/v1-backup.json`);
+    await chooseFile(page, `${OUT}/v1-backup.json`);
     await settled(page);
     check('v1 backup: restores', await page.locator('#help .text').first().textContent(), 'Backup restored');
     const restored = await saved(page);

@@ -68,6 +68,21 @@ exports.until = async (test, ms = 5000) => {
   }
 };
 
+// Chooses a file in the screen's file input (a backup to restore) and waits until the app has
+// answered in the HELP window: it reads the file in the background, so right after choosing it the
+// last message may still show. Counts the window's redraws, so the same message twice still counts.
+exports.chooseFile = async (page, file) => {
+  const before = await page.evaluate(() => {
+    if (window.helpWrites === undefined) {
+      window.helpWrites = 0;
+      new MutationObserver(() => { window.helpWrites++; }).observe(document.getElementById('help'), { childList: true, subtree: true });
+    }
+    return window.helpWrites;
+  });
+  await page.locator('.page-body input[type=file]').setInputFiles(file);
+  await exports.soon(page, (count) => window.helpWrites > count, before);
+};
+
 // Today in the phone's local time zone, as the app keeps days: "YYYY-MM-DD" (a date, or today).
 exports.localToday = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 

@@ -3,7 +3,7 @@
 const { chromium, webkit, devices } = require('playwright');
 const ENGINE = process.env.ENGINE || 'chromium';
 const fs = require('fs');
-const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved, localToday, settled } = require('./helpers');
+const { fakeShareSheet, grabFile, spentText, titleText, openSummary, openMenu, asInstalledApp, mockRates, readPalette, categoryRows, categoryDotColors, check, saved, localToday, settled, chooseFile } = require('./helpers');
 const OUT = require('path').join(__dirname, 'output', process.env.ENGINE || 'chromium'); // screenshots and exported files, one folder per engine so runs can overlap (not committed)
 
 // FF8's six party members, one of whom wanders the main screen.
@@ -292,7 +292,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await settled(page);
   check('storage line shown', (await page.locator('.page-body .empty-note').last().textContent()).startsWith('Storage:'), true);
   page.once('dialog', (d) => d.accept());
-  await page.locator('.page-body input[type=file]').setInputFiles(`${OUT}/backup.json`);
+  await chooseFile(page, `${OUT}/backup.json`);
   await settled(page);
   check('restore toast', await page.locator('#help .text').first().textContent(), 'Backup restored');
   check('restored: back to one period with Transport active', await page.locator('.strip .chip', { hasText: 'Transport' }).count(), 1);
