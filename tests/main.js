@@ -199,7 +199,7 @@ const ringWaves = (page) => page.evaluate(() => {
   await page.locator('.edit-budget').tap();
   await settled(page);
   check('edit budget opens on Add', await page.locator('.budget-ways .on').textContent(), 'Add');
-  await page.locator('.budget-ways button', { hasText: 'Set' }).tap();
+  await page.locator('.budget-switch').tap();
   await settled(page);
   check('Set: prefilled', await page.locator('.budget-amount').textContent(), '$2,000.00');
   await sheetKey('⌫');

@@ -1386,17 +1386,22 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     await settled(page);
     check('undo puts the budget back', await budgets(), '150000');
 
-    // Switching ways starts the digits over: Set from the budget, Add from nothing.
+    // A tap anywhere in the Budget window switches way (like the Amount window's currency), in
+    // place, and starts the digits over: Set from the budget, Add from nothing.
     await page.locator('.edit-budget').tap();
     await settled(page);
     await sheetKey('9');
-    await page.locator('.budget-ways button', { hasText: 'Set' }).tap();
+    await page.evaluate(() => { document.querySelector('#page .primary').dataset.kept = 'yes'; });
+    await page.locator('.budget-after').tap(); // not on the Add / Set labels
     await settled(page);
+    check('Set: switched by tapping the window', await page.locator('.budget-ways .on').textContent(), 'Set');
     check('Set: starts from the budget', await page.locator('.budget-amount').textContent(), '$1,500.00');
-    await page.locator('.budget-ways button', { hasText: 'Add' }).tap();
+    check('Set: button and help line follow', `${await page.locator('#page .primary').textContent()} | ${await page.locator('#help .text').first().textContent()}`, "Save | Changes this period's budget only.");
+    check('switching doesn\'t redraw the screen', await page.locator('#page .primary').getAttribute('data-kept'), 'yes');
+    await page.locator('.budget-amount').tap();
     await settled(page);
-    check('back to Add: empty again', await page.locator('.budget-amount').textContent(), '+$0.00');
-    await page.locator('.budget-ways button', { hasText: 'Set' }).tap();
+    check('back to Add: empty again', `${await page.locator('.budget-ways .on').textContent()} ${await page.locator('.budget-amount').textContent()}`, 'Add +$0.00');
+    await page.locator('.budget-switch').tap();
     await settled(page);
     await sheetKey('⌫');
     await page.locator('#page .primary').tap();
