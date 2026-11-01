@@ -1368,6 +1368,61 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     check('Save with blanks: nothing blank saved', `${afterSave.length} ${afterSave.some((n) => !n.trim())}`, `${names.length - 1} false`);
   });
 
+  await scenario('editing a budget: adding to it, setting it, any period', async (open) => {
+    const { page, sheetKey } = await launch(open); // $1,500.00
+    const budgets = async () => (await saved(page)).periods.map((p) => p.budgetCents).join(',');
+    await openSummary(page);
+    await page.locator('.edit-budget').tap();
+    await settled(page);
+    check('Add: starts empty', `${await page.locator('.budget-amount').textContent()} ${await page.locator('#page .primary').isDisabled()}`, '+$0.00 true');
+    for (const k of ['2', '5', '0', '00']) await sheetKey(k);
+    check('Add: old and new totals', await page.locator('.budget-after').textContent(), '$1,500.00 → $1,750.00');
+    check('Add: button', await page.locator('#page .primary').textContent(), 'Add to budget');
+    await page.locator('#page .primary').tap();
+    await settled(page);
+    check('added to the budget', await page.locator('.stat .value').first().textContent(), '$1,750.00');
+    check('add message', await page.locator('#help .text').first().textContent(), 'Budget +$250.00 · now $1,750.00');
+    await page.locator('#undo-btn').tap();
+    await settled(page);
+    check('undo puts the budget back', await budgets(), '150000');
+
+    // Switching ways starts the digits over: Set from the budget, Add from nothing.
+    await page.locator('.edit-budget').tap();
+    await settled(page);
+    await sheetKey('9');
+    await page.locator('.budget-ways button', { hasText: 'Set' }).tap();
+    await settled(page);
+    check('Set: starts from the budget', await page.locator('.budget-amount').textContent(), '$1,500.00');
+    await page.locator('.budget-ways button', { hasText: 'Add' }).tap();
+    await settled(page);
+    check('back to Add: empty again', await page.locator('.budget-amount').textContent(), '+$0.00');
+    await page.locator('.budget-ways button', { hasText: 'Set' }).tap();
+    await settled(page);
+    await sheetKey('⌫');
+    await page.locator('#page .primary').tap();
+    await settled(page);
+    check('set message, with Undo', `${await page.locator('#help .text').first().textContent()} ${await page.locator('#undo-btn').isVisible()}`, 'Budget set to $150.00 true');
+    check('set the budget', await budgets(), '15000');
+
+    // A past period's budget.
+    await page.locator('#nav-btn').tap();
+    await settled(page);
+    await openMenu(page, 'New Period');
+    for (const k of ['1', '00', '00']) await sheetKey(k);
+    await page.locator('#page .primary').tap();
+    await settled(page);
+    await openMenu(page, 'Past Periods');
+    await page.locator('.period-row').nth(1).tap();
+    await settled(page);
+    await page.locator('.edit-budget').tap();
+    await settled(page);
+    for (const k of ['5', '0', '00']) await sheetKey(k);
+    await page.locator('#page .primary').tap();
+    await settled(page);
+    check('back on the past period\'s summary', await titleText(page), 'Period 1');
+    check('a past period\'s budget raised, the current one untouched', await budgets(), '20000,10000');
+  });
+
   await scenario('categories: spaces around names', async (open) => {
     const { page, save, nameField, savedNames } = await categoriesScreen(open);
     // Category names never keep spaces at either end: not from old saved data, not from typing.

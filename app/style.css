@@ -525,6 +525,8 @@ body.page-open .dock .add-btn { display: none; } /* Add is for the main screen *
 .hint { margin: 0 0 12px; color: var(--soft); font-size: 0.92rem; font-weight: 500; line-height: 1.4; }
 .budget-amount { margin: 2px 0; text-align: center; font-size: 2.6rem; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 .budget-amount.empty { color: var(--off); }
+.budget-ways { justify-content: center; margin: 2px 0 6px; } /* the hand hangs outside and doesn't count for centering */
+.budget-after { color: var(--soft); text-align: center; font-variant-numeric: tabular-nums; }
 
 .actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--gap); } /* equal widths, whatever each button's padding */
 /* A screen's buttons that must stay in reach however long the screen is: fixed just above the

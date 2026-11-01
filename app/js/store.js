@@ -277,9 +277,16 @@ export function deletePeriod(id) {
   };
 }
 
+// Any period's budget, current or past. Returns an undo function.
 export function setBudget(periodId, budgetCents) {
-  getPeriod(periodId).budgetCents = budgetCents;
+  const period = getPeriod(periodId);
+  const before = period.budgetCents;
+  period.budgetCents = budgetCents;
   save();
+  return () => {
+    period.budgetCents = before;
+    save();
+  };
 }
 
 // ---------- expenses ----------
