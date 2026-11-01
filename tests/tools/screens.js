@@ -84,7 +84,7 @@ const RATE = '{"date":"2026-10-20","rates":{"MXN":18.5}}';
     await pause();
     await type('25000');
     await shot('07b-edit-budget-add');
-    await page.locator('.budget-ways button', { hasText: 'Set' }).tap();
+    await page.locator('.budget-switch').tap();
     await pause();
     await shot('07c-edit-budget-set');
     await back();

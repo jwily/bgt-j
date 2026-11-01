@@ -3,7 +3,7 @@
 import { currentPeriod, getPeriod, startPeriod, setBudget } from '../store.js';
 import { CURRENCIES, HOME, formatUsd } from '../money.js';
 import { el } from '../ui.js';
-import { toast } from '../help.js';
+import { toast, setHelp } from '../help.js';
 import { keypad } from '../widgets.js';
 import { formatDate } from '../dates.js';
 import { exportBackup } from '../backup.js';
@@ -23,8 +23,10 @@ export function enter({ mode, periodId }) {
   budgetBackedUp = false;
 }
 
-// Editing: the two ways, as FF8 Config-style choices.
+// Editing: the two ways, as FF8 Config-style choices; tap anywhere in the Budget window for the
+// other, as the main screen's Amount window switches currency.
 const EDIT_WAYS = { add: 'Add', set: 'Set' };
+const EDIT_HOWS = Object.keys(EDIT_WAYS);
 
 const BUDGET_SCREENS = {
   first: {
@@ -59,8 +61,8 @@ export function render({ mode, periodId }) {
     return;
   }
   const screen = BUDGET_SCREENS[mode];
-  const adding = mode === 'edit' && editHow === 'add';
-  const budgetFrom = (cents) => (adding ? period.budgetCents + cents : cents);
+  const adding = () => mode === 'edit' && editHow === 'add';
+  const budgetFrom = (cents) => (adding() ? period.budgetCents + cents : cents);
 
   const amount = el('div', { className: 'budget-amount' });
   const after = mode === 'edit' && el('div', { className: 'budget-after' });
@@ -69,7 +71,7 @@ export function render({ mode, periodId }) {
   // keeps bobbing smoothly instead of restarting with every digit.
   const showDigits = () => {
     const cents = Number(budgetDigits || '0');
-    amount.textContent = `${adding ? '+' : ''}${formatUsd(cents)}`;
+    amount.textContent = `${adding() ? '+' : ''}${formatUsd(cents)}`;
     amount.classList.toggle('empty', !budgetDigits);
     if (after) after.textContent = `${formatUsd(period.budgetCents)} → ${formatUsd(budgetFrom(cents))}`;
     confirmButton.disabled = !budgetDigits;
@@ -87,7 +89,7 @@ export function render({ mode, periodId }) {
       const budget = budgetFrom(cents); // before saving: adding goes from the budget as it was
       const undo = setBudget(period.id, budget);
       goBack(); // to the summary it was opened from
-      toast(adding ? `Budget +${formatUsd(cents)} · now ${formatUsd(budget)}` : `Budget set to ${formatUsd(budget)}`, undo);
+      toast(adding() ? `Budget +${formatUsd(cents)} · now ${formatUsd(budget)}` : `Budget set to ${formatUsd(budget)}`, undo);
     } else {
       startPeriod(cents);
       closePages();
@@ -107,19 +109,30 @@ export function render({ mode, periodId }) {
     });
   }
 
-  let ways = null;
+  const budgetWindow = panel('Budget');
   if (mode === 'edit') {
-    ways = el('div', { className: 'options budget-ways' }, ...Object.entries(EDIT_WAYS).map(([how, label]) => {
-      const way = el('button', { className: how === editHow ? 'on' : '', textContent: label });
-      way.addEventListener('click', () => {
-        if (how === editHow) return;
-        editHow = how;
-        budgetDigits = startDigits(period);
-        renderPage();
-      });
-      return way;
-    }));
+    // Switching updates the window, help line and button in place, not the whole screen (as typing
+    // does), so the button's hand keeps bobbing; the amount slides in like a switched currency's.
+    const ways = EDIT_HOWS.map((how) => el('span', { textContent: EDIT_WAYS[how] }));
+    const showWay = () => ways.forEach((way, i) => way.classList.toggle('on', EDIT_HOWS[i] === editHow));
+    showWay();
+    budgetWindow.append(el('div', { className: 'options budget-ways' }, ...ways));
+    Object.assign(budgetWindow, { role: 'button', tabIndex: 0 });
+    budgetWindow.setAttribute('aria-label', 'Switch between adding to the budget and setting it');
+    budgetWindow.classList.add('budget-switch');
+    budgetWindow.addEventListener('click', () => {
+      editHow = EDIT_HOWS[(EDIT_HOWS.indexOf(editHow) + 1) % EDIT_HOWS.length];
+      budgetDigits = startDigits(period);
+      showWay();
+      showDigits();
+      confirmButton.textContent = screen.button();
+      setHelp(screen.help(current));
+      amount.classList.remove('slide-in');
+      void amount.offsetWidth; // restart the animation
+      amount.classList.add('slide-in');
+    });
   }
+  budgetWindow.append(amount, ...(after ? [after] : []));
 
-  fill(screen.title, screen.help(current), panel('Budget', ways, amount, after), pad, backupButton, confirmButton);
+  fill(screen.title, screen.help(current), budgetWindow, pad, backupButton, confirmButton);
 }
