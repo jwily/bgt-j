@@ -1423,6 +1423,42 @@ const RATE = JSON.stringify({ amount: 1, base: 'USD', date: localToday(), rates:
     check('a past period\'s budget raised, the current one untouched', await budgets(), '20000,10000');
   });
 
+  await scenario('notes: spaces around them', async (open) => {
+    // Notes never keep spaces at either end, like category names: not from typing, not from old data.
+    const { page, type } = await launch(open);
+    const notes = async () => (await saved(page)).expenses.map((e) => e.note).join('|');
+    await page.locator('.note').fill('  Tacos   ');
+    await page.locator('.note').press('Enter');
+    check('typed spaces go when you finish the note', await page.locator('.note').inputValue(), 'Tacos');
+    await type('500');
+    await page.locator('.note').fill('Coffee  '); // added without leaving the field first
+    await page.locator('.add-btn').tap();
+    await settled(page);
+    check('and are never saved', await notes(), 'Coffee');
+    await openSummary(page);
+    await page.locator('.cat-head').first().tap();
+    await page.locator('.item').first().tap();
+    await settled(page);
+    const sheetNote = page.locator('#sheet input[type=text]').last();
+    await sheetNote.fill(' Iced coffee ');
+    await sheetNote.press('Tab');
+    check('the edit sheet\'s note too', await sheetNote.inputValue(), 'Iced coffee');
+    await sheetNote.fill('Iced coffee   ');
+    await page.locator('#sheet .primary').tap();
+    await settled(page);
+    check('edited notes are saved without them', await notes(), 'Iced coffee');
+    await page.evaluate(() => {
+      const data = JSON.parse(localStorage.getItem('budget-tracker'));
+      data.expenses[0].note = '  Old note  ';
+      localStorage.setItem('budget-tracker', JSON.stringify(data));
+    });
+    await page.reload();
+    await settled(page);
+    await openSummary(page);
+    await page.locator('.cat-head').first().tap();
+    check('spaces around a saved note are dropped on load', await page.locator('.item .what').first().evaluate((n) => n.textContent), 'Old note');
+  });
+
   await scenario('categories: spaces around names', async (open) => {
     const { page, save, nameField, savedNames } = await categoriesScreen(open);
     // Category names never keep spaces at either end: not from old saved data, not from typing.

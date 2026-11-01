@@ -3,7 +3,7 @@
 
 import { activeCategories, sortedCategories, saveCategories, categoryIsUsed } from '../store.js';
 import { paletteColor, CATEGORY_SLOTS } from '../palette.js';
-import { el } from '../ui.js';
+import { el, trimOnChange } from '../ui.js';
 import { toast } from '../help.js';
 import { colorDot } from '../widgets.js';
 import { fill, panel, note, currentScreen } from '../pages.js';
@@ -145,14 +145,11 @@ function draw(saved = categoriesFromState()) {
     return name;
   };
   // Spaces at either end go when you finish typing the name (and are never saved).
-  const trimOnChange = (name, entry) => name.addEventListener('change', () => {
-    name.value = name.value.trim();
-    if (entry()) entry().name = name.value;
-  });
+  const trimName = (name, entry) => trimOnChange(name, (value) => { if (entry()) entry().name = value; });
 
   const named = active.map((category) => {
     const name = nameField(category.name, 'Category name');
-    trimOnChange(name, () => category);
+    trimName(name, () => category);
 
     const remove = el('button', { className: 'mini', textContent: '✕', 'aria-label': `Remove ${category.name}` });
     remove.addEventListener('click', () => {
@@ -188,7 +185,7 @@ function draw(saved = categoriesFromState()) {
   const empty = Array.from({ length: Math.max(0, CATEGORY_SLOTS - active.length) }, () => {
     let category = null;
     const name = nameField('', 'New category name');
-    trimOnChange(name, () => category);
+    trimName(name, () => category);
     const spacer = el('span', { className: 'mini', 'aria-hidden': 'true' }); // lines the field up with the named rows'
     const entry = addRow(el('div', { className: 'cat-row slot' }, name, spacer), () => Boolean(category?.name.trim()), true);
     name.addEventListener('input', () => {

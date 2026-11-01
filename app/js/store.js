@@ -137,6 +137,7 @@ function load() {
     // Unreadable: the data's own copy of the choices will do.
   }
   tidy(loaded); // also puts right a choice that no longer exists
+  tidyNotes(loaded);
   return loaded;
 }
 
@@ -171,6 +172,17 @@ function tidy(data) {
   if (!REMINDER_CHOICES.includes(data.settings.backupReminderDays)) data.settings.backupReminderDays = DEFAULT_SETTINGS.backupReminderDays; // e.g. from a hand-edited backup
   keepInputCategoryActive(data);
   assignColors(data);
+}
+
+// Notes without stray spaces at either end, like category names. New and edited expenses' notes are
+// trimmed as they're saved (addExpense, updateExpense), so this only runs when whole data arrives
+// (loading, a backup or snapshot restored), not at every save, which would go through every expense.
+// A missing note (or a hand-edited one that isn't text) becomes an empty one.
+function tidyNote(note) {
+  return isText(note) ? note.trim() : '';
+}
+function tidyNotes(data) {
+  for (const expense of data.expenses) expense.note = tidyNote(expense.note);
 }
 
 // The main screen's choices must stay valid: an active category (one may have just been archived
@@ -215,6 +227,7 @@ export function save() {
 
 export function replaceState(data) {
   state = data;
+  tidyNotes(state);
   save();
 }
 
@@ -293,13 +306,14 @@ export function setBudget(periodId, budgetCents) {
 // Changes that can be undone return a function that undoes them.
 
 export function addExpense(fields) {
-  const expense = { id: newId(), periodId: currentPeriod().id, createdAt: Date.now(), ...fields };
+  const expense = { id: newId(), periodId: currentPeriod().id, createdAt: Date.now(), ...fields, note: tidyNote(fields.note) };
   state.expenses.push(expense);
   save();
   return () => deleteExpense(expense.id);
 }
 
 export function updateExpense(id, changes) {
+  if ('note' in changes) changes = { ...changes, note: tidyNote(changes.note) };
   Object.assign(state.expenses.find((e) => e.id === id), changes);
   save();
 }

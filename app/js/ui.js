@@ -14,6 +14,15 @@ export function el(tag, props = {}, ...children) {
   return node;
 }
 
+// Spaces at either end of a text field go when you finish typing in it (category names, notes),
+// so what you see is what's saved. then(value), if given, runs with the tidied value.
+export function trimOnChange(field, then) {
+  field.addEventListener('change', () => {
+    field.value = field.value.trim();
+    then?.(field.value);
+  });
+}
+
 // Briefly shake an element to say "can't do that".
 export function nudge(node) {
   node.classList.remove('nudge');
