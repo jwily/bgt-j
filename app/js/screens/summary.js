@@ -24,7 +24,6 @@ export function render({ periodId }) {
     hidePages();
     return;
   }
-  const isCurrent = !period.end;
   const spent = spentIn(period.id);
   const diff = period.budgetCents - spent;
 
@@ -80,11 +79,8 @@ export function render({ periodId }) {
   // The screen's actions sit at the bottom, under the thumb; the safer one on the right, nearer it.
   const remove = el('button', { className: 'wide-btn delete-btn', textContent: 'Delete period' });
   remove.addEventListener('click', () => removePeriod(period));
-  let edit = null;
-  if (isCurrent) {
-    edit = el('button', { className: 'wide-btn edit-budget', textContent: 'Edit budget' });
-    edit.addEventListener('click', () => showPage('budget', { mode: 'edit' }, { push: true }));
-  }
+  const edit = el('button', { className: 'wide-btn edit-budget', textContent: 'Edit budget' }); // any period's, past ones too
+  edit.addEventListener('click', () => showPage('budget', { mode: 'edit', periodId: period.id }, { push: true }));
 
   fill(periodName(period), periodDates(period),
     panel('Spent', waveRing(rows.map((r) => ({ value: r.cents, color: r.category.color })), spent, period.budgetCents)),

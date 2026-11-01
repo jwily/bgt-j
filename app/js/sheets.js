@@ -2,7 +2,7 @@
 
 import { activeCategories, sortedCategories, updateExpense, deleteExpense } from './store.js';
 import { CURRENCIES, HOME, formatMoney, formatUsd, plainAmount, parseAmount, toUsdCents } from './money.js';
-import { $, el, nudge } from './ui.js';
+import { $, el, nudge, trimOnChange } from './ui.js';
 import { toast } from './help.js';
 import { categoryChip } from './widgets.js';
 
@@ -48,12 +48,13 @@ export function openExpenseSheet(expense) {
   category.value = expense.categoryId;
   const date = el('input', { type: 'date', value: expense.date });
   const note = el('input', { type: 'text', value: expense.note, placeholder: 'Optional' });
+  trimOnChange(note);
 
   const saveButton = el('button', { className: 'primary', textContent: 'Save' });
   saveButton.addEventListener('click', () => {
     const units = parseAmount(amount.value, currency);
     if (!(units > 0)) return nudge(amount);
-    const changes = { categoryId: category.value, date: date.value || expense.date, note: note.value.trim() };
+    const changes = { categoryId: category.value, date: date.value || expense.date, note: note.value }; // updateExpense trims the note
     if (foreign) {
       changes.original = { ...foreign, amount: units };
       changes.usdCents = toUsdCents(units, currency, foreign.perUsd);

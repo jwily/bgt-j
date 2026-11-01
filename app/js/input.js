@@ -4,7 +4,7 @@ import { state, activeCategories, getCategory, addExpense, setInputPrefs, rateFo
 import { initParty, celebrate } from './party.js';
 import { todayISO, daysBetween, formatDate } from './dates.js';
 import { CURRENCIES, CURRENCY_CODES, HOME, formatMoney, formatUsd, toUsdCents } from './money.js';
-import { $, el, nudge, whenLoaded } from './ui.js';
+import { $, el, nudge, whenLoaded, trimOnChange } from './ui.js';
 import { onLongPress } from './presses.js';
 import { toast } from './help.js';
 import { keypad, categoryChip } from './widgets.js';
@@ -50,6 +50,7 @@ export function initInput() {
 
   parts.note = el('input', { type: 'text', className: 'note', placeholder: 'Optional', enterKeyHint: 'done', 'aria-label': 'Note' });
   parts.note.addEventListener('keydown', (event) => { if (event.key === 'Enter') parts.note.blur(); });
+  trimOnChange(parts.note);
   parts.dateLabel = el('span');
   parts.dateInput = el('input', { type: 'date', 'aria-label': 'Expense date' });
   parts.dateInput.addEventListener('change', () => {
@@ -251,7 +252,7 @@ function add() {
   const { currency, categoryId } = state.input;
   const rate = rateFor(currency);
   const usdCents = toUsdCents(amount, currency, rate);
-  const note = parts.note.value.trim();
+  const note = parts.note.value; // addExpense trims it
   const expenseDate = pickedDate ?? todayISO(); // today as of now, even if the app was left open overnight
 
   // Reset the form before saving so the redraw shows it cleared.

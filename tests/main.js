@@ -198,7 +198,10 @@ const ringWaves = (page) => page.evaluate(() => {
   // Edit budget
   await page.locator('.edit-budget').tap();
   await settled(page);
-  check('edit budget prefilled', await page.locator('.budget-amount').textContent(), '$2,000.00');
+  check('edit budget opens on Add', await page.locator('.budget-ways .on').textContent(), 'Add');
+  await page.locator('.budget-ways button', { hasText: 'Set' }).tap();
+  await settled(page);
+  check('Set: prefilled', await page.locator('.budget-amount').textContent(), '$2,000.00');
   await sheetKey('⌫');
   await page.locator('#page .primary').tap();
   check('budget edited', await page.locator('.stat .value').first().textContent(), '$200.00');
@@ -239,7 +242,7 @@ const ringWaves = (page) => page.evaluate(() => {
   check('period rows', await page.locator('.period-row').count(), 2);
   await page.locator('.period-row').nth(1).tap();
   check('past period title', await titleText(page), 'Period 1');
-  check('past period has no Edit', await page.locator('.edit-budget').count(), 0);
+  check('past period can be edited too', await page.locator('.edit-budget').count(), 1);
   await page.locator('#nav-btn').tap();
   check('back to periods', await titleText(page), 'Past Periods');
   await page.locator('#nav-btn').tap();

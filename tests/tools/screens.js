@@ -80,6 +80,14 @@ const RATE = '{"date":"2026-10-20","rates":{"MXN":18.5}}';
     await shot('07-edit-expense');
     await page.mouse.click(200, 30);
     await pause();
+    await page.locator('.edit-budget').tap();
+    await pause();
+    await type('25000');
+    await shot('07b-edit-budget-add');
+    await page.locator('.budget-ways button', { hasText: 'Set' }).tap();
+    await pause();
+    await shot('07c-edit-budget-set');
+    await back();
     await back();
 
     await menu('New Period');
